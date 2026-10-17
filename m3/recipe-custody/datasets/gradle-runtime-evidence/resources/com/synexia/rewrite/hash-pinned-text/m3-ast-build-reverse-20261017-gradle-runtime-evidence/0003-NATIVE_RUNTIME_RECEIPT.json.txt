@@ -1,0 +1,88 @@
+{
+  "cases": [
+    {
+      "case": "default-stock",
+      "class_sha256": {
+        "fixture/Generated.class": "b115df94a94f7b32ece72073fd13ff043698f75f7eca08c163374e5f77f3155d",
+        "fixture/Main.class": "01f1c7b5f75216e4221ecc06865ca226c2d3ddb11ed03339342a3e087260d34d"
+      }
+    },
+    {
+      "case": "enabled-stock-refusal",
+      "refusal": "plug-in not found: M3AST"
+    },
+    {
+      "case": "enabled-m3",
+      "class_sha256": {
+        "fixture/Generated.class": "b115df94a94f7b32ece72073fd13ff043698f75f7eca08c163374e5f77f3155d",
+        "fixture/Main.class": "01f1c7b5f75216e4221ecc06865ca226c2d3ddb11ed03339342a3e087260d34d"
+      },
+      "incremental_recompile": true,
+      "up_to_date": true
+    },
+    {
+      "case": "api-trace",
+      "class_sha256": {
+        "fixture/Generated.class": "b115df94a94f7b32ece72073fd13ff043698f75f7eca08c163374e5f77f3155d",
+        "fixture/Main.class": "01f1c7b5f75216e4221ecc06865ca226c2d3ddb11ed03339342a3e087260d34d"
+      },
+      "image_sha256": "dd2fb7aff789684189477c5811262396ffdda36f137dc250982275a1eb99c8a3",
+      "slots_sha256": "fe9a127d4be7a070e8da3ca15c5c5074e45c1ff962e4dce1f2ed3b4fa88f59f2",
+      "trace_sha256": "63f1f0b8ef9e9a313f461047f6f0e153cfc9d18fcafbc4e49c9dc6eaa6dd9f03",
+      "trace_stats": {
+        "analyzed": "2",
+        "captures": "2",
+        "completed": "true",
+        "consumerFailed": "false",
+        "errors": "0",
+        "extraSourceReads": "0",
+        "hits": "0",
+        "parsed": "2",
+        "projections": "0"
+      }
+    },
+    {
+      "case": "command-line-trace",
+      "class_sha256": {
+        "fixture/Generated.class": "b115df94a94f7b32ece72073fd13ff043698f75f7eca08c163374e5f77f3155d",
+        "fixture/Main.class": "01f1c7b5f75216e4221ecc06865ca226c2d3ddb11ed03339342a3e087260d34d"
+      },
+      "image_sha256": "dd2fb7aff789684189477c5811262396ffdda36f137dc250982275a1eb99c8a3",
+      "slots_sha256": "fe9a127d4be7a070e8da3ca15c5c5074e45c1ff962e4dce1f2ed3b4fa88f59f2",
+      "trace_sha256": "76b59945b0680b759faf4792dfa9d3e368207c0668d06e4c370c0ca9ec92ee6b",
+      "trace_stats": {
+        "analyzed": "2",
+        "captures": "2",
+        "completed": "true",
+        "consumerFailed": "false",
+        "errors": "0",
+        "extraSourceReads": "0",
+        "hits": "0",
+        "parsed": "2",
+        "projections": "0"
+      }
+    },
+    {
+      "case": "compiler-error",
+      "image_absent": true,
+      "trace_stats": {
+        "analyzed": "2",
+        "captures": "2",
+        "completed": "true",
+        "consumerFailed": "false",
+        "errors": "1",
+        "extraSourceReads": "0",
+        "hits": "0",
+        "parsed": "2",
+        "projections": "0"
+      }
+    }
+  ],
+  "full_m3_vm_acceptance": false,
+  "gradle_home": "/workspace/scratch/13309be96b09/build-work/fork-runtime-gradle/gradle",
+  "gradle_version_output": "\nWelcome to Gradle 9.9.0-milestone-2!\n\nFor more details see https://docs.gradle.org/9.9.0-milestone-2/release-notes.html\n\n\n------------------------------------------------------------\nGradle 9.9.0-milestone-2\n------------------------------------------------------------\n\nBuild time:    2026-09-18 11:04:06 UTC\nRevision:      900829736df393d93277deb9434999decee96b81\n\nKotlin:        2.4.20\nGroovy:        4.0.33\nAnt:           Apache Ant(TM) version 1.10.17 compiled on April 6 2026\nLauncher JVM:  21.0.12.1 (Eclipse Adoptium 21.0.12.1+1-LTS)\nDaemon JVM:    /workspace/scratch/13309be96b09/build-work/fork-consumer-jdk (no Daemon JVM specified, using current Java home)\nOS:            Linux 6.18.55 amd64\n\n",
+  "jdk_home": "/workspace/scratch/13309be96b09/build-work/fork-consumer-jdk",
+  "source_build_provenance": "SUPPLY_BUILD_RECEIPT_SEPARATELY",
+  "status": "REAL_GRADLE_NATIVE_COMPILER_OPTION_PASS",
+  "stock_jdk": "/workspace/scratch/2b4d1cb957a7/toolchains/jdk-21.0.12.1+1"
+}
