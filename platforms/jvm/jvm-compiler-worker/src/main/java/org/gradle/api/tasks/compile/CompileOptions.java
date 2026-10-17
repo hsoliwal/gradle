@@ -91,7 +91,7 @@ public abstract class CompileOptions implements Serializable {
     @Inject
     @SuppressWarnings("unused")
     public CompileOptions(ObjectFactory objectFactory) {
-
+        getM3AstEnabled().convention(false);
     }
 
     /**
@@ -376,6 +376,25 @@ public abstract class CompileOptions implements Serializable {
     public void setCompilerArgs(List<String> compilerArgs) {
         this.compilerArgs = compilerArgs;
     }
+
+    /**
+     * Enables the M3JDK {@code M3AST} plugin in the compiler selected for this task.
+     * <p>
+     * Defaults to {@code false}. When enabled, Gradle appends {@code -Xplugin:M3AST} to the ordinary
+     * compiler arguments unless an argument already selects that plugin. The selected compiler must
+     * provide the plugin. Toolchains, annotation processors and incremental compilation keep their
+     * existing configuration.
+     * <p>
+     * To configure the plugin, add one complete {@code -Xplugin:M3AST ...} argument using
+     * {@link #getCompilerArgs()} or {@link #getCompilerArgumentProviders()}. This property creates
+     * no output files. Any plugin output path must belong to the individual compiler invocation.
+     *
+     * @return whether to enable the M3AST compiler plugin
+     * @since 9.9.0
+     */
+    @Input
+    @Incubating
+    public abstract Property<Boolean> getM3AstEnabled();
 
     /**
      * Configure the java compilation to be incremental (e.g. compiles only those java classes that were changed or that are dependencies to the changed classes).
