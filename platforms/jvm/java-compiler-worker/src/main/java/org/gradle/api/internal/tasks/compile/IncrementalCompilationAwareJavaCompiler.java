@@ -29,4 +29,22 @@ public interface IncrementalCompilationAwareJavaCompiler extends ContextAwareJav
         CompilationSourceDirs compilationSourceDirs,
         CompilationClassBackupService classBackupService
     );
+
+    /**
+     * Retain the real javac task for collectors while opting into a separate execution adapter.
+     * Implementations must explicitly support this lifecycle before it can be selected.
+     */
+    default JavaCompiler.CompilationTask makeIncremental(
+        JavaCompiler.CompilationTask originalTask,
+        JavaCompiler.CompilationTask executionTask,
+        Map<String, Set<String>> sourceToClassMapping,
+        ConstantsAnalysisResult constantsAnalysisResult,
+        CompilationSourceDirs compilationSourceDirs,
+        CompilationClassBackupService classBackupService
+    ) {
+        if (originalTask != executionTask) {
+            throw new UnsupportedOperationException("Compiler does not support M3 AST execution with original javac collectors");
+        }
+        return makeIncremental(originalTask, sourceToClassMapping, constantsAnalysisResult, compilationSourceDirs, classBackupService);
+    }
 }

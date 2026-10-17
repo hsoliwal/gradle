@@ -1,0 +1,292 @@
+{
+  "schema": "M3_GRADLE_SHARED_AST_DATASET_SOURCE_CUSTODY_V1",
+  "repository": "hsoliwal/gradle",
+  "baseline": "47f82a74e0c0e49e9d4aad73949405db22e775fc",
+  "canonicalRecipeOwners": [
+    "com.synexia.rewrite.M3HashPinnedJavaSnapshotRecipe",
+    "com.synexia.rewrite.M3HashPinnedTextSnapshotRecipe"
+  ],
+  "receiverEngineDirectory": "m3/recipe-custody/sdk-owner",
+  "existingEngineAndHarnessChanges": false,
+  "sourceInputs": [
+    {
+      "path": "platforms/jvm/java-compiler-plugin/src/main/java/org/gradle/internal/compiler/java/IncrementalCompileTask.java",
+      "beforeSha256": "a3a7c5c5db24fa3b063e11c00d9ecec4ce7e06709f459e79a325ee65c8356e63",
+      "afterSha256": "cc7ea4350ffc805f3d8bfa73d521591f36064f9be3eebd1e03824ea6ebbe3f87",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-compiler-hook-stage-1/platforms/jvm/java-compiler-plugin/src/main/java/org/gradle/internal/compiler/java/IncrementalCompileTask.java"
+    },
+    {
+      "path": "platforms/jvm/java-compiler-worker/M3_AST_INTEGRATION.md",
+      "beforeSha256": "ABSENT",
+      "afterSha256": "b82b704ccb2c4711a69b196fe17c8d808d32b864a04eedae4ce0aac584c92e17",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-integration-docs-qualified-stage-2/platforms/jvm/java-compiler-worker/M3_AST_INTEGRATION.md"
+    },
+    {
+      "path": "platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/DiagnosticToProblemListener.java",
+      "beforeSha256": "18ccbd738f722c3b0f6b86839d609447b05355f803920bd47e85dbf0bd7a795d",
+      "afterSha256": "12926254e3e76b9fddbc5bf3c41f5faba490dad3703be6be647c86c66847122f",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-rich-diagnostics-stage-4/platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/DiagnosticToProblemListener.java"
+    },
+    {
+      "path": "platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/IncrementalCompilationAwareJavaCompiler.java",
+      "beforeSha256": "ef68e1c865acbd9b20fbc5bb8741084bcbfa26415e7dc8259ca5748d09ae79e9",
+      "afterSha256": "c2c93322c045676dab787761f4ad6beb7d51de2b8ce855a10519b98378bd6c3e",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-compiler-hook-stage-1/platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/IncrementalCompilationAwareJavaCompiler.java"
+    },
+    {
+      "path": "platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/JdkJavaCompiler.java",
+      "beforeSha256": "73106b60a6bc890ddb74003d28eb46cbbfdd250a5de5da4525acdb1d660b4ea0",
+      "afterSha256": "a0bc2241c17a41f6179f1069d763c38774325c88f55e347711292b4688e2a693",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-rich-diagnostics-stage-4/platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/JdkJavaCompiler.java"
+    },
+    {
+      "path": "platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/JdkTools.java",
+      "beforeSha256": "b5f625e30a451cfc6d6dcd9b93deebbe696f61c31ee867e91ccc2729240dd2b1",
+      "afterSha256": "e0f16599e85d082e323e67183efa9d6f86c636f184a7fbbff2212e3b6b8d425b",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-compiler-hook-stage-1/platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/JdkTools.java"
+    },
+    {
+      "path": "platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/M3ASTCompilerArguments.java",
+      "beforeSha256": "ABSENT",
+      "afterSha256": "a28606e09e7a09c7090754697be1bd567a80a21b79036995ff873621a94edd03",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-compiler-hook-stage-1/platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/M3ASTCompilerArguments.java"
+    },
+    {
+      "path": "platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/M3JavacASTProvider.java",
+      "beforeSha256": "ABSENT",
+      "afterSha256": "355eb162dcd5608d28d0446d38f0faa5ad8956a59de0cb6b3cdbc9a7eec255f8",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-source-bindings-hook-stage-2/platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/M3JavacASTProvider.java"
+    },
+    {
+      "path": "platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/M3JavacASTTask.java",
+      "beforeSha256": "ABSENT",
+      "afterSha256": "e3f747b59f0db6088f41a8fa08e39e31bb3c2d733d578683017baafd372b0882",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-rich-diagnostics-stage-4/platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/M3JavacASTTask.java"
+    },
+    {
+      "path": "platforms/jvm/java-compiler-worker/src/test/java/org/gradle/api/internal/tasks/compile/M3JavacASTTaskTest.java",
+      "beforeSha256": "ABSENT",
+      "afterSha256": "11d2a99fcbac8f788c76055ba5c51f7073629c86496ab8df8256d3f03cf50376",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-test-context-api-stage-5/platforms/jvm/java-compiler-worker/src/test/java/org/gradle/api/internal/tasks/compile/M3JavacASTTaskTest.java"
+    },
+    {
+      "path": "platforms/jvm/jvm-compiler-worker/src/main/java/org/gradle/api/tasks/compile/CompileOptions.java",
+      "beforeSha256": "e31c0c804dfd76e9a436c1b793941d6cb91327950de8c09774adc9e5a5ba23ab",
+      "afterSha256": "0898dee46e9f591173a543223bafcc119a8ee1cd176b2df39fee1051361f5b04",
+      "actualSdkOutput": "/workspace/scratch/4f99f40718f0/m3-implementation/generated/gradle-managed-property-convention-stage-7/platforms/jvm/jvm-compiler-worker/src/main/java/org/gradle/api/tasks/compile/CompileOptions.java"
+    }
+  ],
+  "originalCustodyOwnerFiles": [
+    {
+      "path": "m3/recipe-custody/ENGINE_SOURCES.tsv",
+      "blob": "6d03a0153c494253d73f4d1eb79f78f98dde2187",
+      "sha256": "b2e990a09f2c4b7c355b48cc33a72405829fd009f76d1866153aa07225e6684e"
+    },
+    {
+      "path": "m3/recipe-custody/LICENSE.txt",
+      "blob": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "m3/recipe-custody/NOTICE.md",
+      "blob": "b25920ab343d5f817bc2056770b425b78850e9d1",
+      "sha256": "bf0c2580643656f4fb3dec05e4f40dd2041a2a18bedac10857c886b56f95f0b4"
+    },
+    {
+      "path": "m3/recipe-custody/OWNER_CUSTODY.json",
+      "blob": "95ce057567ca1679f3fde48d44d9f9c8acdfee2c",
+      "sha256": "91506070946d464ca77d03a23513cb077027d1fcbd8bab1a43cf5a61e33d7672"
+    },
+    {
+      "path": "m3/recipe-custody/README.md",
+      "blob": "d1df40356509db1a737ef38a7b14ad29ed0f265a",
+      "sha256": "5b80b76b02b6e7d0e351d21b9a812bc5d2f5f4c0b574ef6a0ed9e05e43bb03fa"
+    },
+    {
+      "path": "m3/recipe-custody/SOURCE_PROVENANCE.json",
+      "blob": "e66eafb07136eadb0106ce21d4f9cefd81a3b221",
+      "sha256": "a3cf6081f92bce2ba5c3202ac3cb6f69a4019ba8c5e9c5c1f606c0cd1ab22c2e"
+    },
+    {
+      "path": "m3/recipe-custody/contract/test_prepare.py",
+      "blob": "4a15e11a1a4e4ae3ebeac46bb8ac81d874f70dd5",
+      "sha256": "b91f3081c778cf2ced5a2957709acb0c58f7e4078f2fbf4536bd0b626d8f5973"
+    },
+    {
+      "path": "m3/recipe-custody/contract/verify_receiver.py",
+      "blob": "774cdc2648c4a1cb6d129fe0085f4021153abd79",
+      "sha256": "039ab25b1c45220c6e660a1c99c72bc9e003b2d5040d7a5eefd7afeeb2326516"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/DATASET.json",
+      "blob": "a3461c98b889c7b7fa4bdb686648fd84ca39c33b",
+      "sha256": "711ea6721f127635040488045aa4ddf7d02c2ef8434344a60b96a0bb4ebc4149"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/ENGINE_EFFECTIVE.tsv",
+      "blob": "9046fe413e41ad083f5bc1b9a73ddeecee5d694a",
+      "sha256": "80bf80ee81878cc05393b3c23ef07b2261be1bcb7dcb500b0d4b12cd8e05ec23"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/MODES.tsv",
+      "blob": "8c8972d74ea9b0b02ba956234c25999e4139d77d",
+      "sha256": "7db36d8e2f3bbaf6a6a94d6759e16f8fd6e0dd7fe06162cfc43a046e1a2d423c"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/META-INF/rewrite/m3-ast-build-reverse-20261017-gradle-fork.yml",
+      "blob": "9b803f5229a81b2d7f5b25524b5c3a6044cd7987",
+      "sha256": "982761be523b3dddbbb67415b9322751973a71a431b069c131cb07e21d1454d4"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-java/m3-ast-build-reverse-20261017-gradle-fork/0005-JavaCompilerArgumentsBuilder.java.txt",
+      "blob": "588c624b759c3bce01bf4c15fd0971fdd66beba3",
+      "sha256": "3165d45f657f6d719e1c05abb0943000acee2cc9616b68ae7a4434a7bddf01c9"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-java/m3-ast-build-reverse-20261017-gradle-fork/0006-MinimalJavaCompileOptions.java.txt",
+      "blob": "1bc07ac8da9c478d3699804e20f6fff151cae607",
+      "sha256": "77a32e5fbc1924822c05cb761a7f866b2a3c1bbf2f4149c0ec707b77b285fe51"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-java/m3-ast-build-reverse-20261017-gradle-fork/0008-CompileOptions.java.txt",
+      "blob": "568041b8f0b5fbe75829e5b2ea7acdc19ca95ef9",
+      "sha256": "e31c0c804dfd76e9a436c1b793941d6cb91327950de8c09774adc9e5a5ba23ab"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-java/m3-ast-build-reverse-20261017-gradle-fork/manifest.tsv",
+      "blob": "ca25b47e69329d26c99a46cfaed186e932660339",
+      "sha256": "eb3c8a0baee7d6c54eba9d2322fa6b6727d58d8a7302f595b24e676fee7d55b2"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-java/m3-ast-build-reverse-20261017-gradle-fork/pre/0005-JavaCompilerArgumentsBuilder.java.txt",
+      "blob": "352ae13fbafd1a58dde3382aecf81869ac9d2e5e",
+      "sha256": "898a1a104907f58b0e10900ebb7ab8653a0c4612828781d3975846f3949a78ef"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-java/m3-ast-build-reverse-20261017-gradle-fork/pre/0006-MinimalJavaCompileOptions.java.txt",
+      "blob": "2a041699d0e621faf7b77191bb45aeac5fcc66de",
+      "sha256": "264a8c69bb2cc88fdd363c4722c7f22875919eaf2d18c85591bcc04a7a9fb08e"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-java/m3-ast-build-reverse-20261017-gradle-fork/pre/0008-CompileOptions.java.txt",
+      "blob": "562ee5be169967a4e600485657dc914d07e3cc38",
+      "sha256": "98b45249a7fd59eea0c2a8126e43afd36dcef465f51e1f55d116252b4592fb82"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-text/m3-ast-build-reverse-20261017-gradle-fork/0001-README.md.txt",
+      "blob": "df6d5bf349e9f9928c783b92860b053484e7bec3",
+      "sha256": "c5f0bfbe063d23ce054bef6766f7232affbccb2f78b8fa37fae432e2b3820181"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-text/m3-ast-build-reverse-20261017-gradle-fork/0002-verify_ast_consumer.py.txt",
+      "blob": "14251d6b68bb9687f4839d77556dd9c22c8bbb17",
+      "sha256": "4f9e870cdaea8d1c363717272b2ab906d88bd3799e86e1d6c8c6633e166e69f8"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-text/m3-ast-build-reverse-20261017-gradle-fork/0003-org.gradle.api.tasks.compile.CompileOptions.xml.txt",
+      "blob": "31c1826d9f1a21b27e7e7d07bac88a4120d42431",
+      "sha256": "c43c968d9d9cfe644f2c98660c6dbde18cc9ce4b43388aced7b3d131a84d48b0"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-text/m3-ast-build-reverse-20261017-gradle-fork/0004-notes.md.txt",
+      "blob": "58d1282c40000f62c25fc73fe52504c836bb2338",
+      "sha256": "49d530c852ab4de5a3c32c64d2374b33c81d1e56128aa445154081dbb238821e"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-text/m3-ast-build-reverse-20261017-gradle-fork/0007-JavaCompilerArgumentsBuilderTest.groovy.txt",
+      "blob": "0b5e216ac619d70f02e46ff294885fe2973018fb",
+      "sha256": "aff61507a26878757e8c803db369c9e98a4fcbc36d014355b84568a62647d71e"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-text/m3-ast-build-reverse-20261017-gradle-fork/manifest.tsv",
+      "blob": "bd6f8455ac051c6f7309896b4c1f61d88ddb7c8b",
+      "sha256": "87c85873708aeb1976fa7691276ffe5583256c5e2cbf8ac852898c8b40605b26"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-text/m3-ast-build-reverse-20261017-gradle-fork/pre/0003-org.gradle.api.tasks.compile.CompileOptions.xml.txt",
+      "blob": "3ffff799399bb35d1afd5c2869eda2c92b601e83",
+      "sha256": "36b8df0fdb620fd702839a722b8fbdbd2e95c87bbae0f3aa62f31622bddc18f1"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-text/m3-ast-build-reverse-20261017-gradle-fork/pre/0004-notes.md.txt",
+      "blob": "db3ef341c0410d10770715b207a7971c23335248",
+      "sha256": "f448611e69c0e6fde7a0720e7be988fea0a61bda8b2c3fdc6da4024fa186a85a"
+    },
+    {
+      "path": "m3/recipe-custody/datasets/gradle-fork/resources/com/synexia/rewrite/hash-pinned-text/m3-ast-build-reverse-20261017-gradle-fork/pre/0007-JavaCompilerArgumentsBuilderTest.groovy.txt",
+      "blob": "d48febe3d85272b42fce10cd9a035b16687118ab",
+      "sha256": "808811a4d327a5c2b06cfda0ddf99248644676530d5b072f7facdad0deb271a6"
+    },
+    {
+      "path": "m3/recipe-custody/evidence/ENGINE_BOOTSTRAP_RECEIPT.json",
+      "blob": "0d7bd19689222a9747d4e7b7342312b69a73c8d9",
+      "sha256": "6ddacf89cd9f7bb7eddd6d8be636a9a80323e711535a21af6be02db79e12b22b"
+    },
+    {
+      "path": "m3/recipe-custody/evidence/PORTABLE_REPLAY.json",
+      "blob": "64c4591f8fb54c2b8769889da537a9ae82ff61a9",
+      "sha256": "9c43757e4819f348f3d4d9dd867a6317276a6b5c2b5e128a9ab2d8d1beebc997"
+    },
+    {
+      "path": "m3/recipe-custody/evidence/gradle-fork/RECEIVER_RECEIPT.json",
+      "blob": "ece9d5992b4d335914408a7c050ea7534ee677fc",
+      "sha256": "f009c8cb16a5fb6e9090230e3f11fcecf39b0aabf7f00edf0af8741a682f30d5"
+    },
+    {
+      "path": "m3/recipe-custody/evidence/gradle-fork/SDK_INPUTS.tsv",
+      "blob": "89e6f2ec5f52f34d0e017a7f61c16b06c5bc701b",
+      "sha256": "1483de194922ea2f0e50da1184dea65ac502ae16532d219f2861efe9ae40389c"
+    },
+    {
+      "path": "m3/recipe-custody/evidence/gradle-fork/SDK_QUALIFICATION.json",
+      "blob": "6b39d4dd9fd110dbd9fba61338a5a6330fe94549",
+      "sha256": "d3b366d305a9a564579bbd4ab407dc4147fb1c9b96eab5e6d043dee118b9c038"
+    },
+    {
+      "path": "m3/recipe-custody/evidence/gradle-fork/SDK_RESULTS.tsv",
+      "blob": "9c40ff26f56a8bf64b568ae59f04feff7e2bc392",
+      "sha256": "b6e0fb33c30334bf5a44d55d193307c5eb24dd4f5db9bf18e371189c36463b3b"
+    },
+    {
+      "path": "m3/recipe-custody/pom.xml",
+      "blob": "332b6ca5fae4dec7980d953e8a6f01f5dd8a5419",
+      "sha256": "56567ab0175c47dbbada68bec8fe0fd9bbe027d6174c5cefef695a0b7283d448"
+    },
+    {
+      "path": "m3/recipe-custody/prepare.py",
+      "blob": "4cded298907075cd772e4edec608585acd7b0eab",
+      "sha256": "4a585b670e5d9defab8e7d63d6fc80508321d0b0e750a15b667cbe6ee14eefc4"
+    },
+    {
+      "path": "m3/recipe-custody/receive.py",
+      "blob": "d7f5cda465d8f473f4969d4db15d717af1391745",
+      "sha256": "5d9df3c2623c21c43ade4cbfcbe459026af3983e1d2b21018397dc12e775898a"
+    },
+    {
+      "path": "m3/recipe-custody/sdk-owner/src/main/java/com/synexia/rewrite/M3EditScope.java",
+      "blob": "274360816db1e44a2f1796a3bc5cdeff6b0ce6db",
+      "sha256": "962d37d62d740c3e8055c365a048ae7ee0479c26a9f6bbfe741e540d6c1134ab"
+    },
+    {
+      "path": "m3/recipe-custody/sdk-owner/src/main/java/com/synexia/rewrite/M3HashPinnedJavaSnapshotRecipe.java",
+      "blob": "3bdeeaea9a212fe0c7d1f544510f87c4cd49eb40",
+      "sha256": "67f7b81126e4736c7b61b444fa6545153a61e23c012975ca796fcee623ab6625"
+    },
+    {
+      "path": "m3/recipe-custody/sdk-owner/src/main/java/com/synexia/rewrite/M3HashPinnedTextSnapshotRecipe.java",
+      "blob": "9d0788d3717e017d58345c5c3e62022c2915a3c8",
+      "sha256": "fbf1ea9efad784afef5ac201ff7fc324551f77a099ebfe2f79b70c3a17c731ef"
+    },
+    {
+      "path": "m3/recipe-custody/sdk-owner/src/main/java/com/synexia/rewrite/M3ScopeInference.java",
+      "blob": "d24729950508857280ea1b56d4e930f05137ec85",
+      "sha256": "13660b59f60ec2941ec19e9bc8964ffd4b04689cdc33cd19711fba14b8da09a4"
+    },
+    {
+      "path": "m3/recipe-custody/src/test/java/com/synexia/rewrite/M3TaskRecipeTest.java",
+      "blob": "e69993797978f800a4d1b01b55093dc8dde16514",
+      "sha256": "74b03a3ac3e445a04b8b15076d3ced667bfae2442bd0968cbe74468e4a499e43"
+    }
+  ],
+  "scope": "Origin of the sealed inputs. Actual SDK Results, original compiler tests, distribution builds and runtime consumer qualification are recorded separately. Current native M3 property and original gradle-fork dataset are preserved."
+}

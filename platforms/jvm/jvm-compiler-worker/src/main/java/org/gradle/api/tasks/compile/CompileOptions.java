@@ -89,7 +89,7 @@ public abstract class CompileOptions implements Serializable {
     private FileCollection annotationProcessorPath;
 
     @Inject
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "this-escape"}) // Managed-property convention, as in JavaCompile.
     public CompileOptions(ObjectFactory objectFactory) {
         getM3AstEnabled().convention(false);
     }
