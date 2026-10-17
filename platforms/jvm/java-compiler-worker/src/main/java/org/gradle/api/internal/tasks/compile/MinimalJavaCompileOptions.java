@@ -29,6 +29,7 @@ import java.util.List;
 public class MinimalJavaCompileOptions implements Serializable {
     private List<File> sourcepath;
     private List<String> compilerArgs;
+    private boolean m3AstEnabled;
     private String encoding;
     private String bootClasspath;
     private String extensionDirs;
@@ -53,6 +54,7 @@ public class MinimalJavaCompileOptions implements Serializable {
         FileCollection sourcepath = compileOptions.getSourcepath();
         this.sourcepath = sourcepath == null ? null : ImmutableList.copyOf(sourcepath.getFiles());
         this.compilerArgs = Lists.newArrayList(compileOptions.getAllCompilerArgs());
+        this.m3AstEnabled = compileOptions.getM3AstEnabled().getOrElse(false);
         this.encoding = compileOptions.getEncoding();
         this.bootClasspath = getAsPath(compileOptions.getBootstrapClasspath());
         this.extensionDirs = compileOptions.getExtensionDirs();
@@ -90,6 +92,14 @@ public class MinimalJavaCompileOptions implements Serializable {
 
     public void setCompilerArgs(List<String> compilerArgs) {
         this.compilerArgs = compilerArgs;
+    }
+
+    public boolean isM3AstEnabled() {
+        return m3AstEnabled;
+    }
+
+    public void setM3AstEnabled(boolean m3AstEnabled) {
+        this.m3AstEnabled = m3AstEnabled;
     }
 
     @Nullable

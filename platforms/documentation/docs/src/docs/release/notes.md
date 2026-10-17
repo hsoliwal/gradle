@@ -68,6 +68,15 @@ You can extract the URL from YouTube by clicking the "Share" button.
 ADD RELEASE FEATURES BELOW
 vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv -->
 
+### M3JDK compiler integration in this fork
+
+Java compilation can opt into the M3JDK shared AST compiler plugin with
+`options.m3AstEnabled.set(true)` on a `JavaCompile` task. The option defaults to `false`.
+It reaches the selected compiler through Gradle's existing compiler argument builder, including worker and forked compilation.
+Existing compiler arguments, annotation processors, toolchains and incremental compiler listeners are retained.
+The compiler must provide `M3AST`; this option does not install it or choose a different JDK.
+See the `CompileOptions.m3AstEnabled` DSL reference and this fork's `m3/README.md` for output ownership and examples.
+
 ### Isolated Projects
 [Isolated Projects](userguide/isolated_projects.html) is an incubating performance feature that safely runs project configuration in parallel, significantly reducing configuration time in many scenarios, including IDE sync and CI builds.
 

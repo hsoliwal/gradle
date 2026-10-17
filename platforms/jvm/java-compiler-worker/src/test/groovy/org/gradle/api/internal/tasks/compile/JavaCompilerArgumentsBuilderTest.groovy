@@ -48,6 +48,61 @@ class JavaCompilerArgumentsBuilderTest extends Specification {
         builder.build() == defaultOptions
     }
 
+    def "carries the opt-in through worker options and appends the M3AST plugin"() {
+        given:
+        def options = TestUtil.newInstance(CompileOptions)
+        options.m3AstEnabled.set(true)
+        options.compilerArgs = ['-parameters']
+        spec.compileOptions = options
+
+        expect:
+        spec.compileOptions.m3AstEnabled
+        builder.build() == defaultOptions + ['-parameters', '-Xplugin:M3AST']
+        options.compilerArgs == ['-parameters']
+        spec.compileOptions.compilerArgs == ['-parameters']
+    }
+
+    def "preserves a configured M3AST plugin argument #argument"() {
+        given:
+        spec.compileOptions.m3AstEnabled = true
+        spec.compileOptions.compilerArgs = [argument]
+
+        expect:
+        builder.build() == defaultOptions + [argument]
+
+        where:
+        argument << ['-Xplugin:M3AST', '-Xplugin:M3AST lossless',
+                     '-Xplugin:M3AST trace=/tmp/task-1.tsv image=/tmp/task-1.m3prim slots=/tmp/task-1.slots.tsv fold-expressions',
+                     '-Xplugin:M3AST\tlossless']
+    }
+
+    def "does not mistake another compiler plugin for M3AST"() {
+        given:
+        spec.compileOptions.m3AstEnabled = true
+        spec.compileOptions.compilerArgs = ['-Xplugin:M3ASTOther']
+
+        expect:
+        builder.build() == defaultOptions + ['-Xplugin:M3ASTOther', '-Xplugin:M3AST']
+    }
+
+    def "does not enable M3AST when main options are excluded"() {
+        given:
+        spec.compileOptions.m3AstEnabled = true
+
+        expect:
+        builder.includeMainOptions(false).includeClasspath(false).build().empty
+    }
+
+    def "keeps the annotation processor path when M3AST is enabled"() {
+        given:
+        spec.compileOptions.m3AstEnabled = true
+        spec.annotationProcessorPath = [new File('/processor/path')]
+
+        expect:
+        builder.build() == ['-g', '-sourcepath', '', '-processorpath', new File('/processor/path').path,
+                            USE_UNSHARED_COMPILER_TABLE_OPTION, '-classpath', '', '-Xplugin:M3AST']
+    }
+
     def "generates -source option when current Jvm Version is used"() {
         spec.sourceCompatibility = JavaVersion.current().toString()
 

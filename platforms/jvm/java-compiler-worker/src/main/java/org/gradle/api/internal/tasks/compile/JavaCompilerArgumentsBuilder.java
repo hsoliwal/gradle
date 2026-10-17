@@ -34,6 +34,7 @@ public class JavaCompilerArgumentsBuilder {
     public static final Logger LOGGER = LoggerFactory.getLogger(JavaCompilerArgumentsBuilder.class);
     public static final String USE_UNSHARED_COMPILER_TABLE_OPTION = "-XDuseUnsharedTable=true";
     public static final String EMPTY_SOURCE_PATH_REF_DIR = "emptySourcePathRef";
+    private static final String M3_AST_PLUGIN_OPTION = "-Xplugin:M3AST";
 
     private final JavaCompileSpec spec;
 
@@ -91,6 +92,11 @@ public class JavaCompilerArgumentsBuilder {
 
         validateCompilerArgs(compArgs);
 
+        if (includeMainOptions && spec.getCompileOptions().isM3AstEnabled()
+            && compArgs.stream().noneMatch(JavaCompilerArgumentsBuilder::selectsM3Ast)) {
+            compArgs.add(M3_AST_PLUGIN_OPTION);
+        }
+
         addLauncherOptions();
         addMainOptions(compArgs);
         addClasspath();
@@ -98,6 +104,12 @@ public class JavaCompilerArgumentsBuilder {
         addSourceFiles();
 
         return args;
+    }
+
+    private static boolean selectsM3Ast(String argument) {
+        return argument.equals(M3_AST_PLUGIN_OPTION)
+            || (argument.startsWith(M3_AST_PLUGIN_OPTION) && argument.length() > M3_AST_PLUGIN_OPTION.length()
+                && Character.isWhitespace(argument.charAt(M3_AST_PLUGIN_OPTION.length())));
     }
 
     private void validateCompilerArgs(List<String> compilerArgs) {
