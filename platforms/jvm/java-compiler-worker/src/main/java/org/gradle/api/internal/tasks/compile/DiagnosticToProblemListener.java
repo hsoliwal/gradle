@@ -78,6 +78,11 @@ public class DiagnosticToProblemListener implements DiagnosticListener<JavaFileO
 
     @Override
     public void report(Diagnostic<? extends JavaFileObject> diagnostic) {
+        report(diagnostic, diagnostic);
+    }
+
+    /** Retains the compiler's rich diagnostic while projecting only its outward source location. */
+    void report(Diagnostic<? extends JavaFileObject> diagnostic, Diagnostic<? extends JavaFileObject> sourceDiagnostic) {
         switch (diagnostic.getKind()) {
             case ERROR:
                 errorCount++;
@@ -93,7 +98,7 @@ public class DiagnosticToProblemListener implements DiagnosticListener<JavaFileO
         ProblemId id = id(diagnostic);
         Problem reportedProblem = problemReporter.internalCreate(spec -> {
             spec.id(id);
-            buildProblem(diagnostic, spec);
+            buildProblem(diagnostic, sourceDiagnostic, spec);
         });
         problemsReported.add(reportedProblem);
     }
@@ -192,8 +197,13 @@ public class DiagnosticToProblemListener implements DiagnosticListener<JavaFileO
 
     @VisibleForTesting
     void buildProblem(Diagnostic<? extends JavaFileObject> diagnostic, ProblemSpecInternal spec) {
+        buildProblem(diagnostic, diagnostic, spec);
+    }
+
+    private void buildProblem(Diagnostic<? extends JavaFileObject> diagnostic,
+                              Diagnostic<? extends JavaFileObject> sourceDiagnostic, ProblemSpecInternal spec) {
         maybeAddSolution(diagnostic, spec);
-        addLocations(diagnostic, spec);
+        addLocations(sourceDiagnostic, spec);
 
         String label = toFormattedLabel(diagnostic);
         addContextualLabel(label, spec);

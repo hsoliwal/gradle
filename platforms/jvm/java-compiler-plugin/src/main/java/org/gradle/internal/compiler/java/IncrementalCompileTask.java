@@ -25,6 +25,7 @@ import javax.tools.JavaCompiler;
 import java.io.File;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -49,6 +50,7 @@ public class IncrementalCompileTask implements JavaCompiler.CompilationTask {
     private final Consumer<String> classBackupService;
     private final ConstantDependentsConsumer constantDependentsConsumer;
     private final JavacTask delegate;
+    private final JavaCompiler.CompilationTask execution;
 
     public IncrementalCompileTask(JavaCompiler.CompilationTask delegate,
                                   Function<File, Optional<String>> relativize,
@@ -56,10 +58,25 @@ public class IncrementalCompileTask implements JavaCompiler.CompilationTask {
                                   Consumer<Map<String, Set<String>>> classNamesConsumer,
                                   BiConsumer<String, String> publicDependentDelegate,
                                   BiConsumer<String, String> privateDependentDelegate) {
+        this(delegate, relativize, classBackupService, classNamesConsumer, publicDependentDelegate, privateDependentDelegate, delegate);
+    }
+
+    /**
+     * Preserve the actual javac task for Trees/Elements and listeners while selecting
+     * an explicit execution adapter for that same task.
+     */
+    public IncrementalCompileTask(JavaCompiler.CompilationTask delegate,
+                                  Function<File, Optional<String>> relativize,
+                                  Consumer<String> classBackupService,
+                                  Consumer<Map<String, Set<String>>> classNamesConsumer,
+                                  BiConsumer<String, String> publicDependentDelegate,
+                                  BiConsumer<String, String> privateDependentDelegate,
+                                  JavaCompiler.CompilationTask execution) {
         this.relativize = relativize;
         this.classBackupService = classBackupService;
         this.classNameConsumer = classNamesConsumer;
         this.constantDependentsConsumer = new ConstantDependentsConsumer(publicDependentDelegate, privateDependentDelegate);
+        this.execution = Objects.requireNonNull(execution, "execution");
         if (delegate instanceof JavacTask) {
             this.delegate = (JavacTask) delegate;
         } else {
@@ -89,7 +106,7 @@ public class IncrementalCompileTask implements JavaCompiler.CompilationTask {
         delegate.addTaskListener(classNameCollector);
         delegate.addTaskListener(constantsCollector);
         try {
-            return delegate.call();
+            return execution.call();
         } finally {
             classNameConsumer.accept(classNameCollector.getMapping());
         }

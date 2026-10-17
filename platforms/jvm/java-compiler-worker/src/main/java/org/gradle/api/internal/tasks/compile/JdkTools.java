@@ -140,6 +140,24 @@ public class JdkTools {
                 (BiConsumer<String, String>) constantsAnalysisResult::addPrivateDependent
             );
         }
+
+        @Override
+        public JavaCompiler.CompilationTask makeIncremental(JavaCompiler.CompilationTask originalTask,
+                                                            JavaCompiler.CompilationTask executionTask,
+                                                            Map<String, Set<String>> sourceToClassMapping,
+                                                            ConstantsAnalysisResult constantsAnalysisResult,
+                                                            CompilationSourceDirs compilationSourceDirs,
+                                                            CompilationClassBackupService classBackupService) {
+            ensureCompilerTask();
+            return DirectInstantiator.instantiate(incrementalCompileTaskClass, originalTask,
+                (Function<File, Optional<String>>) compilationSourceDirs::relativize,
+                (Consumer<String>) classBackupService::maybeBackupClassFile,
+                (Consumer<Map<String, Set<String>>>) sourceToClassMapping::putAll,
+                (BiConsumer<String, String>) constantsAnalysisResult::addPublicDependent,
+                (BiConsumer<String, String>) constantsAnalysisResult::addPrivateDependent,
+                executionTask
+            );
+        }
     }
 
     private void ensureCompilerTask() {

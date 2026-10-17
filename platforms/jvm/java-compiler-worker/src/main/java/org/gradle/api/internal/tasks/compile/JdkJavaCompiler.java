@@ -15,7 +15,9 @@
  */
 package org.gradle.api.internal.tasks.compile;
 
+import com.sun.source.util.JavacTask;
 import com.sun.tools.javac.util.Context;
+import com.sun.tools.javac.util.Log;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.internal.tasks.compile.processing.AnnotationProcessorDeclaration;
 import org.gradle.api.internal.tasks.compile.reflect.GradleStandardJavaFileManager;
@@ -32,10 +34,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.tools.DiagnosticListener;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
+import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.Iterator;
@@ -107,6 +111,9 @@ public class JdkJavaCompiler implements Compiler<JavaCompileSpec>, Serializable 
         Charset charset = Optional.ofNullable(compileOptions.getEncoding())
             .map(Charset::forName)
             .orElse(null);
+        if (M3JavacASTTask.requested(options)) {
+            return createM3CompileTask(spec, result, options, compiler, charset);
+        }
         StandardJavaFileManager standardFileManager = compiler.getStandardFileManager(diagnosticToProblemListener, null, charset);
 
         Iterable<? extends JavaFileObject> compilationUnits = standardFileManager.getJavaFileObjectsFromFiles(spec.getSourceFiles());
@@ -127,6 +134,46 @@ public class JdkJavaCompiler implements Compiler<JavaCompileSpec>, Serializable 
         task = new AnnotationProcessingCompileTask(task, annotationProcessors, spec.getAnnotationProcessorPath(), result.getAnnotationProcessingResult());
         task = new ResourceCleaningCompilationTask(task, fileManager);
         return task;
+    }
+
+    @SuppressWarnings("DefaultCharset")
+    private JavaCompiler.CompilationTask createM3CompileTask(JavaCompileSpec spec, ApiCompilerResult result,
+                                                            List<String> options, ContextAwareJavaCompiler compiler,
+                                                            Charset charset) {
+        M3JavacASTTask m3 = M3JavacASTTask.open(options);
+        StandardJavaFileManager standardFileManager = null;
+        try {
+            DiagnosticListener<JavaFileObject> listener = m3.listener(diagnosticToProblemListener, context);
+            standardFileManager = compiler.getStandardFileManager(listener, null, charset);
+            Iterable<? extends JavaFileObject> units = standardFileManager.getJavaFileObjectsFromFiles(spec.getSourceFiles());
+            units = m3.prepare(units, charset == null ? Charset.defaultCharset() : charset, standardFileManager);
+            boolean hasEmptySourcepaths = JavaVersion.current().isJava9Compatible() && emptySourcepathIn(options);
+            JavaFileManager fileManager = m3.fileManager(GradleStandardJavaFileManager.wrap(standardFileManager,
+                DefaultClassPath.of(spec.getAnnotationProcessorPath()), hasEmptySourcepaths));
+            JavacTask original = compiler.getTask(null, fileManager, listener, options, spec.getClassesToProcess(), units, context);
+            // Retain Log itself: javac clears its task Context during generate/cleanup.
+            Log log = Log.instance(context);
+            JavaCompiler.CompilationTask task = m3.attach(original, () -> log.nerrors);
+            if (compiler instanceof IncrementalCompilationAwareJavaCompiler) {
+                task = ((IncrementalCompilationAwareJavaCompiler) compiler).makeIncremental(
+                    original, task, result.getSourceClassesMapping(), result.getConstantsAnalysisResult(),
+                    new CompilationSourceDirs(spec), new CompilationClassBackupService(spec, result)
+                );
+            }
+            task = new AnnotationProcessingCompileTask(task, spec.getEffectiveAnnotationProcessors(),
+                spec.getAnnotationProcessorPath(), result.getAnnotationProcessingResult());
+            return new ResourceCleaningCompilationTask(m3.closeAfter(task), fileManager);
+        } catch (RuntimeException | Error failure) {
+            m3.closeAfterFailure(failure);
+            if (standardFileManager != null) {
+                try {
+                    standardFileManager.close();
+                } catch (IOException cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+            }
+            throw failure;
+        }
     }
 
     private static boolean emptySourcepathIn(List<String> options) {
