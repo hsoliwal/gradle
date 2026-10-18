@@ -1,0 +1,74 @@
+{
+  "schema": "M3_NATIVE_FORK_RECIPE_CUSTODY_V1",
+  "canonical_repository": "hsoliwal/com.synexia",
+  "canonical_crate_path": "synexia-openrewrite-recipes/recipe-crates/m3-ast-build-reverse-20261017",
+  "canonical_pull_request": "https://github.com/hsoliwal/com.synexia/pull/12061",
+  "original_engine_commit": "e244d68fdee88d4a406be48e4ff1d31b60a17988",
+  "effective_owner_dependency_commit": "c05613123249b74ac4243fe0b924b68494116931",
+  "repository": "hsoliwal/gradle",
+  "product_source_epoch": "4c8b4c56d7960a1aa5e2d7b246c47b37fdf72fd7",
+  "dataset": "gradle-fork",
+  "product_source_targets": 8,
+  "dataset_sdk_inputs_sha256": "1483de194922ea2f0e50da1184dea65ac502ae16532d219f2861efe9ae40389c",
+  "dataset_sdk_results_sha256": "b6e0fb33c30334bf5a44d55d193307c5eb24dd4f5db9bf18e371189c36463b3b",
+  "owners": [
+    {
+      "canonical_path": "synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3HashPinnedJavaSnapshotRecipe.java",
+      "mirror_path": "sdk-owner/src/main/java/com/synexia/rewrite/M3HashPinnedJavaSnapshotRecipe.java",
+      "origin_git_blob_sha1": "39c3a6c99f94ab53eb1eab8bc2eb8c691638cd35",
+      "origin_sha256": "750f2e8266ca308369daea14d2bb6db9f3ec90a64e45ee7d5aa1cb5192028347",
+      "effective_git_blob_sha1": "3bdeeaea9a212fe0c7d1f544510f87c4cd49eb40",
+      "effective_sha256": "67f7b81126e4736c7b61b444fa6545153a61e23c012975ca796fcee623ab6625",
+      "license": "Apache-2.0",
+      "origin_url": "https://github.com/hsoliwal/com.synexia/blob/e244d68fdee88d4a406be48e4ff1d31b60a17988/synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3HashPinnedJavaSnapshotRecipe.java"
+    },
+    {
+      "canonical_path": "synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3HashPinnedTextSnapshotRecipe.java",
+      "mirror_path": "sdk-owner/src/main/java/com/synexia/rewrite/M3HashPinnedTextSnapshotRecipe.java",
+      "origin_git_blob_sha1": "c1ce1408b78201139221093076a454ae21169f72",
+      "origin_sha256": "504f1616b68fbd10c3df38adaecd0e9d90de5535d791c8c1b57958b7455c9bd3",
+      "effective_git_blob_sha1": "9d0788d3717e017d58345c5c3e62022c2915a3c8",
+      "effective_sha256": "fbf1ea9efad784afef5ac201ff7fc324551f77a099ebfe2f79b70c3a17c731ef",
+      "license": "Apache-2.0",
+      "origin_url": "https://github.com/hsoliwal/com.synexia/blob/e244d68fdee88d4a406be48e4ff1d31b60a17988/synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3HashPinnedTextSnapshotRecipe.java"
+    },
+    {
+      "canonical_path": "synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3ScopeInference.java",
+      "mirror_path": "sdk-owner/src/main/java/com/synexia/rewrite/M3ScopeInference.java",
+      "origin_git_blob_sha1": "d24729950508857280ea1b56d4e930f05137ec85",
+      "origin_sha256": "13660b59f60ec2941ec19e9bc8964ffd4b04689cdc33cd19711fba14b8da09a4",
+      "effective_git_blob_sha1": "d24729950508857280ea1b56d4e930f05137ec85",
+      "effective_sha256": "13660b59f60ec2941ec19e9bc8964ffd4b04689cdc33cd19711fba14b8da09a4",
+      "license": "Apache-2.0",
+      "origin_url": "https://github.com/hsoliwal/com.synexia/blob/e244d68fdee88d4a406be48e4ff1d31b60a17988/synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3ScopeInference.java"
+    },
+    {
+      "canonical_path": "synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3EditScope.java",
+      "mirror_path": "sdk-owner/src/main/java/com/synexia/rewrite/M3EditScope.java",
+      "origin_git_blob_sha1": "274360816db1e44a2f1796a3bc5cdeff6b0ce6db",
+      "origin_sha256": "962d37d62d740c3e8055c365a048ae7ee0479c26a9f6bbfe741e540d6c1134ab",
+      "effective_git_blob_sha1": "274360816db1e44a2f1796a3bc5cdeff6b0ce6db",
+      "effective_sha256": "962d37d62d740c3e8055c365a048ae7ee0479c26a9f6bbfe741e540d6c1134ab",
+      "license": "Apache-2.0",
+      "origin_url": "https://github.com/hsoliwal/com.synexia/blob/e244d68fdee88d4a406be48e4ff1d31b60a17988/synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3EditScope.java"
+    }
+  ],
+  "transfer": "A separate canonical gradle-custody dataset emits this finite source mirror. The embedded native dataset does not target this directory.",
+  "provenance_scope": "The dependency commit pins the four effective reusable owners. Native dataset changes and custody transfer are published as later source commits with these exact source identities.",
+  "current_source_custody": {
+    "canonical_repository": "hsoliwal/com.synexia",
+    "canonical_source_revision": "215546d1ca0e724eb2c8e2e8ef6b4adce724733a",
+    "canonical_source_custody_path": "synexia-openrewrite-recipes/recipe-crates/public-fork-home-20261018/SOURCE_CUSTODY.tsv",
+    "canonical_source_custody_sha256": "ebcfbd42a49eec806f0a4572af731828deda41f22c17250d34d49af985d78f1d",
+    "canonical_snapshot_paths": [
+      "synexia-openrewrite-recipes/vendor/public-forks/hsoliwal/gradle/default-419a77cf61af",
+      "synexia-openrewrite-recipes/vendor/public-forks/hsoliwal/gradle/default-47f82a74e0c0",
+      "synexia-openrewrite-recipes/vendor/public-forks/hsoliwal/gradle/pr-2-82cacbb68140",
+      "synexia-openrewrite-recipes/vendor/public-forks/hsoliwal/gradle/pr-3-7108faa007c4"
+    ],
+    "binding_receipt": ".m3/SYNEXIA_RECIPE_SOURCE_CUSTODY_20261018.json",
+    "existing_owner_and_dataset_fields": "RETAINED_QUALIFIED_PROVIDER_IDENTITIES",
+    "mirror_retention": "BUILD_AND_PROOF_CALLERS_PENDING_QUALIFIED_HANDOFF",
+    "product_promotion_authority": false
+  }
+}
