@@ -54,5 +54,21 @@
     }
   ],
   "transfer": "A separate canonical gradle-custody dataset emits this finite source mirror. The embedded native dataset does not target this directory.",
-  "provenance_scope": "The dependency commit pins the four effective reusable owners. Native dataset changes and custody transfer are published as later source commits with these exact source identities."
+  "provenance_scope": "The dependency commit pins the four effective reusable owners. Native dataset changes and custody transfer are published as later source commits with these exact source identities.",
+  "current_source_custody": {
+    "canonical_repository": "hsoliwal/com.synexia",
+    "canonical_source_revision": "215546d1ca0e724eb2c8e2e8ef6b4adce724733a",
+    "canonical_source_custody_path": "synexia-openrewrite-recipes/recipe-crates/public-fork-home-20261018/SOURCE_CUSTODY.tsv",
+    "canonical_source_custody_sha256": "ebcfbd42a49eec806f0a4572af731828deda41f22c17250d34d49af985d78f1d",
+    "canonical_snapshot_paths": [
+      "synexia-openrewrite-recipes/vendor/public-forks/hsoliwal/gradle/default-419a77cf61af",
+      "synexia-openrewrite-recipes/vendor/public-forks/hsoliwal/gradle/default-47f82a74e0c0",
+      "synexia-openrewrite-recipes/vendor/public-forks/hsoliwal/gradle/pr-2-82cacbb68140",
+      "synexia-openrewrite-recipes/vendor/public-forks/hsoliwal/gradle/pr-3-7108faa007c4"
+    ],
+    "binding_receipt": ".m3/SYNEXIA_RECIPE_SOURCE_CUSTODY_20261018.json",
+    "existing_owner_and_dataset_fields": "RETAINED_QUALIFIED_PROVIDER_IDENTITIES",
+    "mirror_retention": "BUILD_AND_PROOF_CALLERS_PENDING_QUALIFIED_HANDOFF",
+    "product_promotion_authority": false
+  }
 }
