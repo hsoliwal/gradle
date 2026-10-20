@@ -111,3 +111,63 @@ review; ordinary upstream Gradle distributions do not contain this custom hook.
 Source files enter as exact leaves. Wider L0–L5 facts/file/package/module/project/
 repository summaries remain with the shared AST owner and are requested upward
 from those leaves. Gradle retains its original build-task and incremental model.
+
+## Canonical source and class content deltas
+
+M3JDK21 owns content comparison in `com.m3.file.M3File`, implemented at
+`m3/file/src/main/java/com/m3/file/M3File.java` in the product repository.
+Its content fingerprints provide a common input for compiler, build, and IDE
+consumers. Comparing retained fingerprints needs no source or class-file
+parser. Capturing a fresh fingerprint can still require reading its content.
+
+The `contentDelta` contract returns compact state flags:
+
+| Flag | Value | Meaning |
+| --- | --- | --- |
+| `ADDED` | 1 | Previously known absent; now present. |
+| `REMOVED` | 2 | Previously present; now known absent. |
+| `CONTENT_CHANGED` | 4 | Both present with different recorded fingerprints. |
+
+A `null` fingerprint means known absence, never an unread or inaccessible
+input or a failed capture. Zero describes equal recorded content states.
+Filesystem modification time and size cannot prove that bytes are unchanged.
+A content fingerprint also does not make a concurrently modified file an
+atomic snapshot.
+
+Source bytes, class bytes, and build context are distinct inputs. Equal source
+fingerprints do not preserve semantic facts after compiler options, ordered
+classpath/module-path resolution, processors, or plugins change. Changed class
+bytes require appropriate analysis; a content digest does not determine ABI,
+inlined constants, annotations, generated resources, or runtime behavior.
+Resources and required outputs retain their own task contracts.
+
+Gradle already caches class analysis by class-file hash and classpath analysis
+by filesystem snapshot hash. The receiving work must reuse those owners:
+
+| Responsibility | Existing owner |
+| --- | --- |
+| Actual compiler task and incremental listeners | `JdkJavaCompiler`, `IncrementalCompileTask` |
+| Original-task consumer admission | `M3JavacASTProvider`, `M3JavacASTTask` |
+| Provider assets and options as task inputs | `M3ASTCompilerArguments` |
+| Source/classpath change planning | `JavaRecompilationSpecProvider`, `CurrentCompilationAccess` |
+| Affected compilation and successful result storage | `SelectiveCompiler`, `IncrementalResultStoringCompiler` |
+
+The first three worker owners live in this subproject's
+`src/main/java/org/gradle/api/internal/tasks/compile`; `IncrementalCompileTask`
+lives in `platforms/jvm/java-compiler-plugin`. Planning and result storage live
+under `platforms/jvm/language-java/src/main/java/org/gradle/api/internal/tasks/compile/incremental`.
+The existing `M3JavacASTTaskTest` and `JavaCompilerArgumentsBuilderTest`
+qualify compiler admission and option behavior.
+
+This change documents the M3File contract; it does not install a delta receiver
+in Gradle's planner. The provider is reached after Gradle has selected work,
+so collecting facts there alone cannot establish additional task skipping.
+A future receiver must preserve processor invalidation, multiple classes per
+source, deleted outputs, compile transactions, and existing fallback decisions.
+Retain the worker's current Java compatibility and original task ownership.
+
+See the upstream
+[incremental compilation and compile avoidance documentation](https://docs.gradle.org/current/userguide/java_plugin.html#sec:incremental_compile)
+and [task input/output checks](https://docs.gradle.org/current/userguide/incremental_build.html)
+for the existing decisions. Actual distribution tests must establish any new
+build avoidance or performance claim.
