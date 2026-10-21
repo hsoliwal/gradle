@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Hitesh Soliwal and contributors
+# SPDX-License-Identifier: Apache-2.0
+name: Gradle M3JDK native build tool consumer
+on:
+  pull_request:
+    paths:
+      - 'platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/M3JdkDependencyTool.java'
+      - 'platforms/jvm/java-compiler-worker/src/test/java/org/gradle/api/internal/tasks/compile/M3JdkDependencyToolTest.java'
+      - '.github/workflows/m3-gradle-buildtools.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-gradle-compiler-worker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Exercise the original Gradle worker JUnit test
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :java-compiler-worker:test \
+            --tests '*M3JdkDependencyToolTest'
