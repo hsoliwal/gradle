@@ -19,6 +19,7 @@ public class M3JdkDependencyToolTest {
     private static final class NativeProvider implements ToolProvider {
         int called;
         boolean badSchema;
+        int invalidRowsMode;
         @Override public String name() { return "m3-class-deps"; }
         @Override public int run(PrintWriter out, PrintWriter err, String... args) {
             called++;
@@ -27,7 +28,9 @@ public class M3JdkDependencyToolTest {
                 String digest = java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                         .digest(Files.readAllBytes(file)));
                 out.println((badSchema ? "FORGED" : "M3JDK21_CLASS_DEPS_V1") + "\t"
-                        + (args.length == 2 ? "PUBLIC_API" : "CLASS") + "\t" + digest + "\tcC5Qcm9iZQ\t0");
+                        + (args.length == 2 ? "PUBLIC_API" : "CLASS") + "\t" + digest
+                        + "\tcC5Qcm9iZQ\t" + (invalidRowsMode == 0 ? 0 : 1));
+                if (invalidRowsMode == 2) out.println("X\tdGVzdA");
                 return 0;
             } catch (Exception failure) { err.println("native failure"); return 1; }
         }
@@ -62,6 +65,13 @@ public class M3JdkDependencyToolTest {
         assertThrows(IOException.class, () -> M3JdkDependencyTool.inspect(current, classFile, false,
                 () -> Optional.of(sdk), current));
         sdk.badSchema = false;
+        sdk.invalidRowsMode = 1;
+        assertThrows(IOException.class, () -> M3JdkDependencyTool.inspect(current, classFile, false,
+                () -> Optional.of(sdk), current));
+        sdk.invalidRowsMode = 2;
+        assertThrows(IOException.class, () -> M3JdkDependencyTool.inspect(current, classFile, false,
+                () -> Optional.of(sdk), current));
+        sdk.invalidRowsMode = 0;
         Path link = fixture.resolve("Alias.class"); Files.createSymbolicLink(link, classFile);
         assertThrows(IOException.class, () -> M3JdkDependencyTool.inspect(current, link, false,
                 () -> Optional.of(sdk), current));
@@ -70,7 +80,7 @@ public class M3JdkDependencyToolTest {
                     @Override public String name() { return "wrong-tool"; }
                     @Override public int run(PrintWriter out, PrintWriter err, String... args) { return 0; }
                 }), current));
-        assertEquals(1, sdk.called);
+        assertEquals(3, sdk.called);
         ToolProvider mutator = new ToolProvider() {
             @Override public String name() { return "m3-class-deps"; }
             @Override public int run(PrintWriter out, PrintWriter err, String... args) {
