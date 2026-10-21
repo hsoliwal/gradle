@@ -78,13 +78,41 @@ public final class M3JdkDependencyTool {
         int end = facts.indexOf('\n');
         if (end < 0) throw new IOException("missing SDK dependency receipt header");
         String[] fields = facts.substring(0, end).split("\t", -1);
-        if (fields.length != 5 || !fields[2].matches("[0-9a-f]{64}")) {
+        if (fields.length != 5 || !fields[2].matches("[0-9a-f]{64}")
+                || !fields[3].matches("[A-Za-z0-9_-]+")) {
             throw new IOException("invalid SDK dependency receipt identity");
         }
+        validateRows(facts, end + 1, fields[4]);
         if (!sha256(classFile).equals(fields[2])) {
             throw new IOException("class changed during native SDK dependency analysis");
         }
         return Optional.of(facts);
+    }
+
+    /** Verify bounded provider rows before giving plugins the claimed SDK facts. */
+    private static void validateRows(String facts, int start, String declared) throws IOException {
+        final int expected;
+        try { expected = Integer.parseInt(declared); }
+        catch (NumberFormatException invalid) { throw new IOException("invalid class dependency count", invalid); }
+        if (expected < 0 || expected > 131_072) throw new IOException("class dependency row budget exceeded");
+        int found = 0;
+        while (start < facts.length()) {
+            int end = facts.indexOf('\n', start);
+            if (end < 0 || end < start + 3 || facts.charAt(start) != 'D'
+                    || facts.charAt(start + 1) != '\t') {
+                throw new IOException("malformed native class dependency row");
+            }
+            for (int pos = start + 2; pos < end; pos++) {
+                char ch = facts.charAt(pos);
+                if (!(ch >= 'A' && ch <= 'Z') && !(ch >= 'a' && ch <= 'z')
+                        && !(ch >= '0' && ch <= '9') && ch != '_' && ch != '-') {
+                    throw new IOException("malformed native class dependency name");
+                }
+            }
+            if (++found > expected) throw new IOException("excess native dependency rows");
+            start = end + 1;
+        }
+        if (found != expected) throw new IOException("incomplete native dependency receipt");
     }
 
     private static String sha256(Path classFile) throws IOException {
