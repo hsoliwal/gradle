@@ -1,1 +1,0 @@
-rootProject.name = "validate-plugins-config"

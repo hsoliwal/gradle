@@ -1,9 +1,0 @@
-// tag::settings-plugin[]
-pluginManagement {
-    includeBuild("./my-settings-plugin")
-}
-
-plugins {
-    id("my-settings-plugin")
-}
-// end::settings-plugin[]

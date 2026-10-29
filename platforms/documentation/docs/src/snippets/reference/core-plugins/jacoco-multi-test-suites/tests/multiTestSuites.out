@@ -1,3 +1,0 @@
-> Task :test
-> Task :integrationTest
-> Task :codeCoverageReport

@@ -1,2 +1,0 @@
-// For GenerateAutoTestedSamplesTestTask
-// Without this file, if the sourceSet is empty, no AutoTestedSamplesTest will be generated

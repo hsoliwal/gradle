@@ -1,3 +1,0 @@
-runtimeClasspath - Runtime classpath of source set 'main'.
-+--- com.example:lib:[1, 2) -> 1.1
-\--- com.example:other:[1, 2) -> 1.1

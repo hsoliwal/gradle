@@ -1,7 +1,0 @@
-# SPDX-FileCopyrightText: 2026 Hitesh Soliwal and Contributors to the Synexia Project
-# SPDX-License-Identifier: Apache-2.0
-m3/recipe-custody/evidence/runtime/EXECUTION_LOGS.json	0644
-m3/recipe-custody/evidence/runtime/FULL_SOURCE_GATE_STATUS.json	0644
-m3/recipe-custody/evidence/runtime/NATIVE_RUNTIME_RECEIPT.json	0644
-m3/recipe-custody/evidence/runtime/SDK_SOURCE_LINK.json	0644
-m3/recipe-custody/evidence/runtime/SOURCE_REBUILD_RECEIPT.json	0644

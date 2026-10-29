@@ -1,7 +1,0 @@
-configurations {
-    create('default')
-}
-
-dependencies {
-    add('default', 'test:projectA:2.0')
-}

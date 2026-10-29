@@ -1,2 +1,0 @@
-[libraries]
-my-lib = { module = "com.example:my-lib", version = "1.0.0" }

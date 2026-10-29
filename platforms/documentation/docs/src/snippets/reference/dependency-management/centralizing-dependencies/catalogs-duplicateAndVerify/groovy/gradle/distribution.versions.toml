@@ -1,7 +1,0 @@
-# tag::versions[]
-[versions]
-errorProne = "2.28.0"
-# end::versions[]
-
-[libraries]
-errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorProne" }

@@ -1,8 +1,0 @@
-m3/README.md	0644
-m3/verify_ast_consumer.py	0644
-platforms/documentation/docs/src/docs/dsl/org.gradle.api.tasks.compile.CompileOptions.xml	0644
-platforms/documentation/docs/src/docs/release/notes.md	0644
-platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/JavaCompilerArgumentsBuilder.java	0644
-platforms/jvm/java-compiler-worker/src/main/java/org/gradle/api/internal/tasks/compile/MinimalJavaCompileOptions.java	0644
-platforms/jvm/java-compiler-worker/src/test/groovy/org/gradle/api/internal/tasks/compile/JavaCompilerArgumentsBuilderTest.groovy	0644
-platforms/jvm/jvm-compiler-worker/src/main/java/org/gradle/api/tasks/compile/CompileOptions.java	0644

@@ -1,7 +1,0 @@
-plugins {
-    // none
-}
-
-repositories {
-    // none
-}

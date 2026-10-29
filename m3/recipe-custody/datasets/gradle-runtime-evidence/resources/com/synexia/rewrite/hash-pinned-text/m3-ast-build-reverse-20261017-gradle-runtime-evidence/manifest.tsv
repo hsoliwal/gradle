@@ -1,7 +1,0 @@
-# SPDX-FileCopyrightText: 2026 Hitesh Soliwal and Contributors to the Synexia Project
-# SPDX-License-Identifier: Apache-2.0
-m3/recipe-custody/evidence/runtime/EXECUTION_LOGS.json	ABSENT	3a5fe8df32029710e7df390fa0ed2506b814a56d49671811c7017ca15ecc21af	0001-EXECUTION_LOGS.json.txt
-m3/recipe-custody/evidence/runtime/FULL_SOURCE_GATE_STATUS.json	ABSENT	0326a62e01c2370e27621ad0b1a0948f0bebaf8b1fac97b3affc340b006f3182	0002-FULL_SOURCE_GATE_STATUS.json.txt
-m3/recipe-custody/evidence/runtime/NATIVE_RUNTIME_RECEIPT.json	ABSENT	0b11438d7894c921fa461063a03b6413e81be0ead2f02cced25dc41e25c01441	0003-NATIVE_RUNTIME_RECEIPT.json.txt
-m3/recipe-custody/evidence/runtime/SDK_SOURCE_LINK.json	ABSENT	a4c799ebaaef824c8833335a1cab4b4e5c9c20d2571099ef3bbf2203da3df7ac	0004-SDK_SOURCE_LINK.json.txt
-m3/recipe-custody/evidence/runtime/SOURCE_REBUILD_RECEIPT.json	ABSENT	cca4cbca8c43b1a2c48ce9870f518e1282611a773d29f5e7ddfd8486e71c0921	0005-SOURCE_REBUILD_RECEIPT.json.txt

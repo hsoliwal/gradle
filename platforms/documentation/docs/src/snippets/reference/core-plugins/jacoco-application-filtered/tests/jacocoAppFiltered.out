@@ -1,3 +1,0 @@
-> Task :run
-Some output from 'MyMain'
-> Task :applicationCodeCoverageReport

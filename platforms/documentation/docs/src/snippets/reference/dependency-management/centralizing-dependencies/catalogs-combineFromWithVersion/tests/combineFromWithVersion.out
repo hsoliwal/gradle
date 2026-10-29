@@ -1,3 +1,0 @@
-compileClasspath - Compile classpath for source set 'main'.
-+--- org.codehaus.groovy:groovy:3.0.6
-\--- com.google.errorprone:error_prone_core:2.28.0

@@ -1,9 +1,0 @@
-type: specs.openrewrite.org/v1beta/recipe
-name: com.synexia.m3jdk.AstBuildReverse20261017
-displayName: M3 shared AST and optional build integration
-description: Replays the sealed task through the existing canonical snapshot owners.
-recipeList:
-  - com.synexia.rewrite.M3HashPinnedJavaSnapshotRecipe:
-      crateName: m3-ast-build-reverse-20261017-gradle-shared-ast
-  - com.synexia.rewrite.M3HashPinnedTextSnapshotRecipe:
-      crateName: m3-ast-build-reverse-20261017-gradle-shared-ast
