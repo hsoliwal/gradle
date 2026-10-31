@@ -32,6 +32,9 @@ The diagram below shows the current set of architecture modules and platforms:
     ide["ide module"]
     style ide stroke:#1abc9c,fill:#b1f4e7,stroke-width:2px,color:#000;
 
+    observability["observability module"]
+    style observability stroke:#1abc9c,fill:#b1f4e7,stroke-width:2px,color:#000;
+
     subgraph software["software platform"]
     end
     style software fill:#c2e0f4,stroke:#3498db,stroke-width:2px,color:#000;
@@ -48,6 +51,14 @@ The diagram below shows the current set of architecture modules and platforms:
     style extensibility fill:#c2e0f4,stroke:#3498db,stroke-width:2px,color:#000;
     extensibility --> core
     extensibility --> jvm
+
+    subgraph dsl["dsl platform"]
+    end
+    style dsl fill:#c2e0f4,stroke:#3498db,stroke-width:2px,color:#000;
+    dsl --> core
+    dsl --> software
+    dsl --> jvm
+    dsl --> extensibility
 
     subgraph native["native platform"]
     end
@@ -103,6 +114,10 @@ This is a platform that builds on the core and software platforms to add support
 
 This platform provides specific support for Swift, C++ and C.
 
+### DSL platform
+
+This is a platform that builds on the core, software, JVM and extensibility platforms. It provides the Groovy DSL and the Kotlin DSL. This covers the Groovy script compiler and the base classes of Groovy build scripts, the Kotlin DSL plugins, Kotlin precompiled script plugins and the tooling models that IDEs use for Kotlin build scripts. Core keeps the DSL-agnostic parts, such as script sources and the selection of a DSL by file extension.
+
 ## Cross-cutting architecture modules
 
 There are some additional cross-cutting architecture modules that aren't platforms:
@@ -114,6 +129,10 @@ Provides cross-cutting integration with Gradle's commercial product.
 ### IDE integration
 
 Provides cross-cutting integration with IDEs and other tooling.
+
+### Observability
+
+Provides cross-cutting support for reporting what happens during a build. This includes logging, build operations, the Problems API, their implementations, the rendering of problems and the shared HTML report rendering.
 
 ### Build infrastructure
 
