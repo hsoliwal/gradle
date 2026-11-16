@@ -51,6 +51,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.setDescription("Review an existing digest-pinned Maven M3 analyzer report");
             task.getPublishProblems().convention(false);
             task.getFailOnReportedErrors().convention(false);
+            task.getFailOnIntroducedErrors().convention(false);
         });
 
         // An original OpenRewrite plugin owns recipe discovery, dry-run, and apply.
