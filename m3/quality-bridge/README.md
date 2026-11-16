@@ -254,3 +254,33 @@ refused before a change decision. Report contents are not reinterpreted as
 a compiler execution decision or build-cache admission. No `check` task
 dependency or report baseline is added by default.
 
+
+
+## PMD CPD duplicate-code report import
+
+The original Maven analyzer converter also supports CPD, including the
+current PMD namespaced pmd-cpd report and the legacy unnamespaced
+xmlold renderer. Gradle does **not** implement or copy a CPD parser:
+the existing opt-in m3NormalizeAnalyzerXml task invokes the same
+SHA-256-pinned external Maven adapter JAR with format set to CPD.
+
+    tasks.named('m3NormalizeAnalyzerXml') {
+        format.set('CPD')
+        originalStatus.set('PARTIAL') // original CPD owner must attest COMPLETE
+        originalXml.set(layout.projectDirectory.file('target/cpd.xml'))
+    }
+
+Every original reported duplicate location becomes one M3 v1
+finding with its source path and line/column. The original CPD group
+size in lines/tokens and a canonical group SHA-256 are retained
+without copying the potentially sensitive source code fragment.
+WARNING is an adapter **presentation-only** severity; the original
+CPD minimum token threshold, duplicate detection policy and plugin
+exit status remain authoritative. Recoverable CPD processing errors
+forbid an adapter status of COMPLETE.
+
+The original CPD Maven/Gradle plugin is never started by merely
+applying this bridge. Neither normalizing the report nor reporting
+new findings can skip compilation or authorize build-cache reuse.
+Optional Problems API display and baseline comparisons use the
+existing native Gradle tasks and original v1 byte format.

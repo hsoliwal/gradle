@@ -49,6 +49,21 @@ final class M3AnalyzerAdapterCommandsTest {
     }
 
     @Test
+    void originalCpdXmlUsesExistingPinnedJavaConverterWithoutASecondParser() {
+        var cmd = M3AnalyzerAdapterCommands.normalize(
+                "java", new File("original-adapter.jar"), new File("."),
+                new File("target/cpd.xml"), new File("target/cpd-analysis.tsv"),
+                new File("target/cpd-analysis.sha256"), "CPD", "PARTIAL");
+        assertEquals("CPD", cmd.get(4));
+        assertEquals("PARTIAL", cmd.get(5));
+        assertEquals("io.synexia.maven.analysis.NormalizeCli", cmd.get(3));
+        assertEquals(10, cmd.size());
+        assertFalse(cmd.contains("mvn"));
+        assertFalse(cmd.contains("java -jar"));
+        assertThrows(UnsupportedOperationException.class, () -> cmd.add("--autofix"));
+    }
+
+    @Test
     void forbidsImplicitFormatsStatusAndUnqualifiedBinaries() {
         var jar = new File("adapter.jar");
         var root = new File(".");
