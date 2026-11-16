@@ -96,6 +96,93 @@ public final class M3AnalysisV1 {
     }
 
     /**
+     * Observational difference between existing normalized reports; never
+     * a cache hit, complete source inventory or permission to skip a task.
+     *
+     * @param comparable true only when both source reports claim COMPLETE
+     * @param unchanged identical original findings present in both reports
+     * @param introduced findings present only in the later report
+     * @param resolved findings present only in the earlier report
+     * @param introducedErrors new ERROR-severity findings
+     */
+    public record Comparison(boolean comparable, int unchanged, int introduced, int resolved, int introducedErrors) {
+        public Comparison {
+            if (unchanged < 0 || introduced < 0 || resolved < 0
+                    || introducedErrors < 0 || introducedErrors > introduced
+                    || (!comparable && (unchanged != 0 || introduced != 0 || resolved != 0))) {
+                throw new IllegalArgumentException("invalid analysis change counts");
+            }
+        }
+    }
+
+    /**
+     * Compare two indexed reports in O(n) without re-scanning their sources.
+     * The caller must provide the exact same pinned provider/goal identity
+     * for each report; these supplied strings are not authenticated by v1.
+     *
+     * @param originalProducer explicit producer coordinate for the baseline
+     * @param earlier baseline report
+     * @param updatedProducer explicit producer coordinate for the later report
+     * @param later updated report
+     * @return changes or an explicit non-comparable result for incomplete runs
+     */
+    public static Comparison compare(
+            String originalProducer, Snapshot earlier, String updatedProducer, Snapshot later) {
+        Objects.requireNonNull(earlier, "earlier");
+        Objects.requireNonNull(later, "later");
+        producer(originalProducer);
+        producer(updatedProducer);
+        if (!originalProducer.equals(updatedProducer)) {
+            throw new IllegalArgumentException("analysis reports have different producer identities");
+        }
+        if (earlier.status() != Status.COMPLETE || later.status() != Status.COMPLETE) {
+            return new Comparison(false, 0, 0, 0, 0);
+        }
+        int i = 0;
+        int j = 0;
+        int unchanged = 0;
+        int introduced = 0;
+        int resolved = 0;
+        int introducedErrors = 0;
+        Finding previousLeft = null;
+        Finding previousRight = null;
+        while (i < earlier.size() || j < later.size()) {
+            Finding left = i < earlier.size() ? earlier.entry(i) : null;
+            Finding right = j < later.size() ? later.entry(j) : null;
+            if ((left != null && previousLeft != null && ORDER.compare(previousLeft, left) >= 0)
+                    || (right != null && previousRight != null && ORDER.compare(previousRight, right) >= 0)) {
+                throw new IllegalArgumentException("analysis findings are not in canonical order");
+            }
+            if (left == null || (right != null && ORDER.compare(left, right) > 0)) {
+                introduced++;
+                if ("ERROR".equals(String.valueOf(right.severity()))) {
+                    introducedErrors++;
+                }
+                previousRight = right;
+                j++;
+            } else if (right == null || ORDER.compare(left, right) < 0) {
+                resolved++;
+                previousLeft = left;
+                i++;
+            } else {
+                unchanged++;
+                previousLeft = left;
+                previousRight = right;
+                i++;
+                j++;
+            }
+        }
+        return new Comparison(true, unchanged, introduced, resolved, introducedErrors);
+    }
+
+    private static void producer(String value) {
+        if (value == null || value.isBlank() || value.length() > 512
+                || value.chars().anyMatch(Character::isISOControl)) {
+            throw new IllegalArgumentException("explicit analyzer provider identity required");
+        }
+    }
+
+    /**
      * Parse an existing, bounded, canonical UTF-8/LF report. Missing status
      * cannot be serialized as successful analysis; no file access is performed.
      */
