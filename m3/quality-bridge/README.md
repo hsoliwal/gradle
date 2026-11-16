@@ -284,3 +284,47 @@ applying this bridge. Neither normalizing the report nor reporting
 new findings can skip compilation or authorize build-cache reuse.
 Optional Problems API display and baseline comparisons use the
 existing native Gradle tasks and original v1 byte format.
+
+
+## CodeQL and other original SARIF 2.1.0 reports
+
+The existing m3NormalizeAnalyzerXml task also accepts format SARIF, using the
+**same separately built, SHA-256-pinned Maven adapter JAR**. The original
+m3CodeqlSarif task remains the owner of executing CodeQL and producing SARIF.
+It is not automatically invoked by applying the quality bridge.
+
+An operator may explicitly connect the existing CodeQL task's output provider
+to the normalization task:
+
+    def originalCodeql = tasks.named('m3CodeqlSarif')
+    tasks.named('m3NormalizeAnalyzerXml') {
+        dependsOn(originalCodeql)
+        adapterJar.set(layout.projectDirectory.file(
+                'vendor/m3-analyzer-report-adapter.jar'))
+        adapterSha256.set(providers.gradleProperty('m3.adapter.sha256'))
+        originalReport.set(originalCodeql.flatMap { it.sarifReport })
+        format.set('SARIF')
+        originalStatus.set('PARTIAL')
+    }
+
+originalReport is an additive format-neutral alias of the existing originalXml
+file property; existing Checkstyle/PMD/SpotBugs/CPD callers are unchanged.
+A producer must explicitly attest COMPLETE from its actual original
+execution and source/rule inventory; a well-formed SARIF file alone never
+establishes this. The separately published normalized digest can be used
+by the existing m3ReviewAnalysis task.
+
+The Maven-owned SARIF 2.1.0 adapter supports original CodeQL-style
+tool.driver names, ruleId, result severity, messages, project-relative file
+locations, artifact indexes and originalUriBaseIds chains. It is **not** a
+full SARIF validator, and it does not import source snippets or automatically
+rewrite files. Unsupported/malformed source URI schemes and out-of-project
+references are refused. Original source failures cannot be turned into
+complete, clean analysis merely by the normalization step.
+
+The converter includes relocated Apache-2.0 Jackson streaming code inside
+its standalone JAR; neither Maven Core nor Gradle loads or manages Jackson
+as a new build-system dependency. Rebuild and re-pin the JAR SHA-256 after
+upgrading the converter. CodeQL CLI/query-pack licensing and the original
+analyzer invocation remain separate. No cache replay or compiler skipping
+is implied.
