@@ -377,3 +377,30 @@ rule/source coverage. Existing m3ReviewAnalysis and its opt-in baseline
 comparison can consume the generated v1 report as before. Neither
 build cache nor compilation/test skipping is authorized by this
 normalization. The original Semgrep binary/license stays external.
+
+
+## Source-pinned cross-build Semgrep proof
+
+The focused Gradle CI workflow now includes a **real Maven-to-Gradle
+integration test**, in addition to the original immutable-argv and
+incorrect-SHA refusal tests. The workflow checks out Maven fork commit
+e1c89cc015eb269fe953cbedbe3cf49e0cb9279a, builds the original
+tools/m3-analyzer-report-adapter Java 17 plugin/shaded converter, and
+passes that exact JAR to a Gradle TestKit fixture on both JDK 17 and 21.
+No engine is copied into the Gradle fork.
+
+The TestKit fixture creates an original Semgrep-style JSON report,
+pins the *actual JAR bytes* with SHA-256, invokes the existing
+m3NormalizeAnalyzerXml task using its format-neutral originalReport
+input, and verifies the canonical M3 v1 path/rule/severity, output
+SHA-256 and absence of source snippets. No original Semgrep CLI is
+executed by the fixture: the purpose is to verify that the exact
+external Maven converter works as a Gradle-owned native task.
+
+A normal local Gradle test run skips only this external-binary
+integration case when M3_ADAPTER_JAR is not explicitly supplied; the
+original unit tests and TestKit refusal cases still execute. The
+dedicated GitHub matrix job explicitly builds and supplies the JAR
+so that the case is not skipped there. Source ownership, tool/rule
+completeness and production analyzer parity require separate tests;
+passing a JAR smoke never authorizes Gradle build cache reuse.

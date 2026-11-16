@@ -6,12 +6,15 @@ package io.synexia.gradle.quality;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** No original Checkstyle/PMD process is started by this TestKit fixture. */
 final class M3NormalizeAnalyzerXmlTaskTest {
@@ -93,6 +96,68 @@ final class M3NormalizeAnalyzerXmlTaskTest {
                 .buildAndFail().getOutput();
         assertTrue(output.contains("adapter binary does not match its SHA-256 pin"));
         assertTrue(!Files.exists(project.resolve("build/reports/m3/import/analysis.tsv")));
+    }
+
+    @Test
+    void explicitlyPinnedOriginalMavenConverterRunsSemgrepJsonWithoutGradleJsonEngine() throws Exception {
+        String supplied = System.getenv("M3_ADAPTER_JAR");
+        assumeTrue(supplied != null && !supplied.isBlank(),
+                "Live converter JAR provided by the separate cross-fork CI job");
+        Path originalJar = Path.of(supplied);
+        assertTrue(Files.isRegularFile(originalJar), "CI's pinned Maven artifact must exist");
+
+        Files.createDirectories(project.resolve("target"));
+        Files.createDirectories(project.resolve("vendor"));
+        Path jar = project.resolve("vendor/m3-analyzer-report-adapter.jar");
+        Files.copy(originalJar, jar);
+        String jarHash = HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(jar)));
+        String source = """
+                {
+                  "version":"1.166.0",
+                  "results":[{
+                    "check_id":"java.original-rule",
+                    "path":"src/A.java",
+                    "start":{"line":12,"col":2},
+                    "end":{"line":12,"col":8},
+                    "extra":{"severity":"WARNING","message":"Original finding",
+                      "metadata":{},"fingerprint":"original/1",
+                      "lines":"sensitive original source excerpt"}
+                  }],
+                  "errors":[],
+                  "paths":{"scanned":["src/A.java"],"skipped":[]}
+                }
+                """;
+        Files.writeString(project.resolve("target/original-semgrep.json"), source);
+        Files.writeString(project.resolve("settings.gradle"), "rootProject.name='m3-semgrep-live-bridge'\n");
+        Files.writeString(project.resolve("build.gradle"),
+                "plugins { id 'io.synexia.m3.quality' }\n"
+                + "tasks.named('m3NormalizeAnalyzerXml') {\n"
+                + "  adapterJar.set(layout.projectDirectory.file('vendor/m3-analyzer-report-adapter.jar'))\n"
+                + "  adapterSha256.set('" + jarHash + "')\n"
+                + "  originalReport.set(layout.projectDirectory.file('target/original-semgrep.json'))\n"
+                + "  format.set('SEMGREP')\n"
+                + "  originalStatus.set('PARTIAL')\n"
+                + "}\n");
+
+        var output = GradleRunner.create()
+                .withProjectDir(project.toFile())
+                .withPluginClasspath()
+                .withArguments("m3NormalizeAnalyzerXml", "--stacktrace")
+                .build().getOutput();
+        assertTrue(output.contains("status=PARTIAL, findings=1"));
+        Path normalized = project.resolve("build/reports/m3/import/analysis.tsv");
+        Path digest = project.resolve("build/reports/m3/import/analysis.sha256");
+        assertTrue(Files.isRegularFile(normalized));
+        assertTrue(Files.isRegularFile(digest));
+        String text = Files.readString(normalized);
+        assertTrue(text.contains("java.original-rule\tWARNING\tsrc/A.java\t12\t2\t"));
+        assertTrue(!text.contains("sensitive original source excerpt"),
+                "Semgrep source snippets must not be copied into native evidence");
+        String expected = Files.readString(digest).strip();
+        String actual = HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(normalized)));
+        assertTrue(expected.equals(actual), "Gradle's real Maven adapter must publish matching v1 bytes");
     }
 
     @Test
