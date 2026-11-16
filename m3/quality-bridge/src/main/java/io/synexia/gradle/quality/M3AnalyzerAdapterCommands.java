@@ -8,7 +8,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Objects;
 
-/** A non-shell Java argv plan for an explicitly installed M3 XML adapter JAR. */
+/** A non-shell Java argv plan for an explicitly installed M3 report adapter JAR. */
 public final class M3AnalyzerAdapterCommands {
     private M3AnalyzerAdapterCommands() {}
 
@@ -24,7 +24,7 @@ public final class M3AnalyzerAdapterCommands {
         if (!adapterJar.getName().endsWith(".jar")
                 || !("CHECKSTYLE".equals(format) || "PMD".equals(format)
                         || "SPOTBUGS".equals(format) || "CPD".equals(format)
-                        || "SARIF".equals(format))
+                        || "SARIF".equals(format) || "SEMGREP".equals(format))
                 || !("COMPLETE".equals(originalStatus) || "PARTIAL".equals(originalStatus)
                         || "FAILED".equals(originalStatus))) {
             throw new IllegalArgumentException("explicit analyzer adapter, format and source status required");
