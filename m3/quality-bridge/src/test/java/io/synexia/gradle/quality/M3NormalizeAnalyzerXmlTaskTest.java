@@ -46,6 +46,31 @@ final class M3NormalizeAnalyzerXmlTaskTest {
     }
 
     @Test
+    void sarifReportAliasPreservesOriginalBinaryPinAndNeverStartsCodeql() throws Exception {
+        Files.createDirectories(project.resolve("target"));
+        Files.writeString(project.resolve("target/codeql.sarif"),
+                "{\"version\":\"2.1.0\",\"runs\":[]}");
+        Files.write(project.resolve("adapter.jar"), new byte[] {5, 6, 7, 8});
+        Files.writeString(project.resolve("settings.gradle"), "rootProject.name='m3-sarif-import'\n");
+        Files.writeString(project.resolve("build.gradle"),
+                "plugins { id 'io.synexia.m3.quality' }\n"
+                + "tasks.named('m3NormalizeAnalyzerXml') {\n"
+                + "  adapterJar.set(layout.projectDirectory.file('adapter.jar'))\n"
+                + "  adapterSha256.set('0' * 64)\n"
+                + "  originalReport.set(layout.projectDirectory.file('target/codeql.sarif'))\n"
+                + "  format.set('SARIF')\n"
+                + "  originalStatus.set('PARTIAL')\n"
+                + "}\n");
+        var output = GradleRunner.create()
+                .withProjectDir(project.toFile())
+                .withPluginClasspath()
+                .withArguments("m3NormalizeAnalyzerXml", "--stacktrace")
+                .buildAndFail().getOutput();
+        assertTrue(output.contains("adapter binary does not match its SHA-256 pin"));
+        assertTrue(!Files.exists(project.resolve("build/reports/m3/import/analysis.tsv")));
+    }
+
+    @Test
     void reviewTasksRemainLazyAndNoAnalyzerIsInvokedForSimpleTaskDiscovery() throws Exception {
         Files.writeString(project.resolve("settings.gradle"), "rootProject.name='m3-adapter-list'\n");
         Files.writeString(project.resolve("build.gradle"),
