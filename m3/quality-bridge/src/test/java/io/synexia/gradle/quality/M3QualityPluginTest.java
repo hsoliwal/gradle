@@ -32,5 +32,6 @@ class M3QualityPluginTest {
         assertTrue(output.contains("m3CodeqlSarif"));
         assertTrue(output.contains("m3CodeqlEvidence"));
         assertTrue(output.contains("m3SemgrepScan"));
+        assertTrue(output.contains("m3ReviewAnalysis"));
     }
 }
