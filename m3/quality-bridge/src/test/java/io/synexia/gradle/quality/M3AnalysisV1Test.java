@@ -95,6 +95,48 @@ final class M3AnalysisV1Test {
         assertTrue(snapshot.size() == 2);
     }
 
+    @Test
+    void linearOriginalReportDeltasDistinguishNewResolvedAndUnchangedFindings() throws Exception {
+        String before = HEADER
+                + row("A", "ERROR", "src/A.java", 1, 1, "same")
+                + row("C", "WARNING", "src/C.java", 2, 1, "resolved");
+        String after = HEADER
+                + row("A", "ERROR", "src/A.java", 1, 1, "same")
+                + row("B", "ERROR", "src/B.java", 2, 1, "introduced")
+                + row("D", "INFO", "src/D.java", 3, 1, "introduced");
+        var earlier = M3AnalysisV1.parse(before.getBytes(StandardCharsets.UTF_8));
+        var later = M3AnalysisV1.parse(after.getBytes(StandardCharsets.UTF_8));
+        var difference = M3AnalysisV1.compare("pmd:1:check", earlier, "pmd:1:check", later);
+        assertTrue(difference.comparable());
+        assertEquals(1, difference.unchanged());
+        assertEquals(2, difference.introduced());
+        assertEquals(1, difference.resolved());
+        assertEquals(1, difference.introducedErrors());
+        var reversed = M3AnalysisV1.compare("pmd:1:check", later, "pmd:1:check", earlier);
+        assertEquals(1, reversed.unchanged());
+        assertEquals(1, reversed.introduced());
+        assertEquals(2, reversed.resolved());
+        assertEquals(0, reversed.introducedErrors());
+    }
+
+    @Test
+    void incompleteOrForeignAnalyzerDeltasDoNotAppearClean() throws Exception {
+        var complete = M3AnalysisV1.parse(HEADER.getBytes(StandardCharsets.UTF_8));
+        var partial = M3AnalysisV1.parse(
+                HEADER.replace("status\tCOMPLETE", "status\tPARTIAL").getBytes(StandardCharsets.UTF_8));
+        var result = M3AnalysisV1.compare("checkstyle:1:check", complete, "checkstyle:1:check", partial);
+        assertTrue(!result.comparable());
+        assertEquals(0, result.introduced());
+        assertThrows(IllegalArgumentException.class,
+                () -> M3AnalysisV1.compare("checkstyle:1:check", complete, "pmd:1:check", complete));
+        assertThrows(IllegalArgumentException.class,
+                () -> M3AnalysisV1.compare("", complete, "", complete));
+        assertThrows(IllegalArgumentException.class,
+                () -> new M3AnalysisV1.Comparison(false, 0, 1, 0, 0));
+        assertThrows(IllegalArgumentException.class,
+                () -> new M3AnalysisV1.Comparison(true, 0, 1, 0, 2));
+    }
+
     private static String row(String rule, String severity, String path, int line, int column, String message) {
         String encoded = Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(message.getBytes(StandardCharsets.UTF_8));
