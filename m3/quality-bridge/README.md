@@ -332,6 +332,26 @@ tasks.named('m3NormalizeAnalyzerXml') {
 }
 ~~~
 
+If a consumer **explicitly** wants to review the normalized output
+in the same Gradle invocation, it may wire task providers to the original
+review task. This is not installed by applying the plugin:
+
+~~~groovy
+def normalized = tasks.named('m3NormalizeAnalyzerXml')
+tasks.named('m3ReviewAnalysis') {
+    dependsOn(normalized)
+    reportFile.set(normalized.flatMap { it.normalizedReport })
+    expectedSha256.set(providers.fileContents(
+            normalized.flatMap { it.normalizedSha256 }).asText.map { it.trim() })
+    publishProblems.set(false)
+    failOnReportedErrors.set(false)
+}
+~~~
+
+The original Checkstyle/PMD execution task remains independent: users must
+explicitly add an appropriate original-producer prerequisite if desired.
+The normalized digest is content custody, not analyzer correctness proof.
+
 The adapter JAR must be built, reviewed and supplied explicitly by the
 operator. Neither Maven nor Gradle downloads, installs, starts or configures
 Checkstyle, PMD or SpotBugs as a side effect of this task. The original result files,
