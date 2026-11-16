@@ -135,3 +135,47 @@ Gradle plugin if it already offers safe task inputs/outputs and toolchain suppor
 The PR is opt-in and should stay draft until the actual TestKit test and external
 CLI acceptance matrix passes; a standalone Java argument-vector smoke test is
 not full Gradle qualification.
+
+
+## Original Maven Checkstyle/PMD XML to shared native analyzer reports
+
+The opt-in Gradle task **m3NormalizeAnalyzerXml** reuses the standalone
+Java 17 JAR built at hsoliwal/maven/tools/m3-analyzer-report-adapter.
+Gradle never embeds Maven Core or copies the converter implementation.
+The task receives original Checkstyle/PMD XML **after** the analyzer's own
+original goal/Gradle task runs, checks the converter JAR against an explicitly
+configured SHA-256, and invokes the converter as a direct argument-vector
+Java process with no shell. Its outputs are M3-STATIC-ANALYSIS-V1 bytes and
+a matching digest sidecar under the project build directory.
+
+~~~groovy
+plugins { id 'io.synexia.m3.quality' }
+
+tasks.named('m3NormalizeAnalyzerXml') {
+    adapterJar.set(layout.projectDirectory.file('vendor/m3-analyzer-report-adapter.jar'))
+    adapterSha256.set(providers.gradleProperty('m3.adapter.sha256'))
+    originalXml.set(layout.projectDirectory.file('build/reports/checkstyle/main.xml'))
+    format.set('CHECKSTYLE')  // or PMD
+    originalStatus.set('PARTIAL') // default until original producer attests COMPLETE
+}
+~~~
+
+The adapter JAR must be built, reviewed and supplied explicitly by the
+operator. Neither Maven nor Gradle downloads, installs, starts or configures
+Checkstyle or PMD as a side effect of this task. The original result files,
+rule sets, suppression rules, plugin configuration, task dependencies and
+failure policies remain with their original owners. No dependency is added
+automatically from the original analyzer task or from Gradle's check task.
+If a producer wants to associate execution with normalized output, it must
+wire the explicit task dependency itself.
+
+Use the generated SHA-256 sidecar to configure a subsequent explicit
+m3ReviewAnalysis task. Do not treat the digest or the user-provided COMPLETE
+status as a trusted proof of source completeness. The normalized XML schema
+is documented in the Maven adapter's README and the existing native
+M3-STATIC-ANALYSIS documentation.
+
+This task is @UntrackedTask: the installed adapter, original analyzer's
+rule set and complete source inventory have not been proven to be eligible
+for Gradle build-cache replay. SHA-256 is only a binary/byte-custody check.
+Existing binary and semantic compatibility gates are still required.
