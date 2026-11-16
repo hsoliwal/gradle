@@ -328,3 +328,52 @@ as a new build-system dependency. Rebuild and re-pin the JAR SHA-256 after
 upgrading the converter. CodeQL CLI/query-pack licensing and the original
 analyzer invocation remain separate. No cache replay or compiler skipping
 is implied.
+
+
+## Original Semgrep CLI JSON → native Maven/Gradle diagnostics
+
+The existing opt-in m3NormalizeAnalyzerXml task also accepts **SEMGREP**
+as an original report format and delegates to the **same reviewed,
+SHA-256-pinned Maven Java converter JAR** already used for XML and SARIF.
+This does not create a Semgrep parser or engine inside Gradle. The
+original Semgrep CLI, local rule configuration, exit policy, nosemgrep
+ignore markers and scan coverage remain the source of truth.
+
+When an original m3SemgrepScan has already emitted its JSON report,
+normalization may be requested explicitly:
+
+    tasks.named('m3NormalizeAnalyzerXml') {
+        adapterJar.set(layout.projectDirectory.file(
+                'vendor/m3-analyzer-report-adapter.jar'))
+        adapterSha256.set(providers.gradleProperty('m3.adapter.sha256'))
+        originalReport.set(layout.buildDirectory.file(
+                'reports/m3/semgrep/results.json'))
+        format.set('SEMGREP')
+        originalStatus.set('PARTIAL')
+    }
+
+The original m3SemgrepScan does **not** run merely because the converter
+task exists. Its original output path is provider-backed. Operators may
+explicitly wire a dependency on the original task if they want both in
+one invocation, but the original Semgrep scan can fail under its own
+existing policy when findings exist; in that case Gradle intentionally
+does not run dependent tasks as though the scan succeeded. An already
+produced report can still be imported in a separate invocation, with
+the actual original status declared accordingly.
+
+The original result fields check_id, path, start line/column, severity
+and message are converted to existing M3 v1 findings. Rule severity
+mapping is **presentation-only**: CRITICAL/HIGH/ERROR -> ERROR,
+MEDIUM/WARNING -> WARNING, LOW/INFO/INVENTORY/EXPERIMENT -> INFO.
+Explicitly ignored matches remain excluded. Source snippets,
+autofixes, metavariables, traces and secret content are not copied
+into the normalized report.
+
+Nonempty original errors arrays forbid claiming COMPLETE; a partial
+or failed source scan is represented with an explicit project-wide
+Semgrep.ScanError finding. A matching hash attests bytes and the
+installed adapter binary, **not** actual Semgrep execution or full
+rule/source coverage. Existing m3ReviewAnalysis and its opt-in baseline
+comparison can consume the generated v1 report as before. Neither
+build cache nor compilation/test skipping is authorized by this
+normalization. The original Semgrep binary/license stays external.

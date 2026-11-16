@@ -84,6 +84,24 @@ final class M3AnalyzerAdapterCommandsTest {
     }
 
     @Test
+    void semgrepNativeJsonUsesExistingPinnedExternalJavaNormalizer() {
+        var args = M3AnalyzerAdapterCommands.normalize(
+                "java", new File("m3-analyzer-report-adapter.jar"), new File("."),
+                new File("build/reports/m3/semgrep/results.json"),
+                new File("build/reports/m3/import/analysis.tsv"),
+                new File("build/reports/m3/import/analysis.sha256"),
+                "SEMGREP", "PARTIAL");
+        assertEquals("SEMGREP", args.get(4));
+        assertEquals("PARTIAL", args.get(5));
+        assertEquals("io.synexia.maven.analysis.NormalizeCli", args.get(3));
+        assertEquals(10, args.size());
+        assertFalse(args.contains("mvn"));
+        assertFalse(args.contains("sh"));
+        assertFalse(args.contains("semgrep"));
+        assertThrows(UnsupportedOperationException.class, () -> args.add("--autofix"));
+    }
+
+    @Test
     void forbidsImplicitFormatsStatusAndUnqualifiedBinaries() {
         var jar = new File("adapter.jar");
         var root = new File(".");
