@@ -32,3 +32,20 @@ jobs:
         run: |
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge tasks --all --configuration-cache
+
+      - name: Check out exact Maven converter source version for cross-build proof
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: e1c89cc015eb269fe953cbedbe3cf49e0cb9279a
+          path: m3-maven-adapter
+          persist-credentials: false
+      - name: Build original Maven converter with its real shaded JSON parser
+        run: |
+          mvn -B -ntp -f m3-maven-adapter/tools/m3-analyzer-report-adapter/pom.xml verify
+          test -s m3-maven-adapter/tools/m3-analyzer-report-adapter/target/m3-analyzer-report-adapter-0.1.0-SNAPSHOT.jar
+      - name: Exercise the actual Maven JAR through Gradle TestKit (Semgrep)
+        run: |
+          export M3_ADAPTER_JAR="$GITHUB_WORKSPACE/m3-maven-adapter/tools/m3-analyzer-report-adapter/target/m3-analyzer-report-adapter-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3NormalizeAnalyzerXmlTaskTest' --rerun-tasks
