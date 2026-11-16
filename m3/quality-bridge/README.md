@@ -179,3 +179,36 @@ This task is @UntrackedTask: the installed adapter, original analyzer's
 rule set and complete source inventory have not been proven to be eligible
 for Gradle build-cache replay. SHA-256 is only a binary/byte-custody check.
 Existing binary and semantic compatibility gates are still required.
+
+## Optional incremental analysis comparison
+
+An existing `m3ReviewAnalysis` task may compare a **separately pinned
+baseline** with its current report. This is a linear, no-source-read merge
+over the canonical sorted findings. No new analyzer process is started.
+Provide the original plugin/goal/version producer keys for both reports;
+they must match exactly. The v1 wire report does not contain a producer
+certificate, so these strings are operator claims, not authenticated
+provenance. The task verifies each supplied report's SHA-256 independently.
+
+```groovy
+tasks.named('m3ReviewAnalysis') {
+    reportFile.set(layout.projectDirectory.file('analysis.tsv'))
+    expectedSha256.set(providers.gradleProperty('m3.analysis.sha256'))
+    baselineReportFile.set(layout.projectDirectory.file('baseline.tsv'))
+    baselineSha256.set(providers.gradleProperty('m3.baseline.sha256'))
+    baselineProducer.set('org.apache.maven.plugins:maven-pmd-plugin:3.28:check')
+    currentProducer.set('org.apache.maven.plugins:maven-pmd-plugin:3.28:check')
+    failOnIntroducedErrors.set(false) // opt-in; default false
+}
+```
+
+With both reports explicitly supplied, Gradle logs unchanged, introduced,
+resolved and newly introduced ERROR counts. A changed message, location,
+rule or severity is a new and resolved finding, not a guessed identity match.
+Incomplete analyzer status is clearly reported as *non-comparable*; when
+`failOnIntroducedErrors=true`, incomplete status or an absent baseline
+fails closed. Unrelated producer keys and malformed baseline bytes are
+refused before a change decision. Report contents are not reinterpreted as
+a compiler execution decision or build-cache admission. No `check` task
+dependency or report baseline is added by default.
+
