@@ -23,7 +23,8 @@ public final class M3AnalyzerAdapterCommands {
         Objects.requireNonNull(digestFile, "digestFile");
         if (!adapterJar.getName().endsWith(".jar")
                 || !("CHECKSTYLE".equals(format) || "PMD".equals(format)
-                        || "SPOTBUGS".equals(format) || "CPD".equals(format))
+                        || "SPOTBUGS".equals(format) || "CPD".equals(format)
+                        || "SARIF".equals(format))
                 || !("COMPLETE".equals(originalStatus) || "PARTIAL".equals(originalStatus)
                         || "FAILED".equals(originalStatus))) {
             throw new IllegalArgumentException("explicit analyzer adapter, format and source status required");
