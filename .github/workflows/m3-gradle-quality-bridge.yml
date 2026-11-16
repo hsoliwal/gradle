@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: e1c89cc015eb269fe953cbedbe3cf49e0cb9279a
+          ref: 89de67b38249ea914ef252b765e59d2002780e1b
           path: m3-maven-adapter
           persist-credentials: false
       - name: Build original Maven converter with its real shaded JSON parser
