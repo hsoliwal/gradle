@@ -384,7 +384,7 @@ normalization. The original Semgrep binary/license stays external.
 The focused Gradle CI workflow now includes a **real Maven-to-Gradle
 integration test**, in addition to the original immutable-argv and
 incorrect-SHA refusal tests. The workflow checks out Maven fork commit
-e1c89cc015eb269fe953cbedbe3cf49e0cb9279a, builds the original
+89de67b38249ea914ef252b765e59d2002780e1b, builds the original
 tools/m3-analyzer-report-adapter Java 17 plugin/shaded converter, and
 passes that exact JAR to a Gradle TestKit fixture on both JDK 17 and 21.
 No engine is copied into the Gradle fork.
