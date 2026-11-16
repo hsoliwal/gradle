@@ -120,6 +120,22 @@ final class M3AnalysisV1Test {
     }
 
     @Test
+    void severityAndMessageChangesRemainTwoObservationalChanges() throws Exception {
+        var earlier = M3AnalysisV1.parse((HEADER
+                + row("A", "WARNING", "src/A.java", 1, 1, "before"))
+                .getBytes(StandardCharsets.UTF_8));
+        var later = M3AnalysisV1.parse((HEADER
+                + row("A", "ERROR", "src/A.java", 1, 1, "after"))
+                .getBytes(StandardCharsets.UTF_8));
+        var comparison = M3AnalysisV1.compare("a:1:check", earlier, "a:1:check", later);
+        assertTrue(comparison.comparable());
+        assertEquals(0, comparison.unchanged());
+        assertEquals(1, comparison.introduced());
+        assertEquals(1, comparison.resolved());
+        assertEquals(1, comparison.introducedErrors());
+    }
+
+    @Test
     void incompleteOrForeignAnalyzerDeltasDoNotAppearClean() throws Exception {
         var complete = M3AnalysisV1.parse(HEADER.getBytes(StandardCharsets.UTF_8));
         var partial = M3AnalysisV1.parse(
