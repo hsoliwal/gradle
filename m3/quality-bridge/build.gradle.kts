@@ -5,8 +5,9 @@ plugins {
 group = "io.synexia"
 version = "0.1.0-SNAPSHOT"
 
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(17)
+    options.encoding = "UTF-8"
 }
 
 gradlePlugin {
