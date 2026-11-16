@@ -52,7 +52,8 @@ public final class M3AnalysisV1 {
     private static final Severity[] SEVERITIES = Severity.values();
 
     /** Original analyzer finding, as claimed by the producing adapter. */
-    public record Finding(String ruleId, Severity severity, String relativePath, int line, int column, String message) {}
+    public record Finding(
+            String ruleId, Severity severity, String relativePath, int line, int column, String message) {}
 
     /** Array-backed indexed snapshot: records are materialized only for selected rows. */
     public static final class Snapshot {
