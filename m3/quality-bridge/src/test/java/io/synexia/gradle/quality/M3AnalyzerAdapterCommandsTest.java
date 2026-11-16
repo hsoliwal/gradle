@@ -35,6 +35,20 @@ final class M3AnalyzerAdapterCommandsTest {
     }
 
     @Test
+    void spotbugsUsesTheSamePinnedOriginalXmlAdapterWithoutNewEngine() {
+        var cmd = M3AnalyzerAdapterCommands.normalize(
+                "java", new File("original-adapter.jar"), new File("."),
+                new File("target/spotbugsXml.xml"), new File("target/analysis.tsv"),
+                new File("target/analysis.sha256"), "SPOTBUGS", "PARTIAL");
+        assertEquals("SPOTBUGS", cmd.get(4));
+        assertEquals("PARTIAL", cmd.get(5));
+        assertEquals("io.synexia.maven.analysis.NormalizeCli", cmd.get(3));
+        assertEquals(10, cmd.size());
+        assertThrows(UnsupportedOperationException.class, () -> cmd.add("--autofix"));
+        assertFalse(cmd.contains("mvn"));
+    }
+
+    @Test
     void forbidsImplicitFormatsStatusAndUnqualifiedBinaries() {
         var jar = new File("adapter.jar");
         var root = new File(".");
