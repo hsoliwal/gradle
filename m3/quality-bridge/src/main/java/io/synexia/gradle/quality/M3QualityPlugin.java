@@ -45,6 +45,14 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/semgrep/results.json"));
         });
 
+        // No dependency on 'check': review of external analyzer claims is opt-in.
+        project.getTasks().register("m3ReviewAnalysis", M3ReviewAnalysisTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Review an existing digest-pinned Maven M3 analyzer report");
+            task.getPublishProblems().convention(false);
+            task.getFailOnReportedErrors().convention(false);
+        });
+
         // An original OpenRewrite plugin owns recipe discovery, dry-run, and apply.
         // The alias exists only if that plugin is explicitly applied in the project.
         project.getPluginManager().withPlugin("org.openrewrite.rewrite", applied -> {
