@@ -64,6 +64,26 @@ final class M3AnalyzerAdapterCommandsTest {
     }
 
     @Test
+    void codeqlSarifUsesOriginalPinnedJavaAdapterAndNoShellExecution() {
+        var args = M3AnalyzerAdapterCommands.normalize(
+                "java", new File("m3-analyzer-report-adapter.jar"), new File("."),
+                new File("build/reports/m3/codeql/results.sarif"),
+                new File("build/reports/m3/import/analysis.tsv"),
+                new File("build/reports/m3/import/analysis.sha256"),
+                "SARIF", "PARTIAL");
+        assertEquals("java", args.get(0));
+        assertEquals("-cp", args.get(1));
+        assertEquals("io.synexia.maven.analysis.NormalizeCli", args.get(3));
+        assertEquals("SARIF", args.get(4));
+        assertEquals("PARTIAL", args.get(5));
+        assertEquals(10, args.size());
+        assertFalse(args.contains("mvn"));
+        assertFalse(args.contains("sh"));
+        assertFalse(args.contains("--autofix"));
+        assertThrows(UnsupportedOperationException.class, () -> args.add("--unsafe"));
+    }
+
+    @Test
     void forbidsImplicitFormatsStatusAndUnqualifiedBinaries() {
         var jar = new File("adapter.jar");
         var root = new File(".");
