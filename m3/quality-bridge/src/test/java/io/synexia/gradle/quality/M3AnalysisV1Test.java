@@ -30,6 +30,8 @@ final class M3AnalysisV1Test {
         assertEquals(1L, snapshot.errors());
         assertEquals("Checkstyle.EmptyBlock", snapshot.entry(0).ruleId());
         assertEquals("unused import", snapshot.entry(1).message());
+        assertEquals(M3AnalysisV1.Severity.ERROR, snapshot.entry(1).severity());
+        assertEquals(1L, snapshot.errors(), "the packed index retains its original severity summary");
         assertThrows(IndexOutOfBoundsException.class, () -> snapshot.entry(2));
     }
 
