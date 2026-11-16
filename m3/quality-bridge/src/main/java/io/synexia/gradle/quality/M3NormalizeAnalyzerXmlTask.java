@@ -31,7 +31,7 @@ import org.gradle.api.tasks.UntrackedTask;
 import org.gradle.process.ExecOperations;
 
 /**
- * Opt-in original Checkstyle/PMD XML import into the shared Maven/Gradle v1
+ * Opt-in original XML or SARIF report import into the shared Maven/Gradle v1
  * diagnostics format. Runs only a separately built, explicitly digest-pinned
  * pure-Java adapter; does not run, download or configure analyzers.
  */
@@ -60,6 +60,17 @@ public abstract class M3NormalizeAnalyzerXmlTask extends DefaultTask {
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getOriginalXml();
+
+    /**
+     * Additive format-neutral input alias. The original property remains the
+     * only Gradle-tracked input and is kept for existing Checkstyle/PMD users.
+     *
+     * @return the same original report input property
+     */
+    @Internal
+    public RegularFileProperty getOriginalReport() {
+        return getOriginalXml();
+    }
 
     @Internal
     public abstract DirectoryProperty getProjectRoot();
