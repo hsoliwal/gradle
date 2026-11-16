@@ -43,23 +43,34 @@ public final class M3AnalysisV1 {
         FAILED
     }
 
+    public enum Severity {
+        INFO,
+        WARNING,
+        ERROR
+    }
+
+    private static final Severity[] SEVERITIES = Severity.values();
+
     /** Original analyzer finding, as claimed by the producing adapter. */
-    public record Finding(String ruleId, String severity, String relativePath, int line, int column, String message) {}
+    public record Finding(String ruleId, Severity severity, String relativePath, int line, int column, String message) {}
 
     /** Array-backed indexed snapshot: records are materialized only for selected rows. */
     public static final class Snapshot {
         private final Status status;
-        private final String[] rules, levels, paths, messages;
+        private final String[] rules, paths, messages;
+        private final byte[] severity;
         private final int[] lines, columns;
+        private final long errors;
 
         private Snapshot(Status status, Mutable rows) {
             this.status = status;
             rules = Arrays.copyOf(rows.rules, rows.size);
-            levels = Arrays.copyOf(rows.levels, rows.size);
+            severity = Arrays.copyOf(rows.severity, rows.size);
             paths = Arrays.copyOf(rows.paths, rows.size);
             messages = Arrays.copyOf(rows.messages, rows.size);
             lines = Arrays.copyOf(rows.lines, rows.size);
             columns = Arrays.copyOf(rows.columns, rows.size);
+            errors = rows.errors;
         }
 
         public Status status() {
@@ -72,12 +83,14 @@ public final class M3AnalysisV1 {
 
         public Finding entry(int index) {
             Objects.checkIndex(index, rules.length);
-            return new Finding(rules[index], levels[index], paths[index], lines[index], columns[index], messages[index]);
+            return new Finding(
+                    rules[index], SEVERITIES[severity[index]], paths[index], lines[index], columns[index],
+                    messages[index]);
         }
 
         /** Counts are evidence from the report, not proof that analysis ran. */
         public long errors() {
-            return Arrays.stream(levels).filter("ERROR"::equals).count();
+            return errors;
         }
     }
 
@@ -158,10 +171,7 @@ public final class M3AnalysisV1 {
         }
         try {
             String rule = bounded(fields[0], 256, "rule");
-            String severity = fields[1];
-            if (!("INFO".equals(severity) || "WARNING".equals(severity) || "ERROR".equals(severity))) {
-                throw new IllegalArgumentException("severity");
-            }
+            Severity severity = Severity.valueOf(fields[1]);
             String path = path(fields[2]);
             int line = number(fields[3]), column = number(fields[4]);
             if ((line == 0 && column != 0) || (path.isEmpty() && (line != 0 || column != 0))) {
@@ -249,9 +259,11 @@ public final class M3AnalysisV1 {
 
     /** Parallel lanes, with a single preceding record for strict ordering. */
     private static final class Mutable {
-        String[] rules = new String[8], levels = new String[8], paths = new String[8], messages = new String[8];
+        String[] rules = new String[8], paths = new String[8], messages = new String[8];
+        byte[] severity = new byte[8];
         int[] lines = new int[8], columns = new int[8];
         int size;
+        long errors;
         Finding previous;
 
         void add(Finding finding) throws IOException {
@@ -265,18 +277,21 @@ public final class M3AnalysisV1 {
             if (size == rules.length) {
                 int capacity = Math.min(MAX_ROWS, size * 2);
                 rules = Arrays.copyOf(rules, capacity);
-                levels = Arrays.copyOf(levels, capacity);
+                severity = Arrays.copyOf(severity, capacity);
                 paths = Arrays.copyOf(paths, capacity);
                 messages = Arrays.copyOf(messages, capacity);
                 lines = Arrays.copyOf(lines, capacity);
                 columns = Arrays.copyOf(columns, capacity);
             }
             rules[size] = finding.ruleId();
-            levels[size] = finding.severity();
+            severity[size] = (byte) finding.severity().ordinal();
             paths[size] = finding.relativePath();
             messages[size] = finding.message();
             lines[size] = finding.line();
             columns[size] = finding.column();
+            if (finding.severity() == Severity.ERROR) {
+                errors++;
+            }
             size++;
         }
     }
