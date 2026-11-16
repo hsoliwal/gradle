@@ -70,6 +70,16 @@ CodeQL/PMD/Checkstyle/SpotBugs/other engines remain responsible for execution
 and mapping their own findings. The digest is byte custody, not proof of
 source, rules, toolchain, classpath or producer completeness.
 
+SpotBugs integration uses the same original adapter JAR and the same opt-in
+m3NormalizeAnalyzerXml task, with format set to SPOTBUGS and the already
+produced original BugCollection XML selected as originalXml. The adapter
+preserves the original bug type, priority and SourceLine metadata. A missing
+source path remains an unlocated project-wide finding, not a guessed Java
+source file. Priority 1/2/3-4 maps to ERROR/WARNING/INFO for presentation
+only, not a new SpotBugs detector threshold. Original SpotBugs processing
+errors prohibit COMPLETE, and the original detector, suppressions and
+SpotBugs Maven/Gradle tasks remain authoritative.
+
 ## Optional incremental analysis comparison
 
 An existing `m3ReviewAnalysis` task may compare a **separately pinned
@@ -169,12 +179,12 @@ CLI acceptance matrix passes; a standalone Java argument-vector smoke test is
 not full Gradle qualification.
 
 
-## Original Maven Checkstyle/PMD XML to shared native analyzer reports
+## Original Maven Checkstyle/PMD/SpotBugs XML to shared native analyzer reports
 
 The opt-in Gradle task **m3NormalizeAnalyzerXml** reuses the standalone
 Java 17 JAR built at hsoliwal/maven/tools/m3-analyzer-report-adapter.
 Gradle never embeds Maven Core or copies the converter implementation.
-The task receives original Checkstyle/PMD XML **after** the analyzer's own
+The task receives original Checkstyle/PMD/SpotBugs XML **after** the analyzer's own
 original goal/Gradle task runs, checks the converter JAR against an explicitly
 configured SHA-256, and invokes the converter as a direct argument-vector
 Java process with no shell. Its outputs are M3-STATIC-ANALYSIS-V1 bytes and
@@ -187,14 +197,14 @@ tasks.named('m3NormalizeAnalyzerXml') {
     adapterJar.set(layout.projectDirectory.file('vendor/m3-analyzer-report-adapter.jar'))
     adapterSha256.set(providers.gradleProperty('m3.adapter.sha256'))
     originalXml.set(layout.projectDirectory.file('build/reports/checkstyle/main.xml'))
-    format.set('CHECKSTYLE')  // or PMD
+    format.set('CHECKSTYLE')  // or PMD or SPOTBUGS
     originalStatus.set('PARTIAL') // default until original producer attests COMPLETE
 }
 ~~~
 
 The adapter JAR must be built, reviewed and supplied explicitly by the
 operator. Neither Maven nor Gradle downloads, installs, starts or configures
-Checkstyle or PMD as a side effect of this task. The original result files,
+Checkstyle, PMD or SpotBugs as a side effect of this task. The original result files,
 rule sets, suppression rules, plugin configuration, task dependencies and
 failure policies remain with their original owners. No dependency is added
 automatically from the original analyzer task or from Gradle's check task.
