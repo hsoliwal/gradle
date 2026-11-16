@@ -58,6 +58,71 @@ final class M3ReviewAnalysisTaskTest {
         assertTrue(result.getOutput().contains("M3 analysis report digest does not match"));
     }
 
+    @Test
+    void explicitPinnedBaselineReportsStableFindingsWithoutRunningProviders() throws Exception {
+        configure("COMPLETE", false, false, false);
+        addBaseline("COMPLETE", false, false, false);
+        var result = run(true);
+        assertTrue(result.getOutput().contains(
+                "M3 analysis difference: unchanged=1, introduced=0, resolved=0, newErrors=0"));
+    }
+
+    @Test
+    void optInNewErrorGateRejectsOnlyNewlyIntroducedErrorFindings() throws Exception {
+        configure("COMPLETE", false, false, false);
+        addBaseline("COMPLETE", true, true, false);
+        var result = run(false);
+        assertTrue(result.getOutput().contains("Opt-in M3 new-error analysis gate rejected"));
+    }
+
+    @Test
+    void incompleteBaselineCannotPassAnOptInNewErrorPolicy() throws Exception {
+        configure("COMPLETE", false, false, false);
+        addBaseline("PARTIAL", false, true, false);
+        var result = run(false);
+        assertTrue(result.getOutput().contains("Cannot enforce new-error gate on incomplete original analysis"));
+    }
+
+    @Test
+    void tamperedBaselineIsRefusedBeforeComparingFindings() throws Exception {
+        configure("COMPLETE", false, false, false);
+        addBaseline("COMPLETE", false, false, true);
+        var result = run(false);
+        assertTrue(result.getOutput().contains("M3 analysis report digest does not match"));
+    }
+
+    @Test
+    void newErrorGateNeedsAnExplicitBaselineEvenWhenOriginalReportIsValid() throws Exception {
+        configure("COMPLETE", false, false, false);
+        Files.writeString(project.resolve("build.gradle"),
+                "tasks.named('m3ReviewAnalysis') { failOnIntroducedErrors.set(true) }\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        var result = run(false);
+        assertTrue(result.getOutput().contains("New-error gating requires an explicit analysis baseline"));
+    }
+
+    private void addBaseline(String status, boolean empty, boolean gate, boolean wrongSha)
+            throws Exception {
+        String original = Files.readString(project.resolve("analysis.tsv"));
+        String baseline = empty ? original.substring(0, original.indexOf("OriginalRule")) : original;
+        baseline = baseline.replace("status\tCOMPLETE", "status\t" + status);
+        Files.writeString(project.resolve("baseline.tsv"), baseline);
+        String hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(baseline.getBytes(StandardCharsets.UTF_8)));
+        if (wrongSha) {
+            hash = "f".repeat(64);
+        }
+        Files.writeString(project.resolve("build.gradle"),
+                "tasks.named('m3ReviewAnalysis') {\n"
+                        + "  baselineReportFile.set(layout.projectDirectory.file('baseline.tsv'))\n"
+                        + "  baselineSha256.set('" + hash + "')\n"
+                        + "  baselineProducer.set('original:tool:1:check')\n"
+                        + "  currentProducer.set('original:tool:1:check')\n"
+                        + "  failOnIntroducedErrors.set(" + gate + ")\n"
+                        + "}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+    }
+
     private void configure(String status, boolean failOnErrors, boolean publishProblems, boolean wrongHash)
             throws IOException, NoSuchAlgorithmException {
         String message = Base64.getUrlEncoder().withoutPadding()
