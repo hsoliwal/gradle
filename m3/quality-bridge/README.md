@@ -17,6 +17,14 @@ configuration cache, Java compiler or existing OpenRewrite/CodeQL behavior.
 - `m3SemgrepScan`: runs separately installed Semgrep with an **explicit local**
   rule file, JSON output and a failing exit status for findings. No autofix,
   registry rule downloads or implicit network provisioning.
+- `m3ReviewAnalysis`: **explicit**, read-only consumer of the same strict
+  `M3-STATIC-ANALYSIS-V1` report format used by Maven's native static-analysis
+  evidence service. Requires a SHA-256 from the original producing workflow.
+  Uses bounded, array-backed Java 17 parsing; never runs analyzers or infers
+  source completeness. Can optionally publish adapter-reported findings through
+  Gradle's native Problems API, and optionally fail on source-declared errors or
+  non-COMPLETE status. Both options default to **false**. It is not attached to
+  Gradle's normal `check` task automatically.
 - `m3RewritePreview`: only registered when the original
   `org.openrewrite.rewrite` plugin is **explicitly applied**; delegates to its
   `rewriteDryRun` task. Applying source changes remains an independent manual
@@ -31,6 +39,46 @@ Gradle properties and provider-backed locations; Gradle's normal graph and
 concurrent scheduling remain in charge. External analysis tasks use `@UntrackedTask`
 because the databases/tool implementations may mutate or have external inputs;
 turning on caching for these tasks without proving completeness would be unsafe.
+
+## Maven-to-Gradle static-analysis report compatibility
+
+The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
+evidence through Maven's original session. A qualified producer may export
+the **exact normalized v1 report bytes** and their SHA-256 for a separate
+Gradle build to review. Gradle checks that expected digest; it does not
+inherit Maven session membership or authenticate which analyzer actually ran.
+
+```groovy
+plugins {
+    id 'io.synexia.m3.quality'
+}
+
+tasks.named('m3ReviewAnalysis') {
+    reportFile.set(layout.projectDirectory.file('analysis.tsv'))
+    expectedSha256.set(providers.gradleProperty('m3.analysis.sha256'))
+    publishProblems.set(false)      // opt-in Gradle Problems API display
+    failOnReportedErrors.set(false) // opt-in report policy
+}
+```
+
+The v1 row format is in
+[`hsoliwal/maven/docs/M3-STATIC-ANALYSIS.md`](https://github.com/hsoliwal/maven/blob/master/docs/M3-STATIC-ANALYSIS.md).
+No Gradle Problems event is created unless the user explicitly executes
+`m3ReviewAnalysis` and enables publication. The displayed messages are
+**analyzer adapter claims**, never an independent safety or clean-code verdict.
+CodeQL/PMD/Checkstyle/SpotBugs/other engines remain responsible for execution
+and mapping their own findings. The digest is byte custody, not proof of
+source, rules, toolchain, classpath or producer completeness.
+
+## Atomization and patternization
+
+- Maven: authenticate receipt, sort expected producers, append bounded results,
+  parse framed rows, decode declared status and normalize individual findings.
+- Gradle: a standalone v1 codec applies the same framing, severity, path,
+  line/column, ordering and Base64URL checks; a separate task owns Gradle
+  task inputs, digest pinning, optional native Problems presentation and gates.
+- Neither runtime embeds the other, and neither overrides existing analyzer
+  tasks or source rewrite behavior.
 
 ## Build and test independently
 
