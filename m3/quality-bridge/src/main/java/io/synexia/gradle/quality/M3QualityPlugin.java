@@ -53,6 +53,21 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.getFailOnReportedErrors().convention(false);
         });
 
+        // Explicit, originally executed XML reports only; no analyzer invocation.
+        project.getTasks().register("m3NormalizeAnalyzerXml", M3NormalizeAnalyzerXmlTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Normalize existing Checkstyle/PMD XML using an explicitly pinned Java adapter");
+            task.getJavaExecutable().convention(
+                    project.getProviders().gradleProperty("m3.analysis.java").orElse("java"));
+            task.getFormat().convention("CHECKSTYLE");
+            task.getOriginalStatus().convention("PARTIAL");
+            task.getProjectRoot().convention(project.getLayout().getProjectDirectory());
+            task.getNormalizedReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/import/analysis.tsv"));
+            task.getNormalizedSha256().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/import/analysis.sha256"));
+        });
+
         // An original OpenRewrite plugin owns recipe discovery, dry-run, and apply.
         // The alias exists only if that plugin is explicitly applied in the project.
         project.getPluginManager().withPlugin("org.openrewrite.rewrite", applied -> {
