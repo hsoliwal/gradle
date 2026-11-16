@@ -72,7 +72,8 @@ public final class M3AnalysisV1 {
 
         public Finding entry(int index) {
             Objects.checkIndex(index, rules.length);
-            return new Finding(rules[index], levels[index], paths[index], lines[index], columns[index], messages[index]);
+            return new Finding(
+                    rules[index], levels[index], paths[index], lines[index], columns[index], messages[index]);
         }
 
         /** Counts are evidence from the report, not proof that analysis ran. */
