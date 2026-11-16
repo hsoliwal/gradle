@@ -21,6 +21,7 @@ import org.gradle.api.problems.Problems;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
@@ -48,32 +49,100 @@ public abstract class M3ReviewAnalysisTask extends DefaultTask {
     @Input
     public abstract Property<Boolean> getFailOnReportedErrors();
 
+    /** Previous report is used only when explicitly configured. */
+    @Optional
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract RegularFileProperty getBaselineReportFile();
+
+    @Optional
+    @Input
+    public abstract Property<String> getBaselineSha256();
+
+    @Optional
+    @Input
+    public abstract Property<String> getBaselineProducer();
+
+    @Optional
+    @Input
+    public abstract Property<String> getCurrentProducer();
+
+    @Input
+    public abstract Property<Boolean> getFailOnIntroducedErrors();
+
     @Inject
     protected abstract Problems getProblems();
 
     @TaskAction
     public void review() {
-        Path path = getReportFile().get().getAsFile().toPath();
-        byte[] bytes = checkedReport(path);
-        String expected = getExpectedSha256().get();
-        if (!expected.matches("[0-9a-f]{64}") || !digest(bytes).equals(expected)) {
-            throw new GradleException("M3 analysis report digest does not match the declared source receipt");
-        }
-        final M3AnalysisV1.Snapshot report;
-        try {
-            report = M3AnalysisV1.parse(bytes);
-        } catch (IOException invalid) {
-            throw new GradleException("Invalid canonical M3 analyzer report", invalid);
-        }
+        M3AnalysisV1.Snapshot report = verifiedReport(
+                getReportFile().get().getAsFile().toPath(), getExpectedSha256().get());
         getLogger().lifecycle("M3 analyzer claims: status={}, findings={}, errors={}",
                 report.status(), report.size(), report.errors());
 
+        reviewOptionalBaseline(report);
         if (getPublishProblems().get()) {
             publishProblems(report);
         }
         if (getFailOnReportedErrors().get()
                 && (report.status() != M3AnalysisV1.Status.COMPLETE || report.errors() > 0)) {
             throw new GradleException("Opt-in M3 analysis gate rejected original analyzer claims");
+        }
+    }
+
+    /**
+     * Atom: explicitly opt into a second, independently verified report.
+     * The wire format has no embedded producer certificate, so both producer
+     * coordinates must be supplied and match; this never authorizes reuse.
+     */
+    private void reviewOptionalBaseline(M3AnalysisV1.Snapshot current) {
+        boolean hasReport = getBaselineReportFile().isPresent();
+        boolean hasHash = getBaselineSha256().isPresent();
+        boolean hasPreviousProducer = getBaselineProducer().isPresent();
+        boolean hasCurrentProducer = getCurrentProducer().isPresent();
+        if (hasReport != hasHash || hasReport != hasPreviousProducer || hasReport != hasCurrentProducer) {
+            throw new GradleException("Baseline comparison requires both SHA-256 digests and producer identities");
+        }
+        if (!hasReport) {
+            if (getFailOnIntroducedErrors().get()) {
+                throw new GradleException("New-error gating requires an explicit analysis baseline");
+            }
+            return;
+        }
+        M3AnalysisV1.Snapshot earlier = verifiedReport(
+                getBaselineReportFile().get().getAsFile().toPath(), getBaselineSha256().get());
+        final M3AnalysisV1.Comparison comparison;
+        try {
+            comparison = M3AnalysisV1.compare(
+                    getBaselineProducer().get(), earlier, getCurrentProducer().get(), current);
+        } catch (IllegalArgumentException unrelated) {
+            throw new GradleException("Incompatible original analyzer reports", unrelated);
+        }
+        if (!comparison.comparable()) {
+            getLogger().warn("M3 analysis difference is unavailable: an original analyzer is not COMPLETE");
+            if (getFailOnIntroducedErrors().get()) {
+                throw new GradleException("Cannot enforce new-error gate on incomplete original analysis");
+            }
+            return;
+        }
+        getLogger().lifecycle("M3 analysis difference: unchanged={}, introduced={}, resolved={}, newErrors={}",
+                comparison.unchanged(), comparison.introduced(), comparison.resolved(),
+                comparison.introducedErrors());
+        if (getFailOnIntroducedErrors().get() && comparison.introducedErrors() > 0) {
+            throw new GradleException("Opt-in M3 new-error analysis gate rejected introduced findings");
+        }
+    }
+
+    /** Atom: original file bytes, bounded no-follow admission and exact SHA-256. */
+    private static M3AnalysisV1.Snapshot verifiedReport(Path path, String expected) {
+        byte[] bytes = checkedReport(path);
+        if (expected == null || !expected.matches("[0-9a-f]{64}") || !digest(bytes).equals(expected)) {
+            throw new GradleException("M3 analysis report digest does not match the declared source receipt");
+        }
+        try {
+            return M3AnalysisV1.parse(bytes);
+        } catch (IOException invalid) {
+            throw new GradleException("Invalid canonical M3 analyzer report", invalid);
         }
     }
 
