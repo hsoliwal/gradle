@@ -84,6 +84,17 @@ final class M3ReviewAnalysisTaskTest {
     }
 
     @Test
+    void foreignProducerCannotBorrowAnExistingBaseline() throws Exception {
+        configure("COMPLETE", false, false, false);
+        addBaseline("COMPLETE", false, false, false);
+        Files.writeString(project.resolve("build.gradle"),
+                "tasks.named('m3ReviewAnalysis') { currentProducer.set('unrelated:provider:2:check') }\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        var result = run(false);
+        assertTrue(result.getOutput().contains("Incompatible original analyzer reports"));
+    }
+
+    @Test
     void tamperedBaselineIsRefusedBeforeComparingFindings() throws Exception {
         configure("COMPLETE", false, false, false);
         addBaseline("COMPLETE", false, false, true);
