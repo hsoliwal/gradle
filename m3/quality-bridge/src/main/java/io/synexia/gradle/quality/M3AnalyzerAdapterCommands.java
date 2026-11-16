@@ -22,7 +22,7 @@ public final class M3AnalyzerAdapterCommands {
         Objects.requireNonNull(normalizedReport, "normalizedReport");
         Objects.requireNonNull(digestFile, "digestFile");
         if (!adapterJar.getName().endsWith(".jar")
-                || !("CHECKSTYLE".equals(format) || "PMD".equals(format))
+                || !("CHECKSTYLE".equals(format) || "PMD".equals(format) || "SPOTBUGS".equals(format))
                 || !("COMPLETE".equals(originalStatus) || "PARTIAL".equals(originalStatus)
                         || "FAILED".equals(originalStatus))) {
             throw new IllegalArgumentException("explicit analyzer adapter, format and source status required");
