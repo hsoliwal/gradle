@@ -126,14 +126,21 @@ public abstract class M3NormalizeAnalyzerXmlTask extends DefaultTask {
             throw new GradleException("M3 normalized outputs must stay inside the approved project root");
         }
         try {
+            // Check pre-existing ancestors before making any directory,
+            // then check again for the original tool's output boundary.
+            rejectSymlinks(root, target.getParent());
             Files.createDirectories(target.getParent());
-            for (Path path = target.getParent(); path != null && path.startsWith(root); path = path.getParent()) {
-                if (Files.isSymbolicLink(path)) {
-                    throw new GradleException("M3 analyzer output cannot traverse symlinks");
-                }
-            }
+            rejectSymlinks(root, target.getParent());
         } catch (IOException cannotCreate) {
             throw new GradleException("M3 analyzer output directory unavailable", cannotCreate);
+        }
+    }
+
+    private static void rejectSymlinks(Path root, Path parent) {
+        for (Path at = parent; at != null && at.startsWith(root); at = at.getParent()) {
+            if (Files.isSymbolicLink(at)) {
+                throw new GradleException("M3 analyzer output cannot traverse symlinks");
+            }
         }
     }
 
