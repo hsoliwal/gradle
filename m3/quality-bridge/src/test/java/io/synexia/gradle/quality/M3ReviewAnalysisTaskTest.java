@@ -31,6 +31,20 @@ final class M3ReviewAnalysisTaskTest {
     }
 
     @Test
+    void optedInGradleProblemsApiAcceptsOriginalAnalyzerFindingsWithoutFixingSources() throws Exception {
+        configure("COMPLETE", false, true, false);
+        var result = run(true);
+        assertTrue(result.getOutput().contains("M3 analyzer claims: status=COMPLETE"));
+    }
+
+    @Test
+    void aPartialAnalyzerClaimIsNotSilentlyPromotedToComplete() throws Exception {
+        configure("PARTIAL", false, false, false);
+        var result = run(true);
+        assertTrue(result.getOutput().contains("M3 analyzer claims: status=PARTIAL"));
+    }
+
+    @Test
     void optedInSeverityGateRejectsAlreadyReportedError() throws Exception {
         configure("COMPLETE", true, false, false);
         var result = run(false);
