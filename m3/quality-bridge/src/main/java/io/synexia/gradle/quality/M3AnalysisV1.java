@@ -155,7 +155,7 @@ public final class M3AnalysisV1 {
             }
             if (left == null || (right != null && ORDER.compare(left, right) > 0)) {
                 introduced++;
-                if ("ERROR".equals(String.valueOf(right.severity()))) {
+                if (right.severity() == Severity.ERROR) {
                     introducedErrors++;
                 }
                 previousRight = right;
