@@ -127,6 +127,8 @@ public final class M3QualityPlugin implements Plugin<Project> {
         task.getTarget().convention("all");
         task.getTimeoutSeconds().convention(900);
         task.getIncremental().convention(false);
+        task.getStateBackend().convention(
+                project.getProviders().gradleProperty("m3.polyglot.stateBackend").orElse("legacy"));
         task.getApproveRewriteApply().convention(false);
     }
 }
