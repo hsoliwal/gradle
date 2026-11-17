@@ -69,6 +69,19 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/import/analysis.sha256"));
         });
 
+        // Both entry points delegate to Maven's original standalone polyglot CLI.
+        // Neither task is attached to check/build or executes while the plugin is applied.
+        project.getTasks().register("m3PolyglotPlan", M3PolyglotManifestTask.class, task -> {
+            polyglotDefaults(project, task);
+            task.getMode().convention("plan");
+            task.setDescription("Plan the shared Maven/Gradle polyglot task manifest without executing tools");
+        });
+        project.getTasks().register("m3PolyglotRun", M3PolyglotManifestTask.class, task -> {
+            polyglotDefaults(project, task);
+            task.getMode().convention("run");
+            task.setDescription("Explicitly execute the pinned Maven polyglot engine from Gradle");
+        });
+
         // An original OpenRewrite plugin owns recipe discovery, dry-run, and apply.
         // The alias exists only if that plugin is explicitly applied in the project.
         project.getPluginManager().withPlugin("org.openrewrite.rewrite", applied -> {
@@ -78,5 +91,17 @@ public final class M3QualityPlugin implements Plugin<Project> {
                 task.dependsOn(project.getTasks().named("rewriteDryRun"));
             });
         });
+    }
+
+    private static void polyglotDefaults(Project project, M3PolyglotManifestTask task) {
+        task.setGroup("build");
+        task.getJavaExecutable().convention(
+                project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+        task.getWorkspace().convention(project.getLayout().getProjectDirectory());
+        task.getManifestFile().convention(project.getLayout().getProjectDirectory().file("m3-build.tsv"));
+        task.getTarget().convention("all");
+        task.getTimeoutSeconds().convention(900);
+        task.getIncremental().convention(false);
+        task.getApproveRewriteApply().convention(false);
     }
 }
