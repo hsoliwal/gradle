@@ -40,6 +40,51 @@ concurrent scheduling remain in charge. External analysis tasks use `@UntrackedT
 because the databases/tool implementations may mutate or have external inputs;
 turning on caching for these tasks without proving completeness would be unsafe.
 
+## Share Maven's all-language manifest engine
+
+The opt-in `m3PolyglotPlan` and `m3PolyglotRun` tasks use the **same** Java 17
+`io.synexia.maven.polyglot.PolyglotCli` class from
+`hsoliwal/maven/tools/m3-polyglot-maven-plugin`; Gradle does not fork the manifest
+parser or pretend to own the native compilers. Build that Maven plugin JAR using
+the reviewed Maven source revision, compute its SHA-256, and supply both values:
+
+```groovy
+plugins { id 'io.synexia.m3.quality' }
+
+['m3PolyglotPlan', 'm3PolyglotRun'].each { taskName ->
+    tasks.named(taskName) {
+        engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+        engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+        manifestFile.set(layout.projectDirectory.file('m3-build.tsv'))
+        target.set('all')
+        timeoutSeconds.set(900)
+    }
+}
+
+// Optional, only for the explicitly requested run task; never for planning.
+tasks.named('m3PolyglotRun') {
+    incremental.set(false)
+    approveRewriteApply.set(false)
+}
+```
+
+Invoke `./gradlew m3PolyglotPlan` to validate and display the dependency order,
+then explicitly invoke `./gradlew m3PolyglotRun` to execute native commands.
+Both tasks refuse a missing JAR, missing digest, mismatch, symlinked JAR or
+manifest outside the workspace. An absolute, existing, regular manifest is
+required. No tool is downloaded and no model is invoked. These are untracked
+Gradle tasks because arbitrary toolchains, environments and generated outputs
+cannot yet be proven hermetic. Neither task is attached to `build` or `check`.
+
+The Maven CLI still accepts its original four-argument form and adds optional
+`--timeout-seconds`, `--incremental` and `--approve-rewrite-apply` for explicit
+`run` actions. Incremental shortcuts are **off by default** and apply only to
+ordinary tasks with declared inputs and outputs. CodeQL/OpenRewrite provider
+tasks always re-execute. An input stamp is not proof of toolchain, environment,
+ABI, output-content or transitive-dependency equivalence; do not use it as an
+unqualified build-cache correctness claim. Rewrite application requires explicit
+separate approval and the source-owned recipe/compile/test gates.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
