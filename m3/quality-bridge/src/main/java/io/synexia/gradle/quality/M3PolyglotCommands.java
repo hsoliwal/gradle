@@ -54,8 +54,7 @@ public final class M3PolyglotCommands {
         if (!("plan".equals(mode) || "run".equals(mode))
                 || target == null || !target.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,79}")
                 || timeoutSeconds < 1 || timeoutSeconds > 43_200
-                || !("legacy".equals(stateBackend) || "file".equals(stateBackend)
-                        || "m3db".equals(stateBackend))
+                || !validStateBackend(stateBackend)
                 || (!"legacy".equals(stateBackend) && !incremental)
                 || (!"run".equals(mode) && (incremental || approveRewriteApply))) {
             throw new IllegalArgumentException("invalid M3 polyglot CLI mode, target or option");
@@ -72,6 +71,14 @@ public final class M3PolyglotCommands {
         return List.copyOf(argv);
     }
 
+    /** Match the merged Maven portable CLI contract; storage stays Maven-owned. */
+    private static boolean validStateBackend(String backend) {
+        return "legacy".equals(backend) || "file".equals(backend)
+                || "m3db".equals(backend) || "sqlite".equals(backend)
+                || "h2".equals(backend)
+                || (backend != null && backend.matches("ext-[a-z0-9][a-z0-9-]{0,47}"));
+    }
+
     /** Read-only, versioned capability inventory from the same pinned Maven CLI. */
     public static List<String> providers(String javaExecutable, File engineJar) {
         return providers(javaExecutable, engineJar, List.of());
@@ -85,7 +92,8 @@ public final class M3PolyglotCommands {
                 MAIN_CLASS, "providers");
     }
 
-    private static String classpath(File engineJar, List<File> providerJars) {
+    /** Shared sealed Java classpath for the Maven polyglot and AST fact CLIs. */
+    static String classpath(File engineJar, List<File> providerJars) {
         Objects.requireNonNull(engineJar, "engineJar");
         Objects.requireNonNull(providerJars, "providerJars");
         StringBuilder result = new StringBuilder(engineJar.getAbsolutePath());

@@ -50,7 +50,7 @@ final class M3PolyglotManifestTaskTest {
     void nativeModuleStateOptionsAreForwardedOnlyToExplicitRun() throws Exception {
         String digest = createFakePortableEngine(root);
         fixture(digest);
-        for (String backend : List.of("file", "m3db")) {
+        for (String backend : List.of("file", "m3db", "sqlite", "h2", "ext-operator-store")) {
             GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
                     .withArguments("m3PolyglotPlan", "-Pm3.polyglot.stateBackend=" + backend,
                             "--stacktrace").build();
@@ -80,6 +80,19 @@ final class M3PolyglotManifestTaskTest {
                         "--stacktrace").buildAndFail().getOutput();
         assertTrue(output.contains("invalid M3 polyglot CLI mode, target or option"));
         assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
+    }
+
+    @Test
+    void refusesMalformedBackendBeforeLaunchingOriginalMavenEngine() throws Exception {
+        String digest = createFakePortableEngine(root);
+        fixture(digest);
+        for (String backend : List.of("derby", "ext-", "ext-Bad", "ext-path/escape")) {
+            String output = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments("m3PolyglotRun", "-Pm3.polyglot.stateBackend=" + backend,
+                            "--stacktrace").buildAndFail().getOutput();
+            assertTrue(output.contains("invalid M3 polyglot CLI mode, target or option"));
+            assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
+        }
     }
 
     @Test

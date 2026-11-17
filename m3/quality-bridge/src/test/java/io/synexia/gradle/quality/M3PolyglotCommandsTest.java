@@ -89,12 +89,26 @@ final class M3PolyglotCommandsTest {
         assertEquals(List.of("--incremental", "--state-backend", "m3db", "--approve-rewrite-apply"),
                 nativeDb.subList(nativeDb.size() - 4, nativeDb.size()));
 
+        for (String backend : List.of("sqlite", "h2", "ext-operator-store", "ext-a")) {
+            List<String> portable = M3PolyglotCommands.command(
+                    "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend);
+            assertEquals(List.of("--incremental", "--state-backend", backend),
+                    portable.subList(portable.size() - 3, portable.size()));
+        }
+
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), "file"));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "m3db"));
+        for (String backend : List.of("derby", "ext-", "ext-Bad", "ext-path/escape",
+                "ext-" + "x".repeat(49), "jdbc:sqlite:remote")) {
+            assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                    "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend));
+        }
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
-                "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), "sqlite"));
+                "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), "ext-a"));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "h2"));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), null));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(

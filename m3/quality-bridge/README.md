@@ -68,7 +68,8 @@ plugins { id 'io.synexia.m3.quality' }
 // Optional, only for the explicitly requested run task; never for planning.
 tasks.named('m3PolyglotRun') {
     incremental.set(false)
-    // Only if incremental is true: "legacy" (default), "file", or "m3db".
+    // Only if incremental is true: "legacy" (default), "file", "m3db",
+    // "sqlite", "h2", or an explicitly installed "ext-*" backend.
     stateBackend.set('legacy')
     approveRewriteApply.set(false)
 }
@@ -91,10 +92,12 @@ ABI, output-content or transitive-dependency equivalence; do not use it as an
 unqualified build-cache correctness claim. Rewrite application requires explicit
 separate approval and the source-owned recipe/compile/test gates.
 
-### Maven PR #143: verified module-local incremental persistence
+### Maven PRs #143 and #147: opt-in portable module-local state
 
 Maven [PR #143](https://github.com/hsoliwal/maven/pull/143) has merged the
-portable CLI contract `--state-backend legacy|file|m3db`. The Gradle fork
+initial portable CLI contract. Maven [PR #147](https://github.com/hsoliwal/maven/pull/147)
+subsequently merged `sqlite`, `h2` and explicitly installed `ext-*` backend
+selection. The Gradle fork
 now passes the selected backend to **Maven's pinned engine** without copying
 its parser, state format, task graph, locking or native MIndexDB implementation.
 The Gradle task is still `@UntrackedTask`: M3DB is **Maven polyglot task
@@ -109,29 +112,98 @@ tasks.named('m3PolyglotRun') {
     stateBackend.set('file') // atomically sealed .m3/module-state-v1.bin
     // or 'm3db' when the independently verified native MIndexDB runtime
     // is available on the pinned engine's classpath
+    // or 'sqlite', 'h2', or 'ext-operator-store' with the separately installed,
+    // reviewed driver/provider JARs in the digest-pinned classpath
 }
 ```
 
-Alternatively `-Pm3.polyglot.stateBackend=file` or `m3db` configures the
+Alternatively `-Pm3.polyglot.stateBackend=file`, `m3db`, `sqlite`, `h2` or
+`ext-operator-store` configures the
 `m3PolyglotRun` task only. `m3PolyglotPlan` always defaults to `legacy`
 even when the project property is set, so a plan remains read-only.
 The existing signatures and default argv remain unchanged. A nonlegacy
 backend on a nonincremental run, an unknown backend, or a nonlegacy backend
 configured explicitly for planning is rejected *before* launching the engine.
-The `file` and `m3db` modes require a separately reviewed Maven engine JAR
-that contains PR #143; the existing SHA-256 engine pin is mandatory. The
-optional MIndexDB native runtime is **not bundled or downloaded**.
+Every nonlegacy mode requires an independently reviewed Maven engine JAR
+with the corresponding CLI capability; the existing SHA-256 engine pin is
+mandatory. For SQLite and H2, supply the appropriate JDBC driver as a
+separately pinned `providerJars` entry (with its exact filename-to-SHA-256
+entry in `providerJarSha256`). The same mechanism admits a trusted external
+`M3ModuleDbBackendProvider` service JAR for `ext-*`. Missing drivers,
+providers, duplicate JAR names or mismatched pins fail rather than falling
+back to another backend. The bridge does not accept arbitrary JDBC URLs or
+`derby`, which is not advertised by Maven's merged portable CLI. No database
+driver, MIndexDB native runtime, or backend is **bundled or downloaded**.
 
 Maven's standalone engine verifies declared output contents for reuse and
 conservatively rehashes where ctime/file-key evidence is unavailable.
-The current merged #143 adapter does **not** establish end-to-end,
-cross-process and parallel state fencing; Maven PRs
+Maven #147 now introduces module-wide execution locking and transactional
+storage choices; those guarantees belong to the Maven engine and require
+cross-process, native and filesystem-specific qualification. Competing
 [#144](https://github.com/hsoliwal/maven/pull/144)–
-[#148](https://github.com/hsoliwal/maven/pull/148)
-are still under review. In particular their competing backend/store formats
-should not be assumed merged or compatible. The Gradle bridge currently
-exposes only the three modes of the merged Maven CLI, failing closed for
-unrecognized future backends rather than claiming unverified interoperability.
+[#146](https://github.com/hsoliwal/maven/pull/146) proposals must not be
+blindly combined. Maven [#148](https://github.com/hsoliwal/maven/pull/148)
+merged native MIndexDB-backed syntax fingerprint persistence for its own
+smart-builder goal; this Gradle task does not imply that the separate goal
+or its native runtime is installed. Unsupported future backend names fail
+closed, and no Gradle task/output-cache hit is asserted by the M3 state.
+
+### Maven PR #148: opt-in original JDK 21 AST/atom fingerprints
+
+The `m3MachineFingerprints` task is a separate, **explicit** delegation to
+`io.synexia.maven.smart.MachineFingerprintMain` from the original
+[`hsoliwal/maven/tools/m3-smart-builder`](https://github.com/hsoliwal/maven/tree/master/tools/m3-smart-builder).
+Build the source-pinned `m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar` using a JDK 21
+Maven toolchain, compute its SHA-256, and provide current original OpenRewrite
+preparation and atom/pattern receipts. Those receipts are authoritative only
+after the **Maven** producer's strict, source-bound checks; a locally supplied
+file or an engine SHA-256 alone never proves that recipes ran.
+
+```groovy
+plugins { id 'io.synexia.m3.quality' }
+
+tasks.named('m3MachineFingerprints') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-smart-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.fingerprints.sha256'))
+    sourceRoot.set(layout.projectDirectory.dir('src/main/java'))
+    preparationReport.set(layout.projectDirectory.file('receipts/preparation.json'))
+    atomPatternManifest.set(layout.projectDirectory.file('receipts/atom-pattern.tsv'))
+    workers.set(4)            // bounded 1..8; deterministic per-file fan-in
+    attributeTypes.set(false) // JDK21 compiler type/call attribution is opt-in
+    analyzeFlow.set(false)    // requires attributeTypes=true; may-flow is not proof
+    moduleDb.set('auto')      // 'off' or 'required' also supported
+}
+```
+
+Run `./gradlew m3MachineFingerprints` only after those two source-bound
+receipts have been generated by their original, approved producers. Point
+`-Pm3.fingerprints.java` at a **Java 21** executable if the Gradle daemon uses
+another JDK. The original producer alone writes
+`build/m3-smart/machine-evidence.tsv` and `machine-fingerprints.json`, with
+structural hash, normalized logic cues, SimHash, syntactic contract facts,
+optional compiler attribution and bounded may-flow analysis. These are
+evidence and pattern *candidates*, not extracted private methods, equivalent
+programs or recipe-promotion authority.
+
+For persisted syntax results, the original CLI independently supports
+`--module-db auto|off|required`. `auto` uses an already installed native
+`com.synexia.mindex.db.MIndexDB` provider or computes normally; `off` forbids
+DB use; `required` refuses when no qualified provider is installed. The
+canonical store remains at `.m3/maven/mindexdb` with its original sealed
+artifacts and lock. Supply the complete, independently SHA-256-pinned native
+provider classpath as `providerJars`/`providerJarSha256`, exactly as for the
+polyglot SPI. No MIndexDB format, parser, source-fingerprint row or cache is
+copied into Gradle. The task is intentionally `@UntrackedTask`; no Gradle
+up-to-date or build-cache decision is derived from these receipts. No native
+provider is bundled or downloaded. See the [Maven native module DB contract](https://github.com/hsoliwal/maven/blob/master/tools/m3-smart-builder/README.md).
+
+Preflight checks refuse linked/out-of-scope paths, missing or mismatched
+engine/provider digests, invalid DB modes, and flow without attribution.
+The original producer additionally verifies the evidence manifests and
+source inventory before/after computation and can publish an explicit
+`refused` receipt. Neither this task nor its registration is attached to
+`compileJava`, `check` or `build` automatically. The Java 17 Gradle plugin
+remains usable without running the Java 21 producer.
 
 ### Maven-owned compiler, interpreter, transpiler, atomizer, patternizer
 
