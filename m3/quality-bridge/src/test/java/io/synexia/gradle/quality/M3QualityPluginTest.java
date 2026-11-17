@@ -39,5 +39,6 @@ class M3QualityPluginTest {
         assertTrue(output.contains("m3PolyglotProviders"));
         assertTrue(output.contains("m3EclipseModel"));
         assertTrue(output.contains("m3IdeDeltaExport"));
+        assertTrue(output.contains("m3IdeDeltaReview"));
     }
 }
