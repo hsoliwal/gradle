@@ -35,14 +35,6 @@ public final class M3PolyglotCommands {
                 timeoutSeconds, incremental, approveRewriteApply, List.of(), "legacy");
     }
 
-    /** Opt-in persistent state; the default signature retains the original CLI argv. */
-    public static List<String> command(String javaExecutable, File engineJar, File workspace,
-            File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
-            boolean approveRewriteApply, String stateBackend) {
-        return command(javaExecutable, engineJar, workspace, manifest, target, mode,
-                timeoutSeconds, incremental, approveRewriteApply, List.of(), stateBackend);
-    }
-
     /** Includes only separately verified, explicit third-party SPI provider JARs. */
     public static List<String> command(String javaExecutable, File engineJar, File workspace,
             File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
