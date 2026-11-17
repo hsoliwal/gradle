@@ -4,6 +4,7 @@
  */
 package io.synexia.gradle.quality;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -31,7 +32,6 @@ import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
-import org.gradle.api.tasks.options.Option;
 import org.gradle.work.DisableCachingByDefault;
 import org.gradle.work.FileChange;
 import org.gradle.work.FileType;
@@ -95,6 +95,7 @@ public abstract class M3IdeDeltaExportTask extends DefaultTask {
         if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(root)) {
             throw new IOException("workspace is not an ordinary directory");
         }
+        validateSources(root, outputRoot);
         if (!input.isIncremental()) return changes;
         for (FileChange change : input.getFileChanges(getSourceFiles())) {
             if (change.getFileType() == FileType.DIRECTORY) continue;
@@ -105,9 +106,23 @@ public abstract class M3IdeDeltaExportTask extends DefaultTask {
             rejectSymlinks(root, file);
             String relative = root.relativize(file).toString().replace('\\', '/');
             changes.add(new M3IdeDeltaWire.Change(
-                    M3IdeDeltaWire.ChangeKind.valueOf(change.getChangeType().name()), relative));
+                    switch (change.getChangeType()) {
+                        case ADDED -> M3IdeDeltaWire.ChangeKind.ADDED;
+                        case MODIFIED -> M3IdeDeltaWire.ChangeKind.MODIFIED;
+                        case REMOVED -> M3IdeDeltaWire.ChangeKind.DELETED;
+                    }, relative));
         }
         return changes;
+    }
+
+    private void validateSources(Path root, Path outputRoot) throws IOException {
+        for (File source : getSourceFiles().getFiles()) {
+            Path path = source.toPath().toAbsolutePath().normalize();
+            if (!path.startsWith(root) || path.startsWith(outputRoot)) {
+                throw new IOException("source collection leaves project or includes build reports");
+            }
+            rejectSymlinks(root, path);
+        }
     }
 
     private static void validateOutput(Path file, Path workspace, Path outputRoot) throws IOException {
