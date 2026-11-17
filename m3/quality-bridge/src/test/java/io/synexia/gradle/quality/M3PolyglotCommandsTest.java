@@ -70,6 +70,38 @@ final class M3PolyglotCommandsTest {
     }
 
     @Test
+    void onlyExplicitIncrementalRunCanSelectMavensPersistentModuleState() {
+        var jar = temp.resolve("engine.jar").toFile();
+        var root = temp.toFile();
+        var manifest = temp.resolve("m3-build.tsv").toFile();
+
+        List<String> legacy = M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, true, false, List.of());
+        assertFalse(legacy.contains("--state-backend"));
+
+        List<String> file = M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), "file");
+        assertEquals(List.of("--incremental", "--state-backend", "file"),
+                file.subList(file.size() - 3, file.size()));
+
+        List<String> nativeDb = M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, true, true, List.of(), "m3db");
+        assertEquals(List.of("--incremental", "--state-backend", "m3db", "--approve-rewrite-apply"),
+                nativeDb.subList(nativeDb.size() - 4, nativeDb.size()));
+
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), "file"));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "m3db"));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), "sqlite"));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), null));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), "M3DB"));
+    }
+
+    @Test
     void binaryPinRejectsChangesAndMalformedHashes() throws Exception {
         Path jar = temp.resolve("polyglot.jar");
         Files.writeString(jar, "reviewed engine bytes", StandardCharsets.UTF_8);
