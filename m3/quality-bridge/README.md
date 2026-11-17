@@ -83,8 +83,8 @@ Gradle tasks because arbitrary toolchains, environments and generated outputs
 cannot yet be proven hermetic. Neither task is attached to `build` or `check`.
 
 The Maven CLI still accepts its original four-argument form and adds optional
-`--timeout-seconds`, `--incremental` and `--approve-rewrite-apply` for explicit
-`run` actions. Incremental shortcuts are **off by default** and apply only to
+`--timeout-seconds`, `--incremental`, `--state-backend` and
+`--approve-rewrite-apply` for explicit `run` actions. Incremental shortcuts are **off by default** and apply only to
 ordinary tasks with declared inputs and outputs. CodeQL/OpenRewrite/M3 provider
 tasks always re-execute. An input stamp is not proof of toolchain, environment,
 ABI, output-content or transitive-dependency equivalence; do not use it as an
@@ -341,8 +341,11 @@ Gradle plugin if it already offers safe task inputs/outputs and toolchain suppor
 - M3JDK21 compiler integration remains in the original JavaCompile/worker owner.
 - No CodeQL analysis output is treated as an instruction to rewrite code.
 - Neither CodeQL nor OpenRewrite alone proves source/binary/behavioral compatibility.
-- No cache hits, goal skipping, deletion of originals, patch application, output
-  restoration or automatic model downloads are authorized.
+- No Gradle task-cache hits, Gradle task skipping, deletion of originals, patch
+  application, output restoration or automatic model downloads are authorized
+  by this bridge. Only explicit Maven polyglot `incremental` mode may skip
+  Maven-owned manifest tasks after its declared-input/output checks; it never
+  authorizes Gradle's native `build` or `check` tasks to be skipped.
 - CodeQL CLI licensing and supported language extractors must be checked for the
   intended use; `hsoliwal/codeql` query sources do not bundle its CLI engine.
 - OpenRewrite supports particular source and configuration formats; other
