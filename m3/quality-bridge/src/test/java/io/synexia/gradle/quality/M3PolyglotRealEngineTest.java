@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
 
 import javax.tools.ToolProvider;
 
@@ -104,6 +105,21 @@ final class M3PolyglotRealEngineTest {
         execute();
         assertEquals("4", Files.readString(root.resolve("calls.txt")),
                 "corrupt module state must not authorize a skip");
+
+        // Maven #147 owns JDBC and external-provider admission. A backend
+        // without an installed driver/provider must fail before executing a tool.
+        String originalBuild = Files.readString(root.resolve("build.gradle"));
+        for (String backend : List.of("sqlite", "h2", "ext-not-installed")) {
+            Files.writeString(root.resolve("build.gradle"),
+                    originalBuild.replace("stateBackend.set('file')", "stateBackend.set('" + backend + "')"));
+            String failure = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments("m3PolyglotRun", "--stacktrace").buildAndFail().getOutput();
+            String expected = backend.startsWith("ext-") ? "requested M3 portable DB provider is absent"
+                    : "explicit " + backend + " JDBC driver is absent";
+            assertTrue(failure.contains(expected), failure);
+            assertEquals("4", Files.readString(root.resolve("calls.txt")),
+                    "a missing backend may not start the original language tool");
+        }
     }
 
     private String execute() {
