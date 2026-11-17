@@ -601,3 +601,18 @@ dedicated GitHub matrix job explicitly builds and supplies the JAR
 so that the case is not skipped there. Source ownership, tool/rule
 completeness and production analyzer parity require separate tests;
 passing a JAR smoke never authorizes Gradle build cache reuse.
+
+
+## Native Gradle IDE deltas for Maven and other hosts
+
+This fork now provides the separate opt-in m3IdeDeltaExport and
+m3IdeDeltaReview tasks. Export uses Gradle's original InputChanges and
+emits the canonical Maven M3-IDE-DELTA-V1 envelope plus a SHA-256 sidecar.
+Import requires separately supplied, exact source bytes and SHA-256,
+and checks owner/project identity before presenting change claims.
+Neither task is connected to build/check or allowed to cause any compiler,
+test or build-cache skip. Gradle retains its native scheduler and change
+history; Maven retains its original M3ExternalBuildService classification.
+
+See [the source-bound IDE delta contract](docs/M3-IDE-DELTA.md) for
+configuration, examples, strict wire bounds, provenance and qualification.
