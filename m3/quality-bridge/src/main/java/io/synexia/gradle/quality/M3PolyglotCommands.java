@@ -49,6 +49,14 @@ public final class M3PolyglotCommands {
         return List.copyOf(argv);
     }
 
+    /** Read-only, versioned capability inventory from the same pinned Maven CLI. */
+    public static List<String> providers(String javaExecutable, File engineJar) {
+        String java = M3QualityCommands.executable(javaExecutable);
+        Objects.requireNonNull(engineJar, "engineJar");
+        return List.of(java, "-Dfile.encoding=UTF-8", "-cp", engineJar.getAbsolutePath(),
+                MAIN_CLASS, "providers");
+    }
+
     /** Reject missing, malformed, oversized or symlinked engine artifacts. */
     public static void verifyEngine(Path engine, String expectedSha256) throws IOException {
         if (expectedSha256 == null || !expectedSha256.matches("[0-9a-f]{64}")

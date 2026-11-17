@@ -36,5 +36,7 @@ class M3QualityPluginTest {
         assertTrue(output.contains("m3NormalizeAnalyzerXml"));
         assertTrue(output.contains("m3PolyglotPlan"));
         assertTrue(output.contains("m3PolyglotRun"));
+        assertTrue(output.contains("m3PolyglotProviders"));
+        assertTrue(output.contains("m3EclipseModel"));
     }
 }
