@@ -58,6 +58,10 @@ plugins { id 'io.synexia.m3.quality' }
         manifestFile.set(layout.projectDirectory.file('m3-build.tsv'))
         target.set('all')
         timeoutSeconds.set(900)
+        // Optional external providers, each separately pinned:
+        // providerJars.from(layout.projectDirectory.file('vendor/m3-rust-provider.jar'))
+        // providerJarSha256.put('m3-rust-provider.jar',
+        //     providers.gradleProperty('m3.rust.provider.sha256'))
     }
 }
 
@@ -103,6 +107,10 @@ that Maven's pinned runtime actually loaded:
 tasks.named('m3PolyglotProviders') {
     engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
     engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    // Optional: the *same* extra classpath as m3PolyglotPlan/Run.
+    // providerJars.from(layout.projectDirectory.file('vendor/m3-rust-provider.jar'))
+    // providerJarSha256.put('m3-rust-provider.jar',
+    //     providers.gradleProperty('m3.rust.provider.sha256'))
 }
 ```
 
@@ -116,11 +124,13 @@ inventory. The existing `m3PolyglotPlan`/`m3PolyglotRun` entry points pass
 `@m3` manifest tasks through to that same Maven engine.
 
 An external provider must be installed on the **Maven engine's runtime
-classpath** with its `META-INF/services` descriptor. This initial Gradle bridge
-accepts one pinned engine JAR and does **not yet add a separately digest-pinned
-external provider classpath**. Keep such providers in a deliberately assembled,
-verified runtime or invoke the Maven plugin with explicit plugin dependencies;
-do not treat a missing provider as a fallback to an arbitrary executable.
+classpath** with its `META-INF/services` descriptor. Configure `providerJars`
+and `providerJarSha256` identically on the inventory and execution tasks.
+Every provider filename must be unique, every JAR is separately SHA-256
+verified and size-bounded, and no undeclared/extra checksum keys are accepted.
+The ordered classpath is deterministic. These are explicitly selected local
+artifacts, never silently downloaded, and a missing provider is not a fallback
+to an arbitrary executable. Other Gradle and Maven classloaders remain unchanged.
 
 The consumer recipe `io.synexia.maven.recipe.EnableM3ToolProviderSPI` can
 register the Maven plugin without binding any goal. The M3AST source facts,

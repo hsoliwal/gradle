@@ -31,6 +31,14 @@ public final class M3PolyglotCommands {
     public static List<String> command(String javaExecutable, File engineJar, File workspace,
             File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
             boolean approveRewriteApply) {
+        return command(javaExecutable, engineJar, workspace, manifest, target, mode,
+                timeoutSeconds, incremental, approveRewriteApply, List.of());
+    }
+
+    /** Includes only separately verified, explicit third-party SPI provider JARs. */
+    public static List<String> command(String javaExecutable, File engineJar, File workspace,
+            File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
+            boolean approveRewriteApply, List<File> providerJars) {
         String java = M3QualityCommands.executable(javaExecutable);
         Objects.requireNonNull(engineJar, "engineJar");
         Objects.requireNonNull(workspace, "workspace");
@@ -41,7 +49,7 @@ public final class M3PolyglotCommands {
                 || (!"run".equals(mode) && (incremental || approveRewriteApply))) {
             throw new IllegalArgumentException("invalid M3 polyglot CLI mode, target or option");
         }
-        List<String> argv = new ArrayList<>(List.of(java, "-cp", engineJar.getAbsolutePath(),
+        List<String> argv = new ArrayList<>(List.of(java, "-cp", classpath(engineJar, providerJars),
                 MAIN_CLASS, mode, workspace.getAbsolutePath(), manifest.getAbsolutePath(), target,
                 "--timeout-seconds", Integer.toString(timeoutSeconds)));
         if (incremental) argv.add("--incremental");
@@ -51,10 +59,33 @@ public final class M3PolyglotCommands {
 
     /** Read-only, versioned capability inventory from the same pinned Maven CLI. */
     public static List<String> providers(String javaExecutable, File engineJar) {
+        return providers(javaExecutable, engineJar, List.of());
+    }
+
+    /** Inventories exactly the additional, digest-pinned providers selected by the caller. */
+    public static List<String> providers(String javaExecutable, File engineJar, List<File> providerJars) {
         String java = M3QualityCommands.executable(javaExecutable);
         Objects.requireNonNull(engineJar, "engineJar");
-        return List.of(java, "-Dfile.encoding=UTF-8", "-cp", engineJar.getAbsolutePath(),
+        return List.of(java, "-Dfile.encoding=UTF-8", "-cp", classpath(engineJar, providerJars),
                 MAIN_CLASS, "providers");
+    }
+
+    private static String classpath(File engineJar, List<File> providerJars) {
+        Objects.requireNonNull(engineJar, "engineJar");
+        Objects.requireNonNull(providerJars, "providerJars");
+        StringBuilder result = new StringBuilder(engineJar.getAbsolutePath());
+        if (result.toString().contains(File.pathSeparator)) {
+            throw new IllegalArgumentException("M3 engine JAR path contains a classpath delimiter");
+        }
+        for (File provider : providerJars) {
+            Objects.requireNonNull(provider, "provider");
+            String path = provider.getAbsolutePath();
+            if (path.contains(File.pathSeparator)) {
+                throw new IllegalArgumentException("M3 provider JAR path contains a classpath delimiter");
+            }
+            result.append(File.pathSeparator).append(path);
+        }
+        return result.toString();
     }
 
     /** Reject missing, malformed, oversized or symlinked engine artifacts. */

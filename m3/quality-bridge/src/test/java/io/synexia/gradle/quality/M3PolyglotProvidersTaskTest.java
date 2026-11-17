@@ -5,6 +5,7 @@
 package io.synexia.gradle.quality;
 
 import java.io.IOException;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -69,6 +70,26 @@ class M3PolyglotProvidersTaskTest {
         assertFalse(Files.exists(workspace.resolve("build/reports/m3/polyglot-providers.tsv")));
     }
 
+    @Test
+    void loadsExplicitlyPinnedExternalProviderJarOnMavenRuntimeClasspath() throws Exception {
+        fixture();
+        String digest = engine("M3-POLYGLOT-PROVIDERS-V1\nprovider\tjdk\tcompiler\tjava\n");
+        Path provider = workspace.resolve("external-provider.jar");
+        Files.writeString(provider, "explicit provider bytes");
+        String pin = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(Files.readAllBytes(provider)));
+        configuration(digest);
+        Files.writeString(workspace.resolve("build.gradle"), Files.readString(workspace.resolve("build.gradle"))
+                + "tasks.named('m3PolyglotProviders') {\n"
+                + "  providerJars.from(layout.projectDirectory.file('external-provider.jar'))\n"
+                + "  providerJarSha256.put('external-provider.jar', '" + pin + "')\n"
+                + "}\n");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotProviders", "--stacktrace").build();
+        assertTrue(Files.readString(workspace.resolve("cli-classpath.txt"))
+                .contains(File.pathSeparator + provider));
+    }
+
     private void fixture() throws IOException {
         Files.writeString(workspace.resolve("settings.gradle"), "rootProject.name='m3-provider-proxy'\n");
     }
@@ -89,6 +110,8 @@ class M3PolyglotProvidersTaskTest {
         Files.writeString(source, "package io.synexia.maven.polyglot;\n"
                 + "public final class PolyglotCli { public static void main(String[] args) {\n"
                 + "if (args.length != 1 || !\"providers\".equals(args[0])) throw new IllegalArgumentException();\n"
+                + "try { java.nio.file.Files.writeString(java.nio.file.Path.of(\"cli-classpath.txt\"), "
+                + "System.getProperty(\"java.class.path\")); } catch (java.io.IOException fail) { throw new RuntimeException(fail); }\n"
                 + "System.out.print(\"" + escaped + "\"); } }\n", StandardCharsets.UTF_8);
         Path classes = Files.createDirectories(workspace.resolve("producer/classes"));
         int code = ToolProvider.getSystemJavaCompiler().run(null, null, null,

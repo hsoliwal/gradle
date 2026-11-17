@@ -89,6 +89,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.setDescription("Inspect available M3 Maven tool providers without invoking them");
             task.getJavaExecutable().convention(
                     project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+            task.getProviderJarSha256().convention(java.util.Map.of());
             task.getProviderReport().convention(
                     project.getLayout().getBuildDirectory().file("reports/m3/polyglot-providers.tsv"));
         });
@@ -120,6 +121,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
         task.setGroup("build");
         task.getJavaExecutable().convention(
                 project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+        task.getProviderJarSha256().convention(java.util.Map.of());
         task.getWorkspace().convention(project.getLayout().getProjectDirectory());
         task.getManifestFile().convention(project.getLayout().getProjectDirectory().file("m3-build.tsv"));
         task.getTarget().convention("all");

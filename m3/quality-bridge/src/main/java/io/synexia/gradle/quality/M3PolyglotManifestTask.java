@@ -4,6 +4,7 @@
  */
 package io.synexia.gradle.quality;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -15,10 +16,13 @@ import javax.inject.Inject;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -41,6 +45,13 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
 
     @Input
     public abstract Property<String> getEngineSha256();
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract ConfigurableFileCollection getProviderJars();
+
+    @Input
+    public abstract MapProperty<String, String> getProviderJarSha256();
 
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
@@ -77,19 +88,21 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
                 || !manifest.startsWith(root)) {
             throw new GradleException("M3 polyglot requires an existing manifest inside its workspace");
         }
+        final List<File> providerJars;
         try {
             if (Files.size(manifest) > M3PolyglotCommands.MAX_MANIFEST_BYTES) {
                 throw new IOException("M3 polyglot manifest exceeds the 1 MiB contract");
             }
             rejectSymlinkAncestors(root, manifest);
             M3PolyglotCommands.verifyEngine(engine, getEngineSha256().get());
+            providerJars = M3ProviderClasspath.verify(getProviderJars().getFiles(), getProviderJarSha256().get());
         } catch (IOException invalid) {
             throw new GradleException("Invalid M3 polyglot engine or manifest", invalid);
         }
         List<String> command = M3PolyglotCommands.command(
                 getJavaExecutable().get(), engine.toFile(), root.toFile(), manifest.toFile(),
                 getTarget().get(), getMode().get(), getTimeoutSeconds().get(),
-                getIncremental().get(), getApproveRewriteApply().get());
+                getIncremental().get(), getApproveRewriteApply().get(), providerJars);
         getExecOperations().exec(spec -> {
             spec.setExecutable(command.get(0));
             spec.setArgs(command.subList(1, command.size()));

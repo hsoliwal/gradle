@@ -4,6 +4,7 @@
  */
 package io.synexia.gradle.quality;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -19,9 +20,12 @@ import javax.inject.Inject;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -44,6 +48,13 @@ public abstract class M3PolyglotProvidersTask extends DefaultTask {
     @Input
     public abstract Property<String> getEngineSha256();
 
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract ConfigurableFileCollection getProviderJars();
+
+    @Input
+    public abstract MapProperty<String, String> getProviderJarSha256();
+
     @OutputFile
     public abstract RegularFileProperty getProviderReport();
 
@@ -65,7 +76,10 @@ public abstract class M3PolyglotProvidersTask extends DefaultTask {
         try {
             rejectSymlinks(checkout, report);
             M3PolyglotCommands.verifyEngine(jar, getEngineSha256().get());
-            List<String> args = M3PolyglotCommands.providers(getJavaExecutable().get(), jar.toFile());
+            List<File> providerJars = M3ProviderClasspath.verify(
+                    getProviderJars().getFiles(), getProviderJarSha256().get());
+            List<String> args = M3PolyglotCommands.providers(getJavaExecutable().get(),
+                    jar.toFile(), providerJars);
             M3BoundedOutput output = new M3BoundedOutput(MAX_REPORT_BYTES, "M3 providers");
             getExecOperations().exec(spec -> {
                 spec.setExecutable(args.get(0));
