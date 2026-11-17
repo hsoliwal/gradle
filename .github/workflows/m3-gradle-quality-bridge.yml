@@ -27,6 +27,8 @@ jobs:
         run: sh m3/quality-bridge/scripts/verify-portable-backends.sh
       - name: Verify original Maven JDK21 fingerprint argv contract without Gradle dependencies
         run: sh m3/quality-bridge/scripts/verify-machine-fingerprint-args.sh
+      - name: Verify Maven #149 local-cache Java 17 argv contract
+        run: sh m3/quality-bridge/scripts/verify-polyglot-cache-args.sh
       - name: Test standalone bridge, canonical reports and Gradle TestKit
         run: |
           chmod +x gradlew
