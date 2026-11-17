@@ -23,6 +23,8 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
+      - name: Verify canonical Maven IDE-delta v1 bytes using Java 17
+        run: sh m3/quality-bridge/scripts/verify-ide-delta.sh
       - name: Test standalone bridge, canonical reports and Gradle TestKit
         run: |
           chmod +x gradlew
