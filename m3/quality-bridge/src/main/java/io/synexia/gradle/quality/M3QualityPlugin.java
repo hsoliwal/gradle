@@ -79,6 +79,8 @@ public final class M3QualityPlugin implements Plugin<Project> {
         project.getTasks().register("m3PolyglotRun", M3PolyglotManifestTask.class, task -> {
             polyglotDefaults(project, task);
             task.getMode().convention("run");
+            task.getStateBackend().convention(
+                    project.getProviders().gradleProperty("m3.polyglot.stateBackend").orElse("legacy"));
             task.setDescription("Explicitly execute the pinned Maven polyglot engine from Gradle");
         });
 
@@ -127,8 +129,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
         task.getTarget().convention("all");
         task.getTimeoutSeconds().convention(900);
         task.getIncremental().convention(false);
-        task.getStateBackend().convention(
-                project.getProviders().gradleProperty("m3.polyglot.stateBackend").orElse("legacy"));
+        task.getStateBackend().convention("legacy");
         task.getApproveRewriteApply().convention(false);
     }
 }
