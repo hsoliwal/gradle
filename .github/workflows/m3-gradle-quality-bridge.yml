@@ -49,3 +49,22 @@ jobs:
           export M3_ADAPTER_JAR="$GITHUB_WORKSPACE/m3-maven-adapter/tools/m3-analyzer-report-adapter/target/m3-analyzer-report-adapter-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3NormalizeAnalyzerXmlTaskTest' --rerun-tasks
+
+      # Source custody for Maven PR #143: use the exact merged commit, not
+      # Maven's moving master or an unreviewed plugin artifact.
+      - name: Check out merged Maven module-state engine source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: c71be270dc3acab398185aaad2c5e9583d186f46
+          path: m3-maven-polyglot
+          persist-credentials: false
+      - name: Verify original Maven polyglot engine and its module DB contracts
+        run: |
+          mvn -B -ntp -f m3-maven-polyglot/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-polyglot/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Verify real Maven per-module reuse and invalidation through Gradle TestKit
+        run: |
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-polyglot/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3PolyglotRealEngineTest' --rerun-tasks
