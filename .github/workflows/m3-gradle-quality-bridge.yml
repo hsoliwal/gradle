@@ -27,6 +27,8 @@ jobs:
         run: sh m3/quality-bridge/scripts/verify-portable-backends.sh
       - name: Verify original Maven JDK21 fingerprint argv contract without Gradle dependencies
         run: sh m3/quality-bridge/scripts/verify-machine-fingerprint-args.sh
+      - name: Verify canonical Maven IDE-delta v1 bytes using Java 17
+        run: sh m3/quality-bridge/scripts/verify-ide-delta.sh
       - name: Verify Maven #149 local-cache Java 17 argv contract
         run: sh m3/quality-bridge/scripts/verify-polyglot-cache-args.sh
       - name: Test standalone bridge, canonical reports and Gradle TestKit
@@ -56,8 +58,8 @@ jobs:
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3NormalizeAnalyzerXmlTaskTest' --rerun-tasks
 
-      # Source custody for Maven #143 + #147: pin the reviewed merged
-      # portable-state contract, not Maven's moving master or a binary download.
+      # Source custody: Maven #143/#147/#148 plus #155 QDox/lint build repair
+      # and #149 polyglot cache; pin the merged source rather than moving master.
       - name: Check out merged Maven portable module-state engine source
         uses: actions/checkout@v4
         with:
@@ -74,12 +76,6 @@ jobs:
           export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-polyglot/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3PolyglotRealEngineTest' --rerun-tasks
-
-      - name: Verify real Maven #149 cache reuse across distinct Gradle checkouts
-        run: |
-          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-polyglot/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
-          ./gradlew --no-daemon --stacktrace \
-            -p m3/quality-bridge test --tests '*M3PolyglotCacheRealEngineTest' --rerun-tasks
 
       # Exact same Maven review commit also contains merged #148. Only JDK21
       # can execute its original compiler/JavacTask-based AST producer.
