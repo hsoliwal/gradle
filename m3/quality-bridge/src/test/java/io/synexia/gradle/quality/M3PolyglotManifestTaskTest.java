@@ -47,6 +47,42 @@ final class M3PolyglotManifestTaskTest {
     }
 
     @Test
+    void nativeModuleStateOptionsAreForwardedOnlyToExplicitRun() throws Exception {
+        String digest = createFakePortableEngine(root);
+        fixture(digest);
+        for (String backend : List.of("file", "m3db")) {
+            GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments("m3PolyglotPlan", "-Pm3.polyglot.stateBackend=" + backend,
+                            "--stacktrace").build();
+            assertEquals(List.of("plan", root.toString(), root.resolve("m3-build.tsv").toString(),
+                            "all", "--timeout-seconds", "900"),
+                    Files.readAllLines(root.resolve("cli-argv.txt"), StandardCharsets.UTF_8));
+
+            GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments("m3PolyglotRun", "-Pm3.polyglot.stateBackend=" + backend,
+                            "--stacktrace").build();
+            assertEquals(List.of("run", root.toString(), root.resolve("m3-build.tsv").toString(),
+                            "all", "--timeout-seconds", "37", "--incremental",
+                            "--state-backend", backend),
+                    Files.readAllLines(root.resolve("cli-argv.txt"), StandardCharsets.UTF_8));
+        }
+    }
+
+    @Test
+    void stateBackendCannotTurnAnUnverifiedNonincrementalRunIntoACacheHit() throws Exception {
+        String digest = createFakePortableEngine(root);
+        fixture(digest);
+        Files.writeString(root.resolve("build.gradle"),
+                Files.readString(root.resolve("build.gradle"))
+                        + "tasks.named('m3PolyglotRun') { incremental.set(false) }\n");
+        String output = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotRun", "-Pm3.polyglot.stateBackend=file",
+                        "--stacktrace").buildAndFail().getOutput();
+        assertTrue(output.contains("invalid M3 polyglot CLI mode, target or option"));
+        assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
+    }
+
+    @Test
     void refusesChangedPinnedEngineBeforeAnyExecution() throws Exception {
         String digest = createFakePortableEngine(root);
         fixture(digest);
