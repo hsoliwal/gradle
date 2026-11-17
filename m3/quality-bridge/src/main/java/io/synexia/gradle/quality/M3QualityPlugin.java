@@ -69,6 +69,35 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/import/analysis.sha256"));
         });
 
+        // Native Gradle InputChanges is the source owner; Maven's v1 wire is
+        // only an exchange format and never grants goal or cache skipping.
+        project.getTasks().register("m3IdeDeltaExport", M3IdeDeltaExportTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Export Gradle-owned source deltas in the Maven M3-IDE-DELTA-V1 wire format");
+            task.getWorkspace().convention(project.getLayout().getProjectDirectory());
+            task.getOutputRoot().convention(project.getLayout().getBuildDirectory());
+            task.getSourceFiles().from(project.fileTree("src"));
+            task.getProjectIdentifier().convention(
+                    project.getRootProject().getName() + ":" + project.getPath());
+            task.getDeltaReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/ide-delta.tsv"));
+            task.getDeltaSha256().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/ide-delta.sha256"));
+        });
+
+        // Optional, read-only import; requires an operator-supplied original
+        // digest and never promotes a delta into a Gradle build-cache decision.
+        project.getTasks().register("m3IdeDeltaReview", M3IdeDeltaReviewTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Review a digest-pinned Maven IDE-delta v1 report without executing builds");
+            task.getReportFile().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/ide-delta.tsv"));
+            task.getExpectedSha256().convention(project.getProviders().gradleProperty("m3.ide.delta.sha256"));
+            task.getExpectedProvider().convention("gradle");
+            task.getExpectedProjectIdentifier().convention(
+                    project.getRootProject().getName() + ":" + project.getPath());
+        });
+
         // Both entry points delegate to Maven's original standalone polyglot CLI.
         // Neither task is attached to check/build or executes while the plugin is applied.
         project.getTasks().register("m3PolyglotPlan", M3PolyglotManifestTask.class, task -> {
@@ -82,6 +111,24 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.getStateBackend().convention(
                     project.getProviders().gradleProperty("m3.polyglot.stateBackend").orElse("legacy"));
             task.setDescription("Explicitly execute the pinned Maven polyglot engine from Gradle");
+        });
+
+        // Reuse the Maven/JDK AST fingerprint producer and its canonical
+        // MIndexDB fact owner. No source parse, cache key or receipt is forked.
+        project.getTasks().register("m3MachineFingerprints", M3MachineFingerprintTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Produce canonical Java AST facts through the pinned Maven JDK21 CLI");
+            task.getJavaExecutable().convention(
+                    project.getProviders().gradleProperty("m3.fingerprints.java").orElse("java"));
+            task.getProviderJarSha256().convention(java.util.Map.of());
+            task.getProjectDirectory().convention(project.getLayout().getProjectDirectory());
+            task.getSourceRoot().convention(project.getLayout().getProjectDirectory().dir("src/main/java"));
+            task.getBuildDirectory().convention(project.getLayout().getBuildDirectory());
+            task.getWorkers().convention(1);
+            task.getAttributeTypes().convention(false);
+            task.getAnalyzeFlow().convention(false);
+            task.getModuleDb().convention(
+                    project.getProviders().gradleProperty("m3.fingerprints.moduleDb").orElse("auto"));
         });
 
         // The compiler/interpreter/transpiler/atomizer/patternizer catalog is

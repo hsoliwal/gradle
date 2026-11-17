@@ -89,10 +89,26 @@ final class M3PolyglotCommandsTest {
         assertEquals(List.of("--incremental", "--state-backend", "m3db", "--approve-rewrite-apply"),
                 nativeDb.subList(nativeDb.size() - 4, nativeDb.size()));
 
+        for (String backend : List.of("sqlite", "h2", "ext-operator-store", "ext-a")) {
+            List<String> portable = M3PolyglotCommands.command(
+                    "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend);
+            assertEquals(List.of("--incremental", "--state-backend", backend),
+                    portable.subList(portable.size() - 3, portable.size()));
+        }
+
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), "file"));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "m3db"));
+        for (String backend : List.of("derby", "ext-", "ext-Bad", "ext-path/escape",
+                "ext-" + "x".repeat(49), "jdbc:sqlite:remote")) {
+            assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                    "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend));
+        }
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), "ext-a"));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "h2"));
         for (String backend : List.of("sqlite", "h2", "ext-local", "ext-1", "ext-a-b")) {
             List<String> portable = M3PolyglotCommands.command(
                     "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend);
@@ -112,6 +128,36 @@ final class M3PolyglotCommandsTest {
                 "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), null));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), "M3DB"));
+    }
+
+    @Test
+    void mavenLocalCacheIsExplicitRunOnlyAndDoesNotChangeOldArgv() {
+        File engine = temp.resolve("engine.jar").toFile();
+        File workspace = temp.resolve("workspace with spaces").toFile();
+        File manifest = temp.resolve("workspace with spaces/m3-build.tsv").toFile();
+        File cache = temp.resolve("shared cache with spaces").toFile();
+        List<String> old = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "all", "run", 900, true, false,
+                List.of(), "legacy");
+        assertFalse(old.contains("--build-cache"));
+
+        List<String> selected = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "all", "run", 900, true, false,
+                List.of(), "file", cache);
+        assertEquals(List.of("--state-backend", "file", "--build-cache", cache.getAbsolutePath()),
+                selected.subList(selected.size() - 4, selected.size()));
+        assertFalse(selected.contains("bash"));
+        assertFalse(selected.contains("sh"));
+
+        List<String> cacheOnly = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "all", "run", 900, false, false,
+                List.of(), "legacy", cache);
+        assertEquals(List.of("--build-cache", cache.getAbsolutePath()),
+                cacheOnly.subList(cacheOnly.size() - 2, cacheOnly.size()));
+
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "all", "plan", 900, false, false,
+                List.of(), "legacy", cache));
     }
 
     @Test

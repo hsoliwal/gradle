@@ -50,7 +50,7 @@ final class M3PolyglotManifestTaskTest {
     void nativeModuleStateOptionsAreForwardedOnlyToExplicitRun() throws Exception {
         String digest = createFakePortableEngine(root);
         fixture(digest);
-        for (String backend : List.of("file", "m3db", "sqlite", "h2", "ext-local")) {
+        for (String backend : List.of("file", "m3db", "sqlite", "h2", "ext-operator-store")) {
             GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
                     .withArguments("m3PolyglotPlan", "-Pm3.polyglot.stateBackend=" + backend,
                             "--stacktrace").build();
@@ -80,6 +80,72 @@ final class M3PolyglotManifestTaskTest {
                         "--stacktrace").buildAndFail().getOutput();
         assertTrue(output.contains("invalid M3 polyglot CLI mode, target or option"));
         assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
+    }
+
+    @Test
+    void refusesMalformedBackendBeforeLaunchingOriginalMavenEngine() throws Exception {
+        String digest = createFakePortableEngine(root);
+        fixture(digest);
+        for (String backend : List.of("derby", "ext-", "ext-Bad", "ext-path/escape")) {
+            String output = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments("m3PolyglotRun", "-Pm3.polyglot.stateBackend=" + backend,
+                            "--stacktrace").buildAndFail().getOutput();
+            assertTrue(output.contains("invalid M3 polyglot CLI mode, target or option"));
+            assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
+        }
+    }
+
+    @Test
+    void forwardsExistingSharedCacheOnlyWhenExplicitlyConfigured() throws Exception {
+        String pin = createFakePortableEngine(root);
+        fixture(pin);
+        Path cache = Files.createDirectory(root.resolveSibling(root.getFileName() + "-m3-cache"));
+        try {
+            Files.writeString(root.resolve("build.gradle"),
+                    Files.readString(root.resolve("build.gradle"))
+                    + "tasks.named('m3PolyglotRun') { localArtifactCacheDirectory.fileValue(file('"
+                    + cache.toString().replace('\\', '/') + "')) }\n");
+            GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments("m3PolyglotRun", "--stacktrace").build();
+            List<String> command = Files.readAllLines(root.resolve("cli-argv.txt"), StandardCharsets.UTF_8);
+            assertEquals(List.of("--build-cache", cache.toString()),
+                    command.subList(command.size() - 2, command.size()));
+        } finally {
+            Files.deleteIfExists(cache);
+        }
+    }
+
+    @Test
+    void refusesLocalCacheInsideProjectBeforeEngineExecution() throws Exception {
+        String pin = createFakePortableEngine(root);
+        fixture(pin);
+        Files.createDirectory(root.resolve("cache"));
+        Files.writeString(root.resolve("build.gradle"),
+                Files.readString(root.resolve("build.gradle"))
+                + "tasks.named('m3PolyglotRun') { localArtifactCacheDirectory.fileValue(file('cache')) }\n");
+        String failure = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotRun", "--stacktrace").buildAndFail().getOutput();
+        assertTrue(failure.contains("cache must be an existing directory outside the workspace"));
+        assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
+    }
+
+    @Test
+    void refusesLocalCacheOnPlanBeforeEngineExecution() throws Exception {
+        String pin = createFakePortableEngine(root);
+        fixture(pin);
+        Path cache = Files.createDirectory(root.resolveSibling(root.getFileName() + "-m3-plan-cache"));
+        try {
+            Files.writeString(root.resolve("build.gradle"),
+                    Files.readString(root.resolve("build.gradle"))
+                    + "tasks.named('m3PolyglotPlan') { localArtifactCacheDirectory.fileValue(file('"
+                    + cache.toString().replace('\\', '/') + "')) }\n");
+            String failure = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments("m3PolyglotPlan", "--stacktrace").buildAndFail().getOutput();
+            assertTrue(failure.contains("invalid M3 polyglot CLI mode, target or option"));
+            assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
+        } finally {
+            Files.deleteIfExists(cache);
+        }
     }
 
     @Test
