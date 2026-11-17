@@ -104,7 +104,7 @@ final class M3PolyglotManifestTaskTest {
             Files.writeString(root.resolve("build.gradle"),
                     Files.readString(root.resolve("build.gradle"))
                     + "tasks.named('m3PolyglotRun') { localArtifactCacheDirectory.fileValue(file('"
-                    + cache.toString().replace('\\', '/') + "')) }\\n");
+                    + cache.toString().replace('\\', '/') + "')) }\n");
             GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
                     .withArguments("m3PolyglotRun", "--stacktrace").build();
             List<String> command = Files.readAllLines(root.resolve("cli-argv.txt"), StandardCharsets.UTF_8);
@@ -122,7 +122,7 @@ final class M3PolyglotManifestTaskTest {
         Files.createDirectory(root.resolve("cache"));
         Files.writeString(root.resolve("build.gradle"),
                 Files.readString(root.resolve("build.gradle"))
-                + "tasks.named('m3PolyglotRun') { localArtifactCacheDirectory.fileValue(file('cache')) }\\n");
+                + "tasks.named('m3PolyglotRun') { localArtifactCacheDirectory.fileValue(file('cache')) }\n");
         String failure = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
                 .withArguments("m3PolyglotRun", "--stacktrace").buildAndFail().getOutput();
         assertTrue(failure.contains("cache must be an existing directory outside the workspace"));
@@ -138,7 +138,7 @@ final class M3PolyglotManifestTaskTest {
             Files.writeString(root.resolve("build.gradle"),
                     Files.readString(root.resolve("build.gradle"))
                     + "tasks.named('m3PolyglotPlan') { localArtifactCacheDirectory.fileValue(file('"
-                    + cache.toString().replace('\\', '/') + "')) }\\n");
+                    + cache.toString().replace('\\', '/') + "')) }\n");
             String failure = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
                     .withArguments("m3PolyglotPlan", "--stacktrace").buildAndFail().getOutput();
             assertTrue(failure.contains("invalid M3 polyglot CLI mode, target or option"));
