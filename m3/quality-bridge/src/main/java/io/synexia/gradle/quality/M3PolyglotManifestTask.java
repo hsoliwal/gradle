@@ -79,6 +79,13 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
     @Input
     public abstract Property<Boolean> getApproveRewriteApply();
 
+    /**
+     * Optional separately approved Maven polyglot output-cache directory.
+     * This task is untracked; Gradle must never fingerprint or restore it.
+     */
+    @Internal
+    public abstract DirectoryProperty getLocalArtifactCacheDirectory();
+
     @Inject
     protected abstract ExecOperations getExecOperations();
 
@@ -93,6 +100,7 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
             throw new GradleException("M3 polyglot requires an existing manifest inside its workspace");
         }
         final List<File> providerJars;
+        final File localCache;
         try {
             if (Files.size(manifest) > M3PolyglotCommands.MAX_MANIFEST_BYTES) {
                 throw new IOException("M3 polyglot manifest exceeds the 1 MiB contract");
@@ -100,6 +108,14 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
             rejectSymlinkAncestors(root, manifest);
             M3PolyglotCommands.verifyEngine(engine, getEngineSha256().get());
             providerJars = M3ProviderClasspath.verify(getProviderJars().getFiles(), getProviderJarSha256().get());
+            if (getLocalArtifactCacheDirectory().isPresent()) {
+                Path selected = getLocalArtifactCacheDirectory().get()
+                        .getAsFile().toPath().toAbsolutePath().normalize();
+                verifyCacheDirectory(root, selected);
+                localCache = selected.toFile();
+            } else {
+                localCache = null;
+            }
         } catch (IOException invalid) {
             throw new GradleException("Invalid M3 polyglot engine or manifest", invalid);
         }
@@ -107,12 +123,25 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
                 getJavaExecutable().get(), engine.toFile(), root.toFile(), manifest.toFile(),
                 getTarget().get(), getMode().get(), getTimeoutSeconds().get(),
                 getIncremental().get(), getApproveRewriteApply().get(), providerJars,
-                getStateBackend().get());
+                getStateBackend().get(), localCache);
         getExecOperations().exec(spec -> {
             spec.setExecutable(command.get(0));
             spec.setArgs(command.subList(1, command.size()));
             spec.setWorkingDir(root.toFile());
         });
+    }
+
+    private static void verifyCacheDirectory(Path workspace, Path directory) throws IOException {
+        if (directory.startsWith(workspace) || !Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IOException("M3 polyglot cache must be an existing directory outside the workspace");
+        }
+        Path cursor = directory.getRoot();
+        for (Path part : directory) {
+            cursor = cursor.resolve(part);
+            if (Files.isSymbolicLink(cursor)) {
+                throw new IOException("M3 polyglot local cache has a symlinked path component");
+            }
+        }
     }
 
     private static void rejectSymlinkAncestors(Path root, Path manifest) throws IOException {
