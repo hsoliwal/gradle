@@ -116,6 +116,36 @@ final class M3PolyglotCommandsTest {
     }
 
     @Test
+    void mavenLocalCacheIsExplicitRunOnlyAndDoesNotChangeOldArgv() {
+        File engine = temp.resolve("engine.jar").toFile();
+        File workspace = temp.resolve("workspace with spaces").toFile();
+        File manifest = temp.resolve("workspace with spaces/m3-build.tsv").toFile();
+        File cache = temp.resolve("shared cache with spaces").toFile();
+        List<String> old = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "all", "run", 900, true, false,
+                List.of(), "legacy");
+        assertFalse(old.contains("--build-cache"));
+
+        List<String> selected = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "all", "run", 900, true, false,
+                List.of(), "file", cache);
+        assertEquals(List.of("--state-backend", "file", "--build-cache", cache.getAbsolutePath()),
+                selected.subList(selected.size() - 4, selected.size()));
+        assertFalse(selected.contains("bash"));
+        assertFalse(selected.contains("sh"));
+
+        List<String> cacheOnly = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "all", "run", 900, false, false,
+                List.of(), "legacy", cache);
+        assertEquals(List.of("--build-cache", cache.getAbsolutePath()),
+                cacheOnly.subList(cacheOnly.size() - 2, cacheOnly.size()));
+
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "all", "plan", 900, false, false,
+                List.of(), "legacy", cache));
+    }
+
+    @Test
     void binaryPinRejectsChangesAndMalformedHashes() throws Exception {
         Path jar = temp.resolve("polyglot.jar");
         Files.writeString(jar, "reviewed engine bytes", StandardCharsets.UTF_8);

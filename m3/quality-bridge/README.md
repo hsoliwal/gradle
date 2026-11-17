@@ -687,3 +687,20 @@ history; Maven retains its original M3ExternalBuildService classification.
 
 See [the source-bound IDE delta contract](docs/M3-IDE-DELTA.md) for
 configuration, examples, strict wire bounds, provenance and qualification.
+
+## Opt-in Maven #149 local cache for explicit polyglot targets
+
+The existing `m3PolyglotRun` task now accepts an optional
+`localArtifactCacheDirectory` property. It forwards Maven's original
+`--build-cache <absolute-directory>` CLI argument, with no Gradle-side
+cache implementation, only for explicitly invoked run tasks. Cache
+configuration is absent by default; an existing non-symlink directory
+outside the checkout must be supplied. Existing command APIs and default
+execution remain unchanged.
+
+This does **not** use or authorize Gradle's own build cache, and does not
+make arbitrary polyglot tasks hermetic. Maven #149's cache key does not
+prove toolchain, environment or undeclared inputs; only audited native
+tool tasks should opt in. See
+[the experimental polyglot-cache contract](docs/M3-POLYGLOT-CACHE.md)
+for examples, limitations and acceptance gates.
