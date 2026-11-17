@@ -50,13 +50,13 @@ jobs:
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3NormalizeAnalyzerXmlTaskTest' --rerun-tasks
 
-      # Source custody for Maven PR #143: use the exact merged commit, not
-      # Maven's moving master or an unreviewed plugin artifact.
-      - name: Check out merged Maven module-state engine source
+      # Source custody for Maven #143 and #147: pin the exact reviewed merged
+      # revision with the portable backend and run-lock contract.
+      - name: Check out merged Maven portable module-state engine source
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: c71be270dc3acab398185aaad2c5e9583d186f46
+          ref: 4d4976f9cf6f62b5f007cf5ab80ee92c67c0f3f7
           path: m3-maven-polyglot
           persist-credentials: false
       - name: Verify original Maven polyglot engine and its module DB contracts

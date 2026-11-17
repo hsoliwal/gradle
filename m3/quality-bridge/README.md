@@ -68,7 +68,8 @@ plugins { id 'io.synexia.m3.quality' }
 // Optional, only for the explicitly requested run task; never for planning.
 tasks.named('m3PolyglotRun') {
     incremental.set(false)
-    // Only if incremental is true: "legacy" (default), "file", or "m3db".
+    // Only if incremental is true: legacy (default), file, m3db,
+    // sqlite, h2, or an explicitly installed ext-* backend.
     stateBackend.set('legacy')
     approveRewriteApply.set(false)
 }
@@ -91,10 +92,13 @@ ABI, output-content or transitive-dependency equivalence; do not use it as an
 unqualified build-cache correctness claim. Rewrite application requires explicit
 separate approval and the source-owned recipe/compile/test gates.
 
-### Maven PR #143: verified module-local incremental persistence
+### Maven PRs #143 and #147: opt-in module-local incremental persistence
 
 Maven [PR #143](https://github.com/hsoliwal/maven/pull/143) has merged the
-portable CLI contract `--state-backend legacy|file|m3db`. The Gradle fork
+portable CLI contract `--state-backend legacy|file|m3db`. Merged
+[PR #147](https://github.com/hsoliwal/maven/pull/147) extends it with
+`sqlite`, `h2` and provider-defined `ext-*` backends, plus a module-wide
+run lock and failure-safe invalidation. The Gradle fork
 now passes the selected backend to **Maven's pinned engine** without copying
 its parser, state format, task graph, locking or native MIndexDB implementation.
 The Gradle task is still `@UntrackedTask`: M3DB is **Maven polyglot task
@@ -109,29 +113,39 @@ tasks.named('m3PolyglotRun') {
     stateBackend.set('file') // atomically sealed .m3/module-state-v1.bin
     // or 'm3db' when the independently verified native MIndexDB runtime
     // is available on the pinned engine's classpath
+    // or 'sqlite' / 'h2' with an explicitly installed, SHA-256-pinned
+    // JDBC driver JAR via providerJars and providerJarSha256
+    // or 'ext-local' with a separately installed, pinned backend provider
 }
 ```
 
-Alternatively `-Pm3.polyglot.stateBackend=file` or `m3db` configures the
+Alternatively `-Pm3.polyglot.stateBackend=sqlite` (or another supported
+backend) configures the
 `m3PolyglotRun` task only. `m3PolyglotPlan` always defaults to `legacy`
 even when the project property is set, so a plan remains read-only.
 The existing signatures and default argv remain unchanged. A nonlegacy
 backend on a nonincremental run, an unknown backend, or a nonlegacy backend
 configured explicitly for planning is rejected *before* launching the engine.
-The `file` and `m3db` modes require a separately reviewed Maven engine JAR
-that contains PR #143; the existing SHA-256 engine pin is mandatory. The
-optional MIndexDB native runtime is **not bundled or downloaded**.
+The `file` and `m3db` modes require a Maven engine including PR #143;
+`sqlite`, `h2` and `ext-*` require an engine including PR #147. Its exact
+reviewed source revision and binary SHA-256 must be pinned; the CI contract
+uses merge commit `4d4976f9cf6f62b5f007cf5ab80ee92c67c0f3f7`.
+No MIndexDB runtime, JDBC driver or external backend is bundled or downloaded.
+Unknown backend names are rejected by Gradle; missing optional drivers and
+providers are refused by the original Maven engine. The JDBC drivers are
+ordinary explicit classpath JARs here, not a Gradle database reimplementation.
 
 Maven's standalone engine verifies declared output contents for reuse and
 conservatively rehashes where ctime/file-key evidence is unavailable.
-The current merged #143 adapter does **not** establish end-to-end,
-cross-process and parallel state fencing; Maven PRs
-[#144](https://github.com/hsoliwal/maven/pull/144)–
-[#148](https://github.com/hsoliwal/maven/pull/148)
-are still under review. In particular their competing backend/store formats
-should not be assumed merged or compatible. The Gradle bridge currently
-exposes only the three modes of the merged Maven CLI, failing closed for
-unrecognized future backends rather than claiming unverified interoperability.
+PR #147 adds cooperating-process module locks and preserves a sealed v1 image;
+its SQLite/H2 runtime-driver interoperability, cross-platform crash recovery
+and native MIndexDB integration remain separate qualification gates. Competing
+Maven PRs [#144](https://github.com/hsoliwal/maven/pull/144)–
+[#146](https://github.com/hsoliwal/maven/pull/146) remain open and are not
+silently composed. Merged Maven
+[#148](https://github.com/hsoliwal/maven/pull/148) caches *syntax fingerprints*
+inside the separate smart-builder module; that is neither a successful-build
+receipt nor a Gradle task-cache hit, and is not imported by this CLI bridge.
 
 ### Maven-owned compiler, interpreter, transpiler, atomizer, patternizer
 

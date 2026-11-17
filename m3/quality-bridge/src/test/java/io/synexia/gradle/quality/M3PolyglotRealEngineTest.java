@@ -104,6 +104,26 @@ final class M3PolyglotRealEngineTest {
         execute();
         assertEquals("4", Files.readString(root.resolve("calls.txt")),
                 "corrupt module state must not authorize a skip");
+
+        // Maven #147 requires separately installed JDBC drivers; forwarding a
+        // backend is never authority to silently run with another state store.
+        Files.writeString(root.resolve("build.gradle"), Files.readString(root.resolve("build.gradle"))
+                .replace("stateBackend.set('file')",
+                        "stateBackend.set(providers.gradleProperty('m3.polyglot.stateBackend').orElse('file'))"));
+        for (String backend : java.util.List.of("sqlite", "h2")) {
+            String refusal = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments("m3PolyglotRun", "-Pm3.polyglot.stateBackend=" + backend, "--stacktrace")
+                    .buildAndFail().getOutput();
+            assertTrue(refusal.contains("explicit " + backend + " JDBC driver is absent"),
+                    "Maven must refuse missing drivers instead of changing state backends");
+            assertEquals("4", Files.readString(root.resolve("calls.txt")),
+                    "a refused backend must not execute the tool");
+        }
+        String missingProvider = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotRun", "-Pm3.polyglot.stateBackend=ext-local", "--stacktrace")
+                .buildAndFail().getOutput();
+        assertTrue(missingProvider.contains("requested M3 portable DB provider is absent: ext-local"));
+        assertEquals("4", Files.readString(root.resolve("calls.txt")));
     }
 
     private String execute() {

@@ -93,8 +93,21 @@ final class M3PolyglotCommandsTest {
                 "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), "file"));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "m3db"));
-        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
-                "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), "sqlite"));
+        for (String backend : List.of("sqlite", "h2", "ext-local", "ext-1", "ext-a-b")) {
+            List<String> portable = M3PolyglotCommands.command(
+                    "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend);
+            assertEquals(List.of("--incremental", "--state-backend", backend),
+                    portable.subList(portable.size() - 3, portable.size()));
+            assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                    "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), backend));
+            assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                    "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), backend));
+        }
+        for (String invalid : List.of("ext-", "ext-Upper", "ext-a_b", "ext-../../local",
+                "ext-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "http://server", "SQLite")) {
+            assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                    "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), invalid));
+        }
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), null));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(

@@ -54,8 +54,7 @@ public final class M3PolyglotCommands {
         if (!("plan".equals(mode) || "run".equals(mode))
                 || target == null || !target.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,79}")
                 || timeoutSeconds < 1 || timeoutSeconds > 43_200
-                || !("legacy".equals(stateBackend) || "file".equals(stateBackend)
-                        || "m3db".equals(stateBackend))
+                || !supportedStateBackend(stateBackend)
                 || (!"legacy".equals(stateBackend) && !incremental)
                 || (!"run".equals(mode) && (incremental || approveRewriteApply))) {
             throw new IllegalArgumentException("invalid M3 polyglot CLI mode, target or option");
@@ -70,6 +69,14 @@ public final class M3PolyglotCommands {
         }
         if (approveRewriteApply) argv.add("--approve-rewrite-apply");
         return List.copyOf(argv);
+    }
+
+    /** The versioned Maven CLI owns these backends and validates installed drivers. */
+    private static boolean supportedStateBackend(String backend) {
+        return "legacy".equals(backend) || "file".equals(backend)
+                || "m3db".equals(backend) || "sqlite".equals(backend)
+                || "h2".equals(backend)
+                || (backend != null && backend.matches("ext-[a-z0-9][a-z0-9-]{0,47}"));
     }
 
     /** Read-only, versioned capability inventory from the same pinned Maven CLI. */
