@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: 4d4976f9cf6f62b5f007cf5ab80ee92c67c0f3f7
+          ref: b47e9a1e9173502c19de9bb6657a4f88b3267487
           path: m3-maven-polyglot
           persist-credentials: false
       - name: Verify original Maven polyglot engine, module DB and portable backend contracts
@@ -74,6 +74,12 @@ jobs:
           export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-polyglot/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3PolyglotRealEngineTest' --rerun-tasks
+
+      - name: Verify real Maven #149 cache reuse across distinct Gradle checkouts
+        run: |
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-polyglot/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3PolyglotCacheRealEngineTest' --rerun-tasks
 
       # Exact same Maven review commit also contains merged #148. Only JDK21
       # can execute its original compiler/JavacTask-based AST producer.
