@@ -20,7 +20,7 @@ import java.util.Objects;
  */
 public final class M3IdeDeltaWire {
     public static final int MAX_BYTES = 8 * 1024 * 1024;
-    private static final int MAX_CHANGES = 50_000;
+    private static final int MAX_CHANGES = 65_536;
     private static final String MAGIC = "M3-IDE-DELTA-V1";
 
     public enum BuildKind { INCREMENTAL, AUTO, FULL, CLEAN }
@@ -158,25 +158,25 @@ public final class M3IdeDeltaWire {
     }
 
     private static void checkProvider(String provider) {
-        if (provider == null || !provider.matches("[a-z][a-z0-9_.-]{0,79}")) {
-            throw new IllegalArgumentException("invalid source owner provider");
-        }
+        checkName(provider, "provider", 128);
     }
 
     private static void checkProject(String project) {
-        if (project == null || project.isBlank()
-                || project.getBytes(StandardCharsets.UTF_8).length > 4096) {
-            throw new IllegalArgumentException("invalid project identifier");
+        checkName(project, "project identifier", 256);
+    }
+
+    private static void checkName(String value, String name, int maxLength) {
+        if (value == null || value.isBlank() || value.length() > maxLength
+                || !value.equals(value.trim()) || value.chars().anyMatch(Character::isISOControl)) {
+            throw new IllegalArgumentException("invalid " + name);
         }
-        project.codePoints().forEach(c -> {
-            if (Character.isISOControl(c)) throw new IllegalArgumentException("control in project identifier");
-        });
+        checkUtf16(value);
     }
 
     private static void checkPath(String path) {
-        if (path == null || path.isBlank() || path.length() > 4096
-                || path.startsWith("/") || path.endsWith("/") || path.indexOf('\\') >= 0
-                || path.indexOf(':') >= 0 || path.indexOf('\t') >= 0) {
+        if (path == null || path.isEmpty() || path.length() > 2048
+                || path.charAt(0) == '/' || path.indexOf('\\') >= 0
+                || path.indexOf(':') >= 0 || path.chars().anyMatch(Character::isISOControl)) {
             throw new IllegalArgumentException("invalid project-relative delta path");
         }
         for (String segment : path.split("/", -1)) {
@@ -184,8 +184,19 @@ public final class M3IdeDeltaWire {
                 throw new IllegalArgumentException("traversal or empty delta path segment");
             }
         }
-        path.codePoints().forEach(c -> {
-            if (Character.isISOControl(c)) throw new IllegalArgumentException("control in delta path");
-        });
+        checkUtf16(path);
+    }
+
+    private static void checkUtf16(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (Character.isHighSurrogate(ch)) {
+                if (++i == text.length() || !Character.isLowSurrogate(text.charAt(i))) {
+                    throw new IllegalArgumentException("unpaired high surrogate");
+                }
+            } else if (Character.isLowSurrogate(ch)) {
+                throw new IllegalArgumentException("unpaired low surrogate");
+            }
+        }
     }
 }
