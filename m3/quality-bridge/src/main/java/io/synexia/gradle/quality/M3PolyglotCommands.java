@@ -47,6 +47,17 @@ public final class M3PolyglotCommands {
     public static List<String> command(String javaExecutable, File engineJar, File workspace,
             File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
             boolean approveRewriteApply, List<File> providerJars, String stateBackend) {
+        return command(javaExecutable, engineJar, workspace, manifest, target, mode,
+                timeoutSeconds, incremental, approveRewriteApply, providerJars, stateBackend, null);
+    }
+
+    /**
+     * Explicit Maven #149 local artifact cache; not Gradle's own build cache.
+     * The old argv signatures remain byte-for-byte unchanged without a cache.
+     */
+    public static List<String> command(String javaExecutable, File engineJar, File workspace,
+            File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
+            boolean approveRewriteApply, List<File> providerJars, String stateBackend, File buildCache) {
         String java = M3QualityCommands.executable(javaExecutable);
         Objects.requireNonNull(engineJar, "engineJar");
         Objects.requireNonNull(workspace, "workspace");
@@ -56,7 +67,7 @@ public final class M3PolyglotCommands {
                 || timeoutSeconds < 1 || timeoutSeconds > 43_200
                 || !validStateBackend(stateBackend)
                 || (!"legacy".equals(stateBackend) && !incremental)
-                || (!"run".equals(mode) && (incremental || approveRewriteApply))) {
+                || (!"run".equals(mode) && (incremental || approveRewriteApply || buildCache != null))) {
             throw new IllegalArgumentException("invalid M3 polyglot CLI mode, target or option");
         }
         List<String> argv = new ArrayList<>(List.of(java, "-cp", classpath(engineJar, providerJars),
@@ -68,6 +79,14 @@ public final class M3PolyglotCommands {
             argv.add(stateBackend);
         }
         if (approveRewriteApply) argv.add("--approve-rewrite-apply");
+        if (buildCache != null) {
+            String location = buildCache.getAbsolutePath();
+            if (location.isBlank() || location.startsWith("--")) {
+                throw new IllegalArgumentException("invalid M3 polyglot local cache directory");
+            }
+            argv.add("--build-cache");
+            argv.add(location);
+        }
         return List.copyOf(argv);
     }
 
