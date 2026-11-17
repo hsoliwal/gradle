@@ -23,8 +23,8 @@ import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.file.FileType;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Incremental;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
@@ -34,7 +34,7 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
 import org.gradle.work.FileChange;
-import org.gradle.work.FileType;
+import org.gradle.work.Incremental;
 import org.gradle.work.InputChanges;
 
 /**
