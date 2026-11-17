@@ -58,6 +58,10 @@ plugins { id 'io.synexia.m3.quality' }
         manifestFile.set(layout.projectDirectory.file('m3-build.tsv'))
         target.set('all')
         timeoutSeconds.set(900)
+        // Optional external providers, each separately pinned:
+        // providerJars.from(layout.projectDirectory.file('vendor/m3-rust-provider.jar'))
+        // providerJarSha256.put('m3-rust-provider.jar',
+        //     providers.gradleProperty('m3.rust.provider.sha256'))
     }
 }
 
@@ -79,11 +83,92 @@ cannot yet be proven hermetic. Neither task is attached to `build` or `check`.
 The Maven CLI still accepts its original four-argument form and adds optional
 `--timeout-seconds`, `--incremental` and `--approve-rewrite-apply` for explicit
 `run` actions. Incremental shortcuts are **off by default** and apply only to
-ordinary tasks with declared inputs and outputs. CodeQL/OpenRewrite provider
+ordinary tasks with declared inputs and outputs. CodeQL/OpenRewrite/M3 provider
 tasks always re-execute. An input stamp is not proof of toolchain, environment,
 ABI, output-content or transitive-dependency equivalence; do not use it as an
 unqualified build-cache correctness claim. Rewrite application requires explicit
 separate approval and the source-owned recipe/compile/test gates.
+
+### Maven-owned compiler, interpreter, transpiler, atomizer, patternizer
+
+The same Maven engine now has a versioned `ServiceLoader<M3ToolProvider>`
+interface. A manifest may select an explicitly installed operation with a
+`@m3:<provider>:<capability>:<language>` tool. The five capabilities are
+`compiler`, `interpreter`, `transpiler`, `atomizer` and `patternizer`.
+The built-in Java compiler provider (`@m3:jdk:compiler:java`) forwards options,
+including `-Xplugin:M3AST` when available, to the original JDK/M3JDK compiler.
+Other languages and operations require independent installed providers; none
+are inferred from an Eclipse nature or enabled automatically.
+
+Use the **read-only** `m3PolyglotProviders` task to inspect the provider set
+that Maven's pinned runtime actually loaded:
+
+```groovy
+tasks.named('m3PolyglotProviders') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    // Optional: the *same* extra classpath as m3PolyglotPlan/Run.
+    // providerJars.from(layout.projectDirectory.file('vendor/m3-rust-provider.jar'))
+    // providerJarSha256.put('m3-rust-provider.jar',
+    //     providers.gradleProperty('m3.rust.provider.sha256'))
+}
+```
+
+`./gradlew m3PolyglotProviders` calls Maven's original `PolyglotCli providers`
+and writes the validated, deterministically ordered
+`M3-POLYGLOT-PROVIDERS-V1` response into
+`build/reports/m3/polyglot-providers.tsv`. It checks a pinned SHA-256, rejects
+malformed/unsorted results, normalizes Windows CRLF and atomically publishes
+only bounded UTF-8. No compiler or analyzer is invoked by registration or
+inventory. The existing `m3PolyglotPlan`/`m3PolyglotRun` entry points pass
+`@m3` manifest tasks through to that same Maven engine.
+
+An external provider must be installed on the **Maven engine's runtime
+classpath** with its `META-INF/services` descriptor. Configure `providerJars`
+and `providerJarSha256` identically on the inventory and execution tasks.
+Every provider filename must be unique, every JAR is separately SHA-256
+verified and size-bounded, and no undeclared/extra checksum keys are accepted.
+The ordered classpath is deterministic. These are explicitly selected local
+artifacts, never silently downloaded, and a missing provider is not a fallback
+to an arbitrary executable. Other Gradle and Maven classloaders remain unchanged.
+
+The consumer recipe `io.synexia.maven.recipe.EnableM3ToolProviderSPI` can
+register the Maven plugin without binding any goal. The M3AST source facts,
+M3File identities/digests and M3String immutable atoms remain in their own
+compiler/M3JDK owners, while Maven owns provider discovery and execution
+orchestration and Gradle stays an explicit proxy.
+
+## Read-only Eclipse project model (Maven-owned parser)
+
+The explicit `m3EclipseModel` task now delegates to the **same**
+`io.synexia.maven.polyglot.EclipseModelCli` shipped by Maven's
+`tools/m3-polyglot-maven-plugin`. It uses no forked Eclipse XML parser, no
+embedded Maven, and no extra Gradle model cache. The task requires a SHA-256
+pin for the existing engine JAR and an Eclipse `.project` inside the Gradle
+project checkout. It writes the producer's `m3-eclipse-project-v1` JSON into
+`build/reports/m3/eclipse-model.json`, using bounded UTF-8 output and an atomic
+replace after successful completion. It runs **only when explicitly invoked**.
+
+```groovy
+plugins { id 'io.synexia.m3.quality' }
+
+tasks.named('m3EclipseModel') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+}
+```
+
+Run `./gradlew m3EclipseModel`. This is a descriptor-and-hash snapshot only;
+JDT working copies, CDT native compilation, RustDT, PyDev and LSP server
+lifecycles remain with their original Eclipse owners until their adapters are
+independently implemented and qualified. The intended shared ownership is
+**M3File** (canonical file identity and deltas) → **M3String** (immutable shared
+source atoms and ranges) → **M3AST** (versioned language AST/atom references) →
+M3Scale evidence → Maven/Gradle build execution. This task does **not** claim
+that OS-shared M3String storage or AST adapters already exist in Gradle. The
+M3AST compiler option in this fork remains an independent explicit JavaCompile
+setting; neither task silently enables the other.
 
 ## Maven-to-Gradle static-analysis report compatibility
 

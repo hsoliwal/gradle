@@ -5,12 +5,15 @@
 package io.synexia.gradle.quality;
 
 import java.io.IOException;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -85,5 +88,34 @@ final class M3PolyglotCommandsTest {
             // Symlink creation is not supported on every Windows test host.
             assertTrue(Files.isRegularFile(jar));
         }
+    }
+
+    @Test
+    void thirdPartyJarsRequireOneDigestEachAndHaveDeterministicClasspaths() throws Exception {
+        Path first = temp.resolve("a-provider.jar");
+        Path second = temp.resolve("z-provider.jar");
+        Files.writeString(first, "a reviewed provider", StandardCharsets.UTF_8);
+        Files.writeString(second, "another reviewed provider", StandardCharsets.UTF_8);
+        String firstHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(Files.readAllBytes(first)));
+        String secondHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(Files.readAllBytes(second)));
+        var pins = Map.of("a-provider.jar", firstHash, "z-provider.jar", secondHash);
+        List<File> installed = M3ProviderClasspath.verify(Set.of(second.toFile(), first.toFile()), pins);
+        assertEquals(List.of(first.toFile(), second.toFile()), installed);
+        var cli = M3PolyglotCommands.providers("java", temp.resolve("engine.jar").toFile(), installed);
+        assertEquals("providers", cli.get(cli.size() - 1));
+        assertEquals(temp.resolve("engine.jar") + File.pathSeparator + first + File.pathSeparator + second,
+                cli.get(3));
+        var run = M3PolyglotCommands.command("java", temp.resolve("engine.jar").toFile(),
+                temp.toFile(), temp.resolve("m3-build.tsv").toFile(), "all", "plan", 900,
+                false, false, installed);
+        assertEquals(cli.get(3), run.get(2));
+        assertThrows(IOException.class, () -> M3ProviderClasspath.verify(
+                List.of(first.toFile(), second.toFile()), Map.of("a-provider.jar", firstHash)));
+        assertThrows(IOException.class, () -> M3ProviderClasspath.verify(
+                List.of(first.toFile()), Map.of("a-provider.jar", secondHash)));
+        assertThrows(IOException.class, () -> M3ProviderClasspath.verify(
+                List.of(first.toFile()), Map.of("a-provider.jar", firstHash, "extra.jar", secondHash)));
     }
 }

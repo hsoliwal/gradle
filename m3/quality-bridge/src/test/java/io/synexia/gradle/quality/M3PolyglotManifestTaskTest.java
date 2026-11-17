@@ -5,6 +5,7 @@
 package io.synexia.gradle.quality;
 
 import java.io.IOException;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -56,6 +57,42 @@ final class M3PolyglotManifestTaskTest {
         assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
     }
 
+    @Test
+    void explicitlyPinnedExternalProviderIsPresentInOriginalMavenClasspath() throws Exception {
+        String digest = createFakePortableEngine(root);
+        fixture(digest);
+        Path external = root.resolve("rust-provider.jar");
+        Files.writeString(external, "reviewed external provider", StandardCharsets.UTF_8);
+        String pin = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(Files.readAllBytes(external)));
+        String config = Files.readString(root.resolve("build.gradle"))
+                + "tasks.named('m3PolyglotPlan') {\n"
+                + "  providerJars.from(layout.projectDirectory.file('rust-provider.jar'))\n"
+                + "  providerJarSha256.put('rust-provider.jar', '" + pin + "')\n"
+                + "}\n";
+        Files.writeString(root.resolve("build.gradle"), config);
+        GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotPlan", "--stacktrace").build();
+        String classpath = Files.readString(root.resolve("cli-classpath.txt"));
+        assertTrue(classpath.contains(File.pathSeparator + external.toString()));
+    }
+
+    @Test
+    void rejectsUnpinnedExternalProviderBeforeStartingMavenCli() throws Exception {
+        String digest = createFakePortableEngine(root);
+        fixture(digest);
+        Files.writeString(root.resolve("rust-provider.jar"), "reviewed external provider");
+        String config = Files.readString(root.resolve("build.gradle"))
+                + "tasks.named('m3PolyglotPlan') {\n"
+                + "  providerJars.from(layout.projectDirectory.file('rust-provider.jar'))\n"
+                + "}\n";
+        Files.writeString(root.resolve("build.gradle"), config);
+        String failure = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotPlan", "--stacktrace").buildAndFail().getOutput();
+        assertTrue(failure.contains("M3 SPI provider JARs need an exact SHA-256 pin"));
+        assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
+    }
+
     private void fixture(String digest) throws IOException {
         Files.writeString(root.resolve("settings.gradle.kts"), "rootProject.name = \"fixture\"\n");
         Files.writeString(root.resolve("m3-build.tsv"), "M3-POLYGLOT-1\n");
@@ -81,6 +118,8 @@ final class M3PolyglotManifestTaskTest {
                 + "  public static void main(String[] args) throws Exception {\n"
                 + "    java.nio.file.Files.writeString(java.nio.file.Path.of(\"cli-argv.txt\"), "
                 + "String.join(\"\\n\", args) + \"\\n\");\n"
+                + "    java.nio.file.Files.writeString(java.nio.file.Path.of(\"cli-classpath.txt\"), "
+                + "System.getProperty(\"java.class.path\"));\n"
                 + "  }\n}\n", StandardCharsets.UTF_8);
         Path classes = Files.createDirectories(root.resolve("classes"));
         int status = ToolProvider.getSystemJavaCompiler().run(null, null, null,

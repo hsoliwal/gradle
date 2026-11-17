@@ -82,6 +82,30 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.setDescription("Explicitly execute the pinned Maven polyglot engine from Gradle");
         });
 
+        // The compiler/interpreter/transpiler/atomizer/patternizer catalog is
+        // Maven-owned; this task only queries its versioned, pinned CLI output.
+        project.getTasks().register("m3PolyglotProviders", M3PolyglotProvidersTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Inspect available M3 Maven tool providers without invoking them");
+            task.getJavaExecutable().convention(
+                    project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+            task.getProviderJarSha256().convention(java.util.Map.of());
+            task.getProviderReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/polyglot-providers.tsv"));
+        });
+
+        // Eclipse project descriptors have one Maven-owned parser. Gradle merely
+        // supplies an explicit task boundary and immutable engine provenance.
+        project.getTasks().register("m3EclipseModel", M3EclipseModelTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Inspect an Eclipse project through the pinned Maven project-model CLI");
+            task.getJavaExecutable().convention(
+                    project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+            task.getEclipseProject().convention(project.getLayout().getProjectDirectory());
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-model.json"));
+        });
+
         // An original OpenRewrite plugin owns recipe discovery, dry-run, and apply.
         // The alias exists only if that plugin is explicitly applied in the project.
         project.getPluginManager().withPlugin("org.openrewrite.rewrite", applied -> {
@@ -97,6 +121,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
         task.setGroup("build");
         task.getJavaExecutable().convention(
                 project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+        task.getProviderJarSha256().convention(java.util.Map.of());
         task.getWorkspace().convention(project.getLayout().getProjectDirectory());
         task.getManifestFile().convention(project.getLayout().getProjectDirectory().file("m3-build.tsv"));
         task.getTarget().convention("all");
