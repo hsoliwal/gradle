@@ -20,7 +20,7 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | Per-module content-verified incremental state | **Maven #143 merged** | Gradle #28 bridge, this stacked update | Forward `legacy|file|m3db`; opt-in, fail-closed, `@UntrackedTask`; never claim a native Gradle cache hit |
 | Portable module-state backends and whole-run locks | **Maven #147 merged** after #143 | This stacked update | Forward `sqlite|h2|ext-*` to the same pinned Maven CLI; no Gradle-side DB implementation or automatic dependency provision |
 | Competing DB store formats | Maven #144–#146 **open** | Not imported | Review independently before any state-format migration or replacement |
-| Persistent syntax/atom fingerprints | **Maven #148 merged** in smart-builder | No native Gradle syntax-fingerprint task in this change | Preserve M3JDK/Maven fact ownership; separate source-qualified consumer needed |
+| Persistent syntax/atom fingerprints | **Maven #148 merged** in smart-builder | Opt-in `m3MachineFingerprints` original Java21 CLI proxy in this stacked update | Maven/JDK AST, canonical receipt validation and native MIndexDB own all syntax facts; Gradle supplies a pinned task admission boundary only |
 | Maven polyglot artifact restore cache | Maven #149 **open** | Gradle already has its native local/remote build cache and snapshot systems | No port of a weaker Maven duplicate; evaluate task contracts and M3DB complementarity separately |
 | Resource filtering API | **Maven #150 merged** | Gradle's Copy/Sync/filter/task inputs are native | Adapt capabilities only if semantics differ and tests justify additive APIs |
 | Code clustering and LSP front ends | Maven #113, #117, #124, #142 | No claim of native Gradle port | Future opt-in shared M3AST/LSP artifact integration, without running language servers automatically |
@@ -51,6 +51,37 @@ external IDs and unknown modes are rejected by the current Maven CLI contract.
 The Gradle task stays explicitly untracked: it is not intrinsically
 cacheable, and no implicit attachment to `build` or `check` exists.
 Existing command overloads and plugin tasks are preserved.
+
+## Imported original Maven #148 AST/atom fingerprint boundary
+
+`m3MachineFingerprints` is an opt-in `@UntrackedTask` registered separately
+from Gradle compilation, `check` and `build`. It uses only the original Maven
+`io.synexia.maven.smart.MachineFingerprintMain` and source-pinned
+`m3-smart-maven-plugin` JAR, not a second Gradle parser, semantic ledger,
+M3DB file format or source transformation. A user must supply the original
+SHA-256-pinned JAR, the existing Java-only source root, and the canonical
+OpenRewrite preparation and atom/pattern receipts. The Maven CLI checks
+their exact content and current source-bound provenance before and after
+computation; Gradle performs only file-scope and SHA-256 admission checks.
+
+`workers` is 1..8; `attributeTypes` is optional compiler attribution;
+`analyzeFlow` requires attribution and promises only may-flow evidence, not
+equivalence proof. Maven's `moduleDb=auto|off|required` is preserved and
+native MIndexDB remains at `.m3/maven/mindexdb`. Any external provider and
+its transitive classpath must be separately installed and SHA-256 pinned.
+The Maven CLI produces `build/m3-smart/machine-evidence.tsv` and
+`machine-fingerprints.json`, including explicit refusal receipts. The
+Java 17 Gradle bridge can be configured without a Java21 runtime, but the
+original producer is executed only using a configured Java21 executable.
+
+New proof cases: pure Java17 immutable argv/refusal checks, TestKit against
+a fake original CLI for full option/path transfer and preflight failures,
+and a gated TestKit exercise of the *real* Maven JDK21 producer refusing
+unbound receipts. Maven's own #148 tests cover valid canonical receipts,
+deterministic workers and local MIndexDB facts independently. Further
+qualification requires TestKit with true canonical Synexia OpenRewrite
+receipts, actual native MIndexDB warm/cold recovery on multiple platforms,
+source mutation/cancellation/crash tests, and a verified recipe replay.
 
 ### Proof matrix
 

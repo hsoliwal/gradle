@@ -92,7 +92,8 @@ public final class M3PolyglotCommands {
                 MAIN_CLASS, "providers");
     }
 
-    private static String classpath(File engineJar, List<File> providerJars) {
+    /** Shared sealed Java classpath for the Maven polyglot and AST fact CLIs. */
+    static String classpath(File engineJar, List<File> providerJars) {
         Objects.requireNonNull(engineJar, "engineJar");
         Objects.requireNonNull(providerJars, "providerJars");
         StringBuilder result = new StringBuilder(engineJar.getAbsolutePath());

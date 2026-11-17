@@ -84,6 +84,24 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.setDescription("Explicitly execute the pinned Maven polyglot engine from Gradle");
         });
 
+        // Reuse the Maven/JDK AST fingerprint producer and its canonical
+        // MIndexDB fact owner. No source parse, cache key or receipt is forked.
+        project.getTasks().register("m3MachineFingerprints", M3MachineFingerprintTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Produce canonical Java AST facts through the pinned Maven JDK21 CLI");
+            task.getJavaExecutable().convention(
+                    project.getProviders().gradleProperty("m3.fingerprints.java").orElse("java"));
+            task.getProviderJarSha256().convention(java.util.Map.of());
+            task.getProjectDirectory().convention(project.getLayout().getProjectDirectory());
+            task.getSourceRoot().convention(project.getLayout().getProjectDirectory().dir("src/main/java"));
+            task.getBuildDirectory().convention(project.getLayout().getBuildDirectory());
+            task.getWorkers().convention(1);
+            task.getAttributeTypes().convention(false);
+            task.getAnalyzeFlow().convention(false);
+            task.getModuleDb().convention(
+                    project.getProviders().gradleProperty("m3.fingerprints.moduleDb").orElse("auto"));
+        });
+
         // The compiler/interpreter/transpiler/atomizer/patternizer catalog is
         // Maven-owned; this task only queries its versioned, pinned CLI output.
         project.getTasks().register("m3PolyglotProviders", M3PolyglotProvidersTask.class, task -> {
