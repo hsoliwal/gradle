@@ -56,6 +56,33 @@ Gradle may mark this producer task UP-TO-DATE when no source has changed.
 The receiver must establish its own current source/generation identity.
 Never promote a stored packet into a successful build receipt.
 
+## Explicit read-only consumer
+
+m3IdeDeltaReview reads an existing v1 report without starting Gradle's
+incremental builder, Maven, an IDE, CodeQL or any compiler. It requires an
+operator-supplied SHA-256 of the exact report bytes; the adjacent
+ide-delta.sha256 created by the producer is a convenience for transferring
+the digest, not independent proof that the producer was trustworthy.
+
+~~~sh
+# First explicitly run the producer, inspect its source scope,
+# then supply the independently reviewed digest of its output.
+./gradlew m3IdeDeltaExport
+./gradlew m3IdeDeltaReview -Pm3.ide.delta.sha256=<64-lowercase-hex>
+~~~
+
+Default expected owner is provider=gradle, project=rootProject.name plus
+':' plus project.path. For an external Eclipse/VS Code/Maven host report,
+configure expectedProvider, expectedProjectIdentifier and reportFile
+explicitly in the consumer task, and pin its SHA-256. A source-owner or
+workspace identity mismatch, corrupt packet, missing hash, oversized
+input or linked report is refused.
+
+Even a report that claims complete=true remains **an owner claim only**.
+The import task never binds a Maven build Generation, modifies Gradle
+build inputs, clears invalidation, writes source files or causes task skips.
+It is intentionally untracked and registered separately from the exporter.
+
 ## Wire compatibility
 
 Maven accepts versioned fields in this order:
