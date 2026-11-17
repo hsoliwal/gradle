@@ -48,6 +48,11 @@ reviewed Maven engine JAR's SHA-256. `m3PolyglotPlan` ignores the run-only
 project property and remains read-only. `derby`, arbitrary URLs, malformed
 external IDs and unknown modes are rejected by the current Maven CLI contract.
 
+The Gradle bridge validates backend names using Maven #147's published
+grammar; the Maven engine owns driver discovery, module-wide run locks,
+cache image formats, validation, revocation and commit. Extra driver/provider
+JARs are explicit, digest-pinned `providerJars`. A missing one fails closed.
+
 The Gradle task stays explicitly untracked: it is not intrinsically
 cacheable, and no implicit attachment to `build` or `check` exists.
 Existing command overloads and plugin tasks are preserved.
