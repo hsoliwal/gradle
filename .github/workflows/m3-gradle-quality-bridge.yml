@@ -27,6 +27,10 @@ jobs:
         run: sh m3/quality-bridge/scripts/verify-portable-backends.sh
       - name: Verify original Maven JDK21 fingerprint argv contract without Gradle dependencies
         run: sh m3/quality-bridge/scripts/verify-machine-fingerprint-args.sh
+      - name: Verify canonical Maven IDE-delta v1 bytes using Java 17
+        run: sh m3/quality-bridge/scripts/verify-ide-delta.sh
+      - name: Verify Maven #149 local-cache Java 17 argv contract
+        run: sh m3/quality-bridge/scripts/verify-polyglot-cache-args.sh
       - name: Test standalone bridge, canonical reports and Gradle TestKit
         run: |
           chmod +x gradlew
@@ -54,13 +58,13 @@ jobs:
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3NormalizeAnalyzerXmlTaskTest' --rerun-tasks
 
-      # Source custody for Maven #143 + #147: pin the reviewed merged
-      # portable-state contract, not Maven's moving master or a binary download.
+      # Source custody: Maven #143/#147/#148 plus #155 QDox/lint build repair
+      # and #149 polyglot cache; pin the merged source rather than moving master.
       - name: Check out merged Maven portable module-state engine source
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: 4d4976f9cf6f62b5f007cf5ab80ee92c67c0f3f7
+          ref: b47e9a1e9173502c19de9bb6657a4f88b3267487
           path: m3-maven-polyglot
           persist-credentials: false
       - name: Verify original Maven polyglot engine, module DB and portable backend contracts
