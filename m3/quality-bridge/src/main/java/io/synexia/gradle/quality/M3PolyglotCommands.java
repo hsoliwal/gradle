@@ -32,13 +32,21 @@ public final class M3PolyglotCommands {
             File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
             boolean approveRewriteApply) {
         return command(javaExecutable, engineJar, workspace, manifest, target, mode,
-                timeoutSeconds, incremental, approveRewriteApply, List.of());
+                timeoutSeconds, incremental, approveRewriteApply, List.of(), "legacy");
     }
 
     /** Includes only separately verified, explicit third-party SPI provider JARs. */
     public static List<String> command(String javaExecutable, File engineJar, File workspace,
             File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
             boolean approveRewriteApply, List<File> providerJars) {
+        return command(javaExecutable, engineJar, workspace, manifest, target, mode,
+                timeoutSeconds, incremental, approveRewriteApply, providerJars, "legacy");
+    }
+
+    /** Delegates Maven's sealed module-state backend; never enables Gradle task caching. */
+    public static List<String> command(String javaExecutable, File engineJar, File workspace,
+            File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
+            boolean approveRewriteApply, List<File> providerJars, String stateBackend) {
         String java = M3QualityCommands.executable(javaExecutable);
         Objects.requireNonNull(engineJar, "engineJar");
         Objects.requireNonNull(workspace, "workspace");
@@ -46,6 +54,9 @@ public final class M3PolyglotCommands {
         if (!("plan".equals(mode) || "run".equals(mode))
                 || target == null || !target.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,79}")
                 || timeoutSeconds < 1 || timeoutSeconds > 43_200
+                || !("legacy".equals(stateBackend) || "file".equals(stateBackend)
+                        || "m3db".equals(stateBackend))
+                || (!"legacy".equals(stateBackend) && !incremental)
                 || (!"run".equals(mode) && (incremental || approveRewriteApply))) {
             throw new IllegalArgumentException("invalid M3 polyglot CLI mode, target or option");
         }
@@ -53,6 +64,10 @@ public final class M3PolyglotCommands {
                 MAIN_CLASS, mode, workspace.getAbsolutePath(), manifest.getAbsolutePath(), target,
                 "--timeout-seconds", Integer.toString(timeoutSeconds)));
         if (incremental) argv.add("--incremental");
+        if (!"legacy".equals(stateBackend)) {
+            argv.add("--state-backend");
+            argv.add(stateBackend);
+        }
         if (approveRewriteApply) argv.add("--approve-rewrite-apply");
         return List.copyOf(argv);
     }

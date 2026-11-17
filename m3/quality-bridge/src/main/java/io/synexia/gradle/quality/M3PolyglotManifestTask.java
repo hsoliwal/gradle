@@ -72,6 +72,10 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
     @Input
     public abstract Property<Boolean> getIncremental();
 
+    /** Maven-owned persistent incremental state, not Gradle's build cache. */
+    @Input
+    public abstract Property<String> getStateBackend();
+
     @Input
     public abstract Property<Boolean> getApproveRewriteApply();
 
@@ -102,7 +106,8 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
         List<String> command = M3PolyglotCommands.command(
                 getJavaExecutable().get(), engine.toFile(), root.toFile(), manifest.toFile(),
                 getTarget().get(), getMode().get(), getTimeoutSeconds().get(),
-                getIncremental().get(), getApproveRewriteApply().get(), providerJars);
+                getIncremental().get(), getApproveRewriteApply().get(), providerJars,
+                getStateBackend().get());
         getExecOperations().exec(spec -> {
             spec.setExecutable(command.get(0));
             spec.setArgs(command.subList(1, command.size()));

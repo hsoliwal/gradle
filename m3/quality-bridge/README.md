@@ -68,6 +68,8 @@ plugins { id 'io.synexia.m3.quality' }
 // Optional, only for the explicitly requested run task; never for planning.
 tasks.named('m3PolyglotRun') {
     incremental.set(false)
+    // Only if incremental is true: "legacy" (default), "file", or "m3db".
+    stateBackend.set('legacy')
     approveRewriteApply.set(false)
 }
 ```
@@ -81,13 +83,55 @@ Gradle tasks because arbitrary toolchains, environments and generated outputs
 cannot yet be proven hermetic. Neither task is attached to `build` or `check`.
 
 The Maven CLI still accepts its original four-argument form and adds optional
-`--timeout-seconds`, `--incremental` and `--approve-rewrite-apply` for explicit
-`run` actions. Incremental shortcuts are **off by default** and apply only to
+`--timeout-seconds`, `--incremental`, `--state-backend` and
+`--approve-rewrite-apply` for explicit `run` actions. Incremental shortcuts are **off by default** and apply only to
 ordinary tasks with declared inputs and outputs. CodeQL/OpenRewrite/M3 provider
 tasks always re-execute. An input stamp is not proof of toolchain, environment,
 ABI, output-content or transitive-dependency equivalence; do not use it as an
 unqualified build-cache correctness claim. Rewrite application requires explicit
 separate approval and the source-owned recipe/compile/test gates.
+
+### Maven PR #143: verified module-local incremental persistence
+
+Maven [PR #143](https://github.com/hsoliwal/maven/pull/143) has merged the
+portable CLI contract `--state-backend legacy|file|m3db`. The Gradle fork
+now passes the selected backend to **Maven's pinned engine** without copying
+its parser, state format, task graph, locking or native MIndexDB implementation.
+The Gradle task is still `@UntrackedTask`: M3DB is **Maven polyglot task
+state**, not authorization to skip Gradle tasks or replace Gradle's own
+configuration cache, build cache, incremental compilation or Worker API.
+
+With the opt-in `incremental` setting enabled:
+
+```groovy
+tasks.named('m3PolyglotRun') {
+    incremental.set(true)
+    stateBackend.set('file') // atomically sealed .m3/module-state-v1.bin
+    // or 'm3db' when the independently verified native MIndexDB runtime
+    // is available on the pinned engine's classpath
+}
+```
+
+Alternatively `-Pm3.polyglot.stateBackend=file` or `m3db` configures the
+`m3PolyglotRun` task only. `m3PolyglotPlan` always defaults to `legacy`
+even when the project property is set, so a plan remains read-only.
+The existing signatures and default argv remain unchanged. A nonlegacy
+backend on a nonincremental run, an unknown backend, or a nonlegacy backend
+configured explicitly for planning is rejected *before* launching the engine.
+The `file` and `m3db` modes require a separately reviewed Maven engine JAR
+that contains PR #143; the existing SHA-256 engine pin is mandatory. The
+optional MIndexDB native runtime is **not bundled or downloaded**.
+
+Maven's standalone engine verifies declared output contents for reuse and
+conservatively rehashes where ctime/file-key evidence is unavailable.
+The current merged #143 adapter does **not** establish end-to-end,
+cross-process and parallel state fencing; Maven PRs
+[#144](https://github.com/hsoliwal/maven/pull/144)–
+[#148](https://github.com/hsoliwal/maven/pull/148)
+are still under review. In particular their competing backend/store formats
+should not be assumed merged or compatible. The Gradle bridge currently
+exposes only the three modes of the merged Maven CLI, failing closed for
+unrecognized future backends rather than claiming unverified interoperability.
 
 ### Maven-owned compiler, interpreter, transpiler, atomizer, patternizer
 
@@ -297,8 +341,11 @@ Gradle plugin if it already offers safe task inputs/outputs and toolchain suppor
 - M3JDK21 compiler integration remains in the original JavaCompile/worker owner.
 - No CodeQL analysis output is treated as an instruction to rewrite code.
 - Neither CodeQL nor OpenRewrite alone proves source/binary/behavioral compatibility.
-- No cache hits, goal skipping, deletion of originals, patch application, output
-  restoration or automatic model downloads are authorized.
+- No Gradle task-cache hits, Gradle task skipping, deletion of originals, patch
+  application, output restoration or automatic model downloads are authorized
+  by this bridge. Only explicit Maven polyglot `incremental` mode may skip
+  Maven-owned manifest tasks after its declared-input/output checks; it never
+  authorizes Gradle's native `build` or `check` tasks to be skipped.
 - CodeQL CLI licensing and supported language extractors must be checked for the
   intended use; `hsoliwal/codeql` query sources do not bundle its CLI engine.
 - OpenRewrite supports particular source and configuration formats; other
