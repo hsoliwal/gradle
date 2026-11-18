@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2026 Contributors to the Synexia Project
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle original LLVM toolchain evidence
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - 'm3/MAVEN_GRADLE_CONVERGENCE.md'
+      - '.github/workflows/m3-gradle-llvm-evidence.yml'
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - 'm3/MAVEN_GRADLE_CONVERGENCE.md'
+      - '.github/workflows/m3-gradle-llvm-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-llvm-evidence-crossfork:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Guard this isolated source-pinned Maven cross-fork lane
+        run: sh m3/quality-bridge/scripts/verify-llvm-evidence-workflow.sh
+      - name: Verify original CLI argv and refusal grammar without Gradle
+        run: sh m3/quality-bridge/scripts/verify-llvm-evidence-args.sh
+      # Maven #210 merges the source-owned M3-LLVM-TOOLCHAIN-V1 scanner and
+      # verifier into the optional LLVM provider JAR. Unlike the separately
+      # pinned Maven #198 and #203 lanes, this pin qualifies evidence only.
+      - name: Checkout merged original Maven #210 toolchain evidence implementation
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 78848ef9a52fbc1ae34032bd46b3d057b5f1d7fd
+          path: m3-maven-llvm-evidence
+          persist-credentials: false
+      - name: Install the original Maven polyglot dependency without executing LLVM
+        run: |
+          mvn -B -ntp -f m3-maven-llvm-evidence/tools/m3-polyglot-maven-plugin/pom.xml install
+          test -s m3-maven-llvm-evidence/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Qualify Maven's original independent JDK17 toolchain evidence and SPI tests
+        run: |
+          mvn -B -ntp -f m3-maven-llvm-evidence/tools/m3-llvm-tools-provider/pom.xml verify
+          test -s m3-maven-llvm-evidence/tools/m3-llvm-tools-provider/target/m3-llvm-tools-provider-0.1.0-SNAPSHOT.jar
+          sh m3-maven-llvm-evidence/tools/m3-llvm-tools-provider/scripts/verify.sh
+      - name: Test Gradle scan, verify, SHA refusal and changed native bytes against original JAR
+        run: |
+          export M3_MAVEN_LLVM_EVIDENCE_JAR="$GITHUB_WORKSPACE/m3-maven-llvm-evidence/tools/m3-llvm-tools-provider/target/m3-llvm-tools-provider-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3LlvmToolchainEvidenceRealEngineTest' --rerun-tasks

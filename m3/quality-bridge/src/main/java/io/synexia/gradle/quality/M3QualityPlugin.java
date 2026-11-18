@@ -141,6 +141,18 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/polyglot-providers.tsv"));
         });
 
+        // Maven #210 owns the original LLVM executable-byte evidence schema.
+        // Gradle adds opt-in, untracked scan/verify task boundaries only; neither
+        // task is wired to compilation or cached from incomplete native inputs.
+        project.getTasks().register("m3LlvmToolchainScan", M3LlvmToolchainEvidenceTask.class, task -> {
+            llvmEvidenceDefaults(project, task, "scan");
+            task.setDescription("Seal selected LLVM executable bytes via Maven's original toolchain CLI");
+        });
+        project.getTasks().register("m3LlvmToolchainVerify", M3LlvmToolchainEvidenceTask.class, task -> {
+            llvmEvidenceDefaults(project, task, "verify");
+            task.setDescription("Verify Maven's original LLVM toolchain byte manifest without running tools");
+        });
+
         // Eclipse project descriptors have one Maven-owned parser. Gradle merely
         // supplies an explicit task boundary and immutable engine provenance.
         project.getTasks().register("m3EclipseModel", M3EclipseModelTask.class, task -> {
@@ -260,6 +272,18 @@ public final class M3QualityPlugin implements Plugin<Project> {
         task.getIncremental().convention(false);
         task.getStateBackend().convention("legacy");
         task.getApproveRewriteApply().convention(false);
+    }
+
+    private static void llvmEvidenceDefaults(Project project, M3LlvmToolchainEvidenceTask task,
+            String mode) {
+        task.setGroup("verification");
+        task.getMode().convention(mode);
+        task.getSelectedTools().convention(
+                project.getProviders().gradleProperty("m3.llvm.tools").orElse("opt"));
+        task.getJavaExecutable().convention(
+                project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+        task.getEvidenceManifest().convention(
+                project.getLayout().getBuildDirectory().file("reports/m3/llvm-toolchain.tsv"));
     }
 
     private static void analyzerDefaults(Project project, M3NormalizeAnalyzerXmlTask task,
