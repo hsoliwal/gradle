@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Recipe-first, opt-in M3JDK database consumer. M3JDK/Maven still own the
+# storage API, module-state receipts and compiler/tool cache validity.
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.synexia.gradle.recipe.EnableM3JdkDbModuleAccess
+displayName: Enable opt-in M3JDK database module access from Gradle
+description: >-
+  Install the reviewed M3 Gradle quality plugin. Operators must still select
+  a source-pinned Maven #220 polyglot engine and a reviewed M3JDK runtime,
+  configure m3PolyglotRun incremental native/m3db state, and explicitly
+  select current-java-base or current-named module visibility. No database
+  engine, native runtime, JAR or Gradle build-cache shortcut is installed.
+recipeList:
+  - org.openrewrite.gradle.plugins.AddPlugin:
+      pluginId: io.synexia.m3.quality
+      version: '0.1.0-SNAPSHOT'
