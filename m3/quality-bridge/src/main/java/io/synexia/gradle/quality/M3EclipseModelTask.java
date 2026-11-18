@@ -22,6 +22,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.MapProperty;
@@ -98,12 +99,18 @@ public abstract class M3EclipseModelTask extends DefaultTask {
     @Inject
     protected abstract ExecOperations getExecOperations();
 
+    /** Gradle supplies a configuration-cache-compatible layout service for this task. */
+    @Inject
+    protected ProjectLayout getM3ProjectLayout() {
+        throw new UnsupportedOperationException("Gradle injects the project layout service");
+    }
+
     @TaskAction
     public void inspectEclipseProject() {
         Path root = getEclipseProject().get().getAsFile().toPath().toAbsolutePath().normalize();
-        Path checkout = getProject().getLayout().getProjectDirectory().getAsFile().toPath()
+        Path checkout = getM3ProjectLayout().getProjectDirectory().getAsFile().toPath()
                 .toAbsolutePath().normalize();
-        Path build = getProject().getLayout().getBuildDirectory().get().getAsFile().toPath()
+        Path build = getM3ProjectLayout().getBuildDirectory().get().getAsFile().toPath()
                 .toAbsolutePath().normalize();
         Path engine = getEngineJar().get().getAsFile().toPath().toAbsolutePath().normalize();
         Path report = getModelReport().get().getAsFile().toPath().toAbsolutePath().normalize();

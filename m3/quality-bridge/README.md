@@ -315,11 +315,20 @@ tasks.named('m3PolyglotRun') {
 The default remains `legacy` for existing Gradle consumers, with unchanged
 argv. These two additional selectors require a **newer source-pinned Maven
 engine**, not the older pinned #149 binary. CI builds the original Maven
-polyglot JAR from `f92096f8d3eb135d28cf698335a4423ef9179e9d`, verifies
-the donor's own tests, then checks both alias pairs through real Gradle
-TestKit invocations: persistent generation reuse, separate archive/directory
-shapes and output-tamper invalidation. These imports never claim Gradle
-configuration-cache or task output-cache equivalence. The opt-in
+polyglot JAR from `ff1b0939e8ac962352d5fe4f4461808e867ef670`, which includes
+the original dry-run fix, and verifies the producer's own tests. Mandatory
+Gradle TestKit coverage checks `embedded` to `legacy` persistent generation
+reuse and output-tamper invalidation. It also checks that both `native` and
+`m3db` fail closed without their optional native runtime, producing no task
+output and no fallback state.
+
+Positive `native` to `m3db` generation reuse, directory-store custody and
+output-tamper invalidation are a separate optional acceptance path. That
+path requires an explicitly installed, SHA-256-pinned provider supplied as
+`M3_POLYGLOT_NATIVE_RUNTIME_JAR` and `M3_POLYGLOT_NATIVE_RUNTIME_SHA256`;
+without both, positive native acceptance is **NOT_RUN**. No native runtime
+is bundled or downloaded. These imports never claim Gradle configuration-cache
+or task output-cache equivalence. The opt-in
 [OpenRewrite consumer recipe](recipes/enable-m3-polyglot-state-bridge.yml)
 adds only plugin availability; it is a reviewed-replay gate, not an automatic
 state migration or a compiler execution recipe.
@@ -1254,3 +1263,18 @@ toolchains and OpenRewrite SDK replay are separate release gates.
 The [opt-in OpenRewrite consumer recipe](recipes/enable-m3-llvm-evidence-bridge.yml)
 installs the plugin only; users explicitly supply the JAR, SHA, installed
 LLVM home and desired scan/verify invocation.
+
+## Native smart review and configuration-cache execution
+
+`m3PreBuildAdvice`, `m3PostBuildAdvice`, and `m3CodeAgent` reuse the original
+Maven Java/JNI smart-review entry points. The optional `optionllm` project
+property admits an explicitly configured native provider; source-bound recipe
+nominations retain the canonical receipt and catalogue checks. See
+[native smart review](docs/M3-SMART-REVIEW.md) for task properties, reports,
+native provider setup, and observed-build-outcome handling.
+
+The Eclipse-model, provider-inventory and project-database tasks now use injected
+project-layout services during execution. Their TestKit paths exercise strict
+configuration-cache reuse, custom directory conventions, repeated pin checks,
+and missing-store refusal. Configuration reuse preserves each task's explicit
+execution and validation contract.

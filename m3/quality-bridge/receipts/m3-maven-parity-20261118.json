@@ -1,0 +1,199 @@
+{
+  "schema": "M3_GRADLE_MAVEN_PARITY_HANDOFF_V1",
+  "license": "Apache-2.0",
+  "kind": "PASSIVE_SOURCE_HANDOFF_RECEIPT",
+  "canonical": {
+    "repository": "hsoliwal/com.synexia",
+    "branch": "m3/gradle-maven-parity-e143-20261118",
+    "core_commit": "cd48e53c53d21e0d8fe96601198bec6bd2662992",
+    "previous_qualified_core": "952eabeafda90fdeb7744da62698d45fb7521f88",
+    "predecessor_pull_request": "https://github.com/hsoliwal/com.synexia/pull/18441",
+    "recipe_id": "com.synexia.m3.GradleMavenParity20261118",
+    "crate_path": "synexia-openrewrite-recipes/recipe-crates/m3-gradle-maven-parity-20261118",
+    "owner_revision": "915a959eb828d519d45060c2b39e246d400949b1",
+    "owners": [
+      {
+        "path": "synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3EditScope.java",
+        "git_blob": "5e4cf8ea8df34090b5a17494ace72ab907161b9c",
+        "sha256": "0dc762ef802b32ad0a40ff23e21cfbb67ad4bbd8a251b46b8a5954b647927824"
+      },
+      {
+        "path": "synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3HashPinnedJavaSnapshotRecipe.java",
+        "git_blob": "9f76010c7dfd997e8d7962e994b448c81b0407f3",
+        "sha256": "8ec99d91196c8c7d688d8d431958a9734dd8c863cca28fe8bb2a950c8c7d03d5"
+      },
+      {
+        "path": "synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3HashPinnedTextSnapshotRecipe.java",
+        "git_blob": "960ea7eed3921fe9da2fb5fa6193b3ae93d8964d",
+        "sha256": "653de10251ee0748c9bb0ef95e31b2b6b56814f74133e3f1885f4f756a937cf8"
+      },
+      {
+        "path": "synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3ResourceEnvelope.java",
+        "git_blob": "1b0b84ab1dd08aab4c8edb5835bd00615d0cf908",
+        "sha256": "2f5f0a1dd1fabe07c97bf7acf4ead51e1853d302a2b21f6fe011d019cc496c57"
+      },
+      {
+        "path": "synexia-openrewrite-recipes/src/main/java/com/synexia/rewrite/M3ScopeInference.java",
+        "git_blob": "b4e06c9104b832bbfb0cf6667a85c0a1d241b163",
+        "sha256": "e8cbe903d15b480819fdb289a4481997808ee76943a102fe6ff93268d42746f8"
+      }
+    ],
+    "reused_tools_sha256": "5e6d48155fbcad54e8afdadac4dc8f39fc23ab940115717fc6ba796d7823239c",
+    "proof_pom_sha256": "c609a709aa367b83802fafbb1f6b5f88e08a2927cde26c6242ef50a03aada915",
+    "pinned_owner_launcher_sha256": "33bba72b127c03da5fbab8ec6ddeecd2b1fc1963dbf851fea20b920e55aaa18f"
+  },
+  "receiving_repository": "hsoliwal/gradle",
+  "receiving_baseline": "bf61910567151b9260c6427c21a718df7f8b7fe5",
+  "source_proof": {
+    "sdk": "OpenRewrite 8.90.4",
+    "maven": "3.9.6",
+    "java": "Temurin 21.0.9+10",
+    "datasets": 16,
+    "effective_sdk_methods_passed": 80,
+    "new_bf_sdk_methods_passed": 10,
+    "reused_identical_byte_sdk_methods_passed": 70,
+    "roots": {
+      "FINAL_PRODUCT_FILES.tsv": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-gradle-maven-parity-20261118/qualification/successor-bf/FINAL_PRODUCT_FILES.tsv",
+        "sha256": "0b0d44b9ac827b1d1b74dc3891ba4b2c0f6b073cdd15e1c36ef5dc5a1216cdcd"
+      },
+      "SOURCE_MANIFESTS.tsv": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-gradle-maven-parity-20261118/qualification/successor-bf/SOURCE_MANIFESTS.tsv",
+        "sha256": "7f12158d4bf5d105200a8d26beafd3214c2292a7b2dcc92f36e290d36ca821d6"
+      },
+      "SDK_EXECUTIONS.tsv": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-gradle-maven-parity-20261118/qualification/successor-bf/SDK_EXECUTIONS.tsv",
+        "sha256": "668b9f7015b2f8599dbf063d51b84ec299aea19a5da20e5834a80f8c676357ff"
+      },
+      "SOURCE_ADMISSION.json": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-gradle-maven-parity-20261118/qualification/successor-bf/SOURCE_ADMISSION.json",
+        "sha256": "953effe13ad00e3da0a3368d21308808ca87990f57df632298c9a52c448987d2"
+      },
+      "QUALIFICATION.json": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-gradle-maven-parity-20261118/qualification/successor-bf/QUALIFICATION.json",
+        "sha256": "53d9cf0f21dd3e98d0db9b635c528be9ea07aa242dc3ed6900dcac124ba704d3"
+      },
+      "CURRENT_ENGINE_SOURCES.tsv": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-gradle-maven-parity-20261118/qualification/CURRENT_ENGINE_SOURCES.tsv",
+        "sha256": "9abc737b231c66f4dc5432072b8b026c40f2e1e49b7029fcce65491b7854854b"
+      },
+      "TOOLCHAIN.json": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-gradle-maven-parity-20261118/qualification/TOOLCHAIN.json",
+        "sha256": "a29ce5b9417ad5e4356efc94c6159448ccad270311787e89dec9fdc644abad7f"
+      }
+    }
+  },
+  "files": [
+    {
+      "path": ".github/workflows/m3-gradle-quality-bridge.yml",
+      "before_sha256": "a8e6be627cdbf02d2d91917c5b74908a0acb8f2c61a45bdcd1f15dba1c92119b",
+      "after_sha256": "dd478d220e27ea4f10886a269ec3a6f8e34b26407401b49b3d38a5cd100e3efe"
+    },
+    {
+      "path": "m3/MAVEN_GRADLE_CONVERGENCE.md",
+      "before_sha256": "2e543eb47200c74b96efac6237ca5361683b906bbb9ef7f502bd7aea77851061",
+      "after_sha256": "3d36cea69e462e60b01077e210669d8da43f348eb648e90d9a0f16aeb21c7a3b"
+    },
+    {
+      "path": "m3/quality-bridge/README.md",
+      "before_sha256": "9047852cd708db01c3f4d1e37b8cea5710657e503ced5bc367aee3f4cdfb8a95",
+      "after_sha256": "dff9cf42de58435c1a99b89d045684b36783a1333ba327ab7036865a8eaecc82"
+    },
+    {
+      "path": "m3/quality-bridge/docs/M3-SMART-REVIEW.md",
+      "before_sha256": "ABSENT",
+      "after_sha256": "c3b005ab24351b359bc1cb0b465c6ddfd65d7748d9fb5216d44f223d7fb5bb2c"
+    },
+    {
+      "path": "m3/quality-bridge/scripts/verify-quality-workflow.sh",
+      "before_sha256": "b0f828106113a92045ba1e292c662d02996518bd9703410e9ea89dc4473999c7",
+      "after_sha256": "a5337da9f0d1c2c178ee389956257b458abebc43e5155924d2cbc40451222162"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3BuildAdviceTask.java",
+      "before_sha256": "ABSENT",
+      "after_sha256": "95b2953e2c69d175c818408c8289dd798febdeb61ddf12eaba35227d859e4f24"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3CodeAgentTask.java",
+      "before_sha256": "ABSENT",
+      "after_sha256": "f43b71dd1a0a483af0a0bd1c6cfb4725f7a2d382f96cda7c4bfc0ab0ffec9fa3"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3EclipseModelTask.java",
+      "before_sha256": "338165087b9d6202af3b4146ca15616339b0971525ba3858ebf305e596ba4dbe",
+      "after_sha256": "a7f3c8bbd410dea2c9659e77583240bb419de000b60515eb6bebd14c1239e380"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3PolyglotProvidersTask.java",
+      "before_sha256": "731ceff270a56f158b2d8d46272d9891a380a47423f4fc06833e809fbf21966c",
+      "after_sha256": "62ee346aa498311bbd8900b32d400bfcaede8e2dd29a0ef17288776564bda6cf"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3ProjectDbTask.java",
+      "before_sha256": "e9747a2e80dd21c9647ae85a5c64cdbc68c0122fb982cfc629a6d445ee0f86dd",
+      "after_sha256": "8e6e4a584926b2b637aa5648fa21ccc9ab42ae1984683517bd33332d0f8f1fd8"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3QualityPlugin.java",
+      "before_sha256": "5a95777eaf16fbb3d4da0bdb3d6b8013062621e2b6480c4257bcc1e9be437ca1",
+      "after_sha256": "e73999d727e4e826c453eca9594b1b376e2b3603da7bebd7ccd945243e007f9b"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3SmartReviewCommands.java",
+      "before_sha256": "ABSENT",
+      "after_sha256": "8c308fb5cac80bfe303a2ef85b8227228124e6863ccedc2eb7b7fdec8ee79c68"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3SmartReviewTask.java",
+      "before_sha256": "ABSENT",
+      "after_sha256": "ec073b2fbd0551cf87ec22d29816c3d4cf8c45372d4c03c431d0286756f44c36"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3EclipseModelTaskTest.java",
+      "before_sha256": "ee79f6cc94fc0e7dc42d8200aadcd2a5ee22e71e5c4dbcfa3e087636ee5fe0c8",
+      "after_sha256": "66d9e4655841ddb577efa1e29b263c0b0df3428bacaca9fc35658e0c5979850a"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3PolyglotProvidersTaskTest.java",
+      "before_sha256": "7ed36902da1136a4e64737465c90465981e9f2a37551f3a143dae8915449542b",
+      "after_sha256": "117f184f98d4074177b31843ee14ccd3fbad2ec420371c3b00ba7064fdce2c19"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3PolyglotStateAliasesRealEngineTest.java",
+      "before_sha256": "f452b0fb5e374297bd35728d16193015cc11200e7ae03d3a265b926efeff5e6f",
+      "after_sha256": "962481eee3c4f0abb7df745d365ff661f899161ff5d9c59393a644a2169186d4"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3ProjectDbTaskTest.java",
+      "before_sha256": "07791fa91508a070036cb17a4ac68210f1feb5ebf58a0e3798a86244293d4cd9",
+      "after_sha256": "290c76eeacacef2d75c58534f7eac3c30b17289177f94139985dedade7a1d4d3"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3QualityPluginTest.java",
+      "before_sha256": "ca9018a851189f4bbd01dddb3cc15ef89ab16f1336093160817e2468ef0050bc",
+      "after_sha256": "4622b14d52d74bcab181be52dff4c8e0bcf22ceea482f86fc6d71c01c72c593d"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3SmartReviewCommandsTest.java",
+      "before_sha256": "ABSENT",
+      "after_sha256": "19613051710d34ab3993196ae262d8a581b600605463e0c00bfa65afc77a53f0"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3SmartReviewRealEngineTest.java",
+      "before_sha256": "ABSENT",
+      "after_sha256": "bd36006b696aaac39e4ecd7330d9db05cd1418b495641fe0f439de62d967b022"
+    }
+  ],
+  "boundaries": {
+    "source_emission_and_native_behavior_are_separate_gates": true,
+    "private_recipe_or_template_implementation_embedded": false,
+    "native_proof": "See the canonical task qualification records; this passive receipt supplies source identity and no additional runtime authority.",
+    "self_hash_exclusions": [
+      "m3/quality-bridge/receipts/m3-maven-parity-20261118.json",
+      "the handoff dataset and its proof",
+      "later canonical registration/provenance updates"
+    ],
+    "self_hash_policy": "The twenty source files and pre-existing proof roots exclude this receipt. Its emission is qualified in a separate text-recipe pass retained in canonical history after the named core commit."
+  }
+}

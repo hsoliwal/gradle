@@ -35,6 +35,8 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | Reproducible original LLVM executable evidence | **Maven #210 merged** (`78848ef9a52fbc1ae34032bd46b3d057b5f1d7fd`) after Maven #203 | New opt-in `m3LlvmToolchainScan` / `m3LlvmToolchainVerify` read the original separately SHA-256-pinned Maven provider JAR and run its standalone CLI; exact-source JDK17/21 CI lane | Maven owns `M3-LLVM-TOOLCHAIN-V1`, symlink resolution, executable SHA-256, atomic publication and refusal; Gradle does not rehash/reinterpret manifests or cache native outputs |
 | Optional transaction-backed external stores | **Maven #206 and #209 merged** | Existing external `ext-*` provider-JAR bridge is still opt-in; real RocksDB/MapDB/LMDB Gradle runtime qualification pending | Import only source-qualified provider artifacts; #209's returned builder paths must be included, not copied as Gradle storage code |
 | PDE / polyglot descriptor facts | **Maven #211 merged** | Earlier Gradle Eclipse model and builder handoff tasks remain independent; separate descriptor import qualification pending | Maven/Eclipse source models retain descriptor ownership; do not invent a duplicate Gradle parser |
+| Native Java/JNI build review and recipe nomination | `BuildHookMain` / `CodeAgentMain` at Maven `ff1b0939e8ac962352d5fe4f4461808e867ef670` | `m3PreBuildAdvice`, `m3PostBuildAdvice`, `m3CodeAgent` | Explicit native provider selection and `optionllm`; source-bound receipt/catalogue admission remains Maven-owned |
+| Configuration-cache replay of explicit bridge actions | Standalone Maven producers retain current input validation | Injected ProjectLayout services in Eclipse/model, provider inventory and ProjectDb tasks | Strict two-run Gradle TestKit; untracked tasks revalidate pins, store existence and original source receipts on replay |
 
 Maven-specific behavior (Resolver, enforcer, Mavenizer POM generation,
 Maven core lifecycle participation and Maven API services) remains in Maven.
@@ -150,8 +152,14 @@ Maven's later merged #184 adds explicit `embedded` and `native` spellings,
 which the merged Gradle #39 forwards to the original Maven CLI. `legacy` is
 the compatibility alias of the embedded M3IndexDB archive; `native` is the
 alias of `m3db`'s directory store. The older #149 CI remains source-pinned
-for independent cache compatibility, while a separate Maven #188 pin and
-real Gradle TestKit check the newer aliases and invalidation semantics.
+for independent cache compatibility. A separate Maven source pin,
+`ff1b0939e8ac962352d5fe4f4461808e867ef670`, includes the original dry-run
+fix and qualifies `embedded` to `legacy` reuse and output-tamper invalidation
+through real Gradle TestKit. Mandatory native coverage checks that both
+`native` and `m3db` refuse a missing runtime without task output or fallback
+state. Positive native alias reuse and invalidation require the optional,
+explicitly pinned `M3_POLYGLOT_NATIVE_RUNTIME_JAR` and
+`M3_POLYGLOT_NATIVE_RUNTIME_SHA256`; otherwise that acceptance is **NOT_RUN**.
 
 ## Imported original Maven #160 and #178 compiler-diagnostic boundary
 
@@ -293,3 +301,28 @@ must establish release readiness; LLVM source revision
 `591f3d1edf0a9ee718d17a0ee70dd013b3c01908` was reviewed but is not
 silently installed or built by Gradle. Source-owned OpenRewrite opt-in
 recipe: `m3/quality-bridge/recipes/enable-m3-llvm-provider-bridge.yml`.
+
+## Native review and execution replay
+
+The native smart-review entry points remain present in Maven after the browser
+hooks were removed. The Gradle bridge now exposes those original Java21 entry
+points through explicit tasks, with Java17-compatible task configuration and
+an independently selected producer executable. Post-build advice requires the
+observed success/failure outcome; recipe nomination requires the original
+preparation, atom/pattern and catalogue inputs. Native CLI/JNI commentary also
+requires `optionllm` and explicitly supplied local provider/model artifacts.
+See [the smart-review contract](quality-bridge/docs/M3-SMART-REVIEW.md).
+
+The three existing task types that previously reached `Project` during their
+actions now obtain their layouts through an injected `ProjectLayout` service.
+The added service accessor is concrete, so existing task subclasses retain
+their original abstract-method obligations. Direct task registration and late custom build-directory
+selection are preserved. Tests distinguish configuration reuse from task
+execution and source/output cache admission. Existing backend, M3IndexDB,
+compiler, IDE-delta, provider, LLVM and artifact-cache owners are retained.
+
+The new source-pinned smart-review CI lane preserves the existing producer
+qualification lanes. Native M3File/M3AST planner receivers and complete
+Gradle-owned task/dependency/output-generation ingestion remain separate
+implementation obligations; source-bound review reports do not supply their
+missing invalidation contracts.

@@ -8,12 +8,16 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 WORKFLOW="$ROOT/.github/workflows/m3-gradle-quality-bridge.yml"
 test -f "$WORKFLOW" || { echo "M3 quality workflow is missing" >&2; exit 1; }
 
-require_once() {
-    count=$(grep -F -c -- "$1" "$WORKFLOW" || true)
-    if [ "$count" -ne 1 ]; then
-        printf 'Expected one workflow contract entry (%s), found %s\n' "$1" "$count" >&2
+require_count() {
+    count=$(grep -F -c -- "$2" "$WORKFLOW" || true)
+    if [ "$count" -ne "$1" ]; then
+        printf 'Expected %s workflow contract entries (%s), found %s\n' "$1" "$2" "$count" >&2
         exit 1
     fi
+}
+
+require_once() {
+    require_count 1 "$1"
 }
 
 require_once "ref: b47e9a1e9173502c19de9bb6657a4f88b3267487"
@@ -37,9 +41,9 @@ require_once "  push:"
 require_once "  pull_request:"
 require_once "  workflow_dispatch:"
 
-# Newer Maven #184/#188 producer qualification is deliberately independent
-# of the original Maven #149 cache and the earlier converter source pins.
-require_once "ref: f92096f8d3eb135d28cf698335a4423ef9179e9d"
+# Alias qualification includes the original dry-run fix, independently of
+# the older #149 cache. The alias and native-advice checkouts share this pin.
+require_count 2 "ref: ff1b0939e8ac962352d5fe4f4461808e867ef670"
 
 # Maven #198 is an independent, merge-pinned LLVM SPI producer. A host Clang
 # smoke is mandatory in CI but is not proof of the user's LLVM fork ABI.
@@ -52,5 +56,8 @@ require_once "ref: 3441dc1e91a2835b7b6bca608ffb9676565d9eff"
 require_once "run: sh m3/quality-bridge/scripts/verify-llvm-tools-inventory.sh"
 require_once "test --tests '*M3LlvmToolsProviderRealEngineTest' --rerun-tasks"
 require_once "mvn -B -ntp -f m3-maven-llvm-tools/tools/m3-llvm-tools-provider/pom.xml verify"
+
+# Advice and source-bound recipe nomination use the original Java/JNI owner.
+require_once "test --tests '*M3SmartReviewRealEngineTest' --rerun-tasks"
 
 printf '%s\n' "PASS: source-pinned M3 Gradle/Maven CI lanes retained"

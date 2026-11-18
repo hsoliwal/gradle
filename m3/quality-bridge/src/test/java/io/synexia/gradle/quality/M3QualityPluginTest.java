@@ -23,12 +23,15 @@ class M3QualityPluginTest {
         Files.writeString(projectDirectory.resolve("settings.gradle.kts"), "rootProject.name=\"fixture\"\n");
         Files.writeString(projectDirectory.resolve("build.gradle.kts"),
                 "plugins { id(\"io.synexia.m3.quality\") }\n");
-        String output = GradleRunner.create()
+        GradleRunner runner = GradleRunner.create()
                 .withProjectDir(projectDirectory.toFile())
                 .withPluginClasspath()
-                .withArguments("tasks", "--all", "--stacktrace")
-                .build()
-                .getOutput();
+                .withArguments("tasks", "--all", "--configuration-cache",
+                        "--configuration-cache-problems=fail", "--stacktrace");
+        String output = runner.build().getOutput();
+        assertTrue(output.contains("Configuration cache entry stored"), output);
+        String replay = runner.build().getOutput();
+        assertTrue(replay.contains("Reusing configuration cache"), replay);
         assertTrue(output.contains("m3CodeqlSarif"));
         assertTrue(output.contains("m3CodeqlEvidence"));
         assertTrue(output.contains("m3SemgrepScan"));
@@ -46,5 +49,8 @@ class M3QualityPluginTest {
         assertTrue(output.contains("m3EclipseReconcile"));
         assertTrue(output.contains("m3IdeDeltaExport"));
         assertTrue(output.contains("m3IdeDeltaReview"));
+        assertTrue(output.contains("m3PreBuildAdvice"));
+        assertTrue(output.contains("m3PostBuildAdvice"));
+        assertTrue(output.contains("m3CodeAgent"));
     }
 }
