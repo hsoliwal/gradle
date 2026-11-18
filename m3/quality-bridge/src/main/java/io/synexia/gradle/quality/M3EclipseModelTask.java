@@ -50,6 +50,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             .getBytes(StandardCharsets.UTF_8);
     private static final byte[] CONTEXT_PREFIX = "{\"schema\":\"m3-eclipse-build-context-v1\""
             .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] HANDOFF_PREFIX = "{\"schema\":\"m3-eclipse-build-handoff-v1\""
+            .getBytes(StandardCharsets.UTF_8);
 
     @Input
     public abstract Property<String> getJavaExecutable();
@@ -80,6 +82,12 @@ public abstract class M3EclipseModelTask extends DefaultTask {
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getContextPacket();
+
+    /** Original Eclipse m2e invocation envelope, never a Gradle build-cache input. */
+    @Optional
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract RegularFileProperty getHandoffPacket();
 
     /** "model" retains the original v1 schema; "owners" selects the generic builder-owner report. */
     @Input
@@ -113,18 +121,21 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                     getProviderJars().getFiles(), getProviderJarSha256().get());
 
             String mode = getReportMode().get();
-            if (!"model".equals(mode) && !"owners".equals(mode) && !"context".equals(mode)) {
+            if (!"model".equals(mode) && !"owners".equals(mode)
+                    && !"context".equals(mode) && !"handoff".equals(mode)) {
                 throw new IOException("unsupported Eclipse report mode: " + mode);
             }
             Path packet = null;
-            if ("context".equals(mode)) {
-                if (!getContextPacket().isPresent()) {
-                    throw new IOException("Eclipse source-owner configuration packet was not supplied");
+            if ("context".equals(mode) || "handoff".equals(mode)) {
+                var declared = "handoff".equals(mode) ? getHandoffPacket() : getContextPacket();
+                if (!declared.isPresent()) {
+                    throw new IOException("Eclipse source-owner packet was not supplied");
                 }
-                packet = getContextPacket().get().getAsFile().toPath().toAbsolutePath().normalize();
+                packet = declared.get().getAsFile().toPath().toAbsolutePath().normalize();
+                long maxBytes = "handoff".equals(mode) ? 12L * 1024 * 1024 : 1024L * 1024;
                 if (!packet.startsWith(root) || !Files.isRegularFile(packet, LinkOption.NOFOLLOW_LINKS)
-                        || Files.size(packet) > 1024 * 1024) {
-                    throw new IOException("Eclipse context packet must be an existing project-local file under 1 MiB");
+                        || Files.size(packet) > maxBytes) {
+                    throw new IOException("Eclipse source-owner packet must be project-local and bounded");
                 }
                 rejectLinkedPath(checkout, packet);
             }
@@ -133,10 +144,13 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
                 case "context" -> M3EclipseModelCommands.context(
                         getJavaExecutable().get(), engine.toFile(), packet.toFile(), installedProviders);
+                case "handoff" -> M3EclipseModelCommands.handoff(
+                        getJavaExecutable().get(), engine.toFile(), packet.toFile(), installedProviders);
                 default -> M3EclipseModelCommands.inspect(
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
             };
-            M3BoundedOutput output = new M3BoundedOutput(MAX_REPORT_BYTES, "Eclipse model");
+            M3BoundedOutput output = new M3BoundedOutput(
+                    "handoff".equals(mode) ? 24 * 1024 * 1024 : MAX_REPORT_BYTES, "Eclipse model");
             getExecOperations().exec(spec -> {
                 spec.setExecutable(command.get(0));
                 spec.setArgs(command.subList(1, command.size()));
@@ -155,6 +169,7 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             byte[] expectedPrefix = switch (mode) {
                 case "owners" -> OWNERS_PREFIX;
                 case "context" -> CONTEXT_PREFIX;
+                case "handoff" -> HANDOFF_PREFIX;
                 default -> MODEL_PREFIX;
             };
             if (json.length < expectedPrefix.length + 2
