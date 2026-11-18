@@ -286,6 +286,48 @@ that OS-shared M3String storage or AST adapters already exist in Gradle. The
 M3AST compiler option in this fork remains an independent explicit JavaCompile
 setting; neither task silently enables the other.
 
+## Generic Eclipse language builders (JDT, CDT, RustDT, Corrosion, PyDev, PDE, LSP4E, future plugins)
+
+`m3EclipseBuilders` is an opt-in, read-only companion to `m3EclipseModel`.
+Both tasks delegate to the Maven-authored `EclipseModelCli`, without a second
+parser, Eclipse OSGi runtime or compiler in Gradle. The new report uses
+`m3-eclipse-builder-owners-v1` and preserves original builder order,
+exact extension IDs, registered adapter IDs, unbound natures and descriptor
+hashes. The Maven source owns the versioned `M3EclipseBuilderProvider`
+ServiceLoader interface. Unknown builders remain **unbound**, rather than
+being assigned to javac, clang, cargo or a guessed build command.
+
+```groovy
+plugins { id 'io.synexia.m3.quality' }
+
+tasks.named('m3EclipseBuilders') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+
+    // Optional installed Eclipse builder descriptors; every JAR is separately pinned.
+    // providerJars.from(layout.projectDirectory.file('vendor/eclipse-adapter.jar'))
+    // providerJarSha256.put('eclipse-adapter.jar',
+    //     providers.gradleProperty('m3.eclipse.adapter.sha256'))
+}
+```
+
+Invoke `./gradlew m3EclipseBuilders` explicitly to produce
+`build/reports/m3/eclipse-builders.json`. Merely applying the plugin does
+not execute this task, invoke Eclipse builders, start LSPs, install toolchains,
+resolve CDT build configurations or import Maven projects. The same strict
+checksum validator used by the existing polyglot adapter verifies supplied
+engine and provider JARs. The output is versioned JSON, atomically published
+only after successful CLI completion; it does not authorize task/cache skipping.
+
+Maven now reads **immediate** arbitrary `.settings/` files (bounded and
+without following symlinks) so vendor-specific Eclipse language metadata is
+visible in either model. Nested Eclipse workspaces, actual `IResourceDelta`,
+JDT working copies, `IBuildConfiguration`, CDT `ICBuildConfiguration`,
+Rust/Cargo execution, markers and cancellation still belong to Eclipse or
+their installed owners. Later qualified IDE plugins should exchange those
+real facts through the existing M3 IDE delta wire instead of fabricating them.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
