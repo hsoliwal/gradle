@@ -50,6 +50,7 @@ class M3QualityPluginTest {
         assertTrue(output.contains("m3EclipseJdtFacts"));
         assertTrue(output.contains("m3EclipseCdtFacts"));
         assertTrue(output.contains("m3EclipseCargoFacts"));
+        assertTrue(output.contains("m3EclipseLanguageFacts"));
         assertTrue(output.contains("m3EclipseTychoFinalP2Facts"));
         assertTrue(output.contains("m3IdeDeltaExport"));
         assertTrue(output.contains("m3IdeDeltaReview"));

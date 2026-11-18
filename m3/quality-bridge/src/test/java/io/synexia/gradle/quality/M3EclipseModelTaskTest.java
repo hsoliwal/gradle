@@ -261,6 +261,57 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void genericLanguageEvidenceMustBeExplicitAndNeverRunsNativeCompiler() throws Exception {
+        fixture();
+        Path original = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Files.writeString(original.resolve("language-facts.ide"), "M3-TEST-PYDEV-FACTS-V1\nsource\n");
+        Files.writeString(original.resolve("build-handoff.ide"), "M3-ECLIPSE-BUILD-HANDOFF-V1\nsource\n");
+        String report = "{\"schema\":\"m3-eclipse-language-facts-v1\",\"providerId\":\"test.pydev\","
+                + "\"observedCount\":7,\"authorizesBuildSkipping\":false}\r\n";
+        String digest = engine(report);
+        configuration(digest, "m3EclipseLanguageFacts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseLanguageFacts') {\n"
+                + "  languageProviderId.set('test.pydev')\n"
+                + "  languagePacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/language-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        Path result = workspace.resolve("build/reports/m3/eclipse-language-facts.json");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("tasks", "--all").build();
+        assertFalse(Files.exists(result), "registration never executes language compilers or language servers");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseLanguageFacts", "--stacktrace").build();
+        assertEquals(report.replace("\r\n", "\n"), Files.readString(result));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-cdt-facts.json")));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-jdt-facts.json")));
+    }
+
+    @Test
+    void genericLanguageFactsRejectCrossLanguageSchemaSubstitution() throws Exception {
+        fixture();
+        Path original = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Files.writeString(original.resolve("language-facts.ide"), "M3-TEST-PYDEV-FACTS-V1\nsource\n");
+        Files.writeString(original.resolve("build-handoff.ide"), "M3-ECLIPSE-BUILD-HANDOFF-V1\nsource\n");
+        String digest = engine("{\"schema\":\"m3-cargo-build-facts-v1\"}\n");
+        configuration(digest, "m3EclipseLanguageFacts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseLanguageFacts') {\n"
+                + "  languageProviderId.set('test.pydev')\n"
+                + "  languagePacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/language-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        var failed = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseLanguageFacts", "--stacktrace").buildAndFail();
+        assertTrue(failed.getOutput().contains("M3 Eclipse model inspection refused"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-language-facts.json")));
+    }
+
+    @Test
     void reviewsCargoSourceFactsOnlyThroughOriginalPinnedMavenCodec() throws Exception {
         fixture();
         Path owner = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));

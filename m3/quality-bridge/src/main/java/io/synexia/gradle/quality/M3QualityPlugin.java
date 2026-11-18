@@ -270,6 +270,21 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-tycho-final-p2-facts.json"));
         });
 
+        // Future Eclipse language owners (PyDev, DLTK, Xtext, Scala, Groovy,
+        // Swift, Go, vendor LSP) can install a separately SHA-pinned Java17
+        // evidence provider; Gradle never needs another compiler/parser.
+        project.getTasks().register("m3EclipseLanguageFacts", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("language");
+            task.setDescription("Review arbitrary original Eclipse language evidence via installed Maven SPI");
+            task.getHandoffPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/build-handoff.ide"));
+            task.getLanguagePacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/language-facts.ide"));
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-language-facts.json"));
+        });
+
         // The Maven #184 project DB owns the data and deterministic retrieval.
         // These optional tasks neither reimplement indexes nor affect build/check.
         project.getTasks().register("m3ProjectDbIngest", M3ProjectDbTask.class, task -> {

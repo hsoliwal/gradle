@@ -53,6 +53,23 @@ final class M3EclipseModelCommandsTest {
     }
 
     @Test
+    void genericLanguageAdapterUsesOneMavenCliAndOriginalPinnedJarClasspath() {
+        File engine = workspace.resolve("engine.jar").toFile();
+        File language = workspace.resolve("vendor language facts.ide").toFile();
+        File original = workspace.resolve("original eclipse handoff.ide").toFile();
+        File adapter = workspace.resolve("approved-language-adapter.jar").toFile();
+        String classpath = engine.getAbsolutePath() + File.pathSeparator + adapter.getAbsolutePath();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", classpath,
+                "io.synexia.maven.polyglot.M3EclipseLanguageEvidenceCli",
+                "test.pydev", language.getAbsolutePath(), original.getAbsolutePath()),
+                M3EclipseModelCommands.languageFacts("java", engine, "test.pydev",
+                        language, original, List.of(adapter)));
+        assertThrows(NullPointerException.class,
+                () -> M3EclipseModelCommands.languageFacts(
+                        "java", engine, "test.pydev", language, null, List.of()));
+    }
+
+    @Test
     void cargoSourceFactsStayWithOneExactOriginalEclipseInvocation() {
         File engine = workspace.resolve("engine.jar").toFile();
         File cargo = workspace.resolve("rust facts.ide").toFile();

@@ -52,6 +52,25 @@ public final class M3EclipseModelCommands {
                 MAIN_CLASS, "tycho-final-p2", tychoFacts.getAbsolutePath(), eclipseHandoff.getAbsolutePath());
     }
 
+    /** Generic installed Eclipse evidence adapter, without any second source parser. */
+    public static List<String> languageFacts(String javaExecutable, File engineJar,
+            String providerId, File originalLanguagePacket, File eclipseHandoff, List<File> providers) {
+        String java = M3QualityCommands.executable(javaExecutable);
+        Objects.requireNonNull(engineJar, "engineJar");
+        Objects.requireNonNull(providerId, "providerId");
+        Objects.requireNonNull(originalLanguagePacket, "originalLanguagePacket");
+        Objects.requireNonNull(eclipseHandoff, "eclipseHandoff");
+        Objects.requireNonNull(providers, "providers");
+        StringBuilder classpath = new StringBuilder(engineJar.getAbsolutePath());
+        for (File provider : providers) {
+            classpath.append(File.pathSeparator).append(
+                    Objects.requireNonNull(provider, "provider").getAbsolutePath());
+        }
+        return List.of(java, "-Dfile.encoding=UTF-8", "-cp", classpath.toString(),
+                "io.synexia.maven.polyglot.M3EclipseLanguageEvidenceCli",
+                providerId, originalLanguagePacket.getAbsolutePath(), eclipseHandoff.getAbsolutePath());
+    }
+
     /** Original Corrosion/Cargo locked/offline metadata; never runs Cargo here. */
     public static List<String> cargo(String javaExecutable, File engineJar, File cargoFacts,
             File eclipseHandoff, List<File> providers) {
