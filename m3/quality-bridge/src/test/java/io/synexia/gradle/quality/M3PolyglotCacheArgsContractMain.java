@@ -38,7 +38,27 @@ public final class M3PolyglotCacheArgsContractMain {
         refuse(() -> M3PolyglotCommands.command(
                 "java", engine, root, manifest, "all", "run", 900, false, false,
                 List.of(), "sqlite", cache));
-        System.out.println("PASS: Gradle adapter forwards explicit Maven #149 local cache with old signatures intact");
+        List<String> reuse = M3PolyglotCommands.command(
+                "java", engine, root, manifest, "all", "run", 900, true, false,
+                List.of(), "file", cache, true);
+        check(selected.equals(reuse.subList(0, reuse.size() - 1)), "provider reuse changed existing argv");
+        check(reuse.get(reuse.size() - 1).equals("--provider-reuse"), "explicit provider reuse was lost");
+        List<String> noReuse = M3PolyglotCommands.command(
+                "java", engine, root, manifest, "all", "run", 900, true, false,
+                List.of(), "file", cache, false);
+        check(noReuse.equals(selected), "false provider reuse changed existing argv");
+        List<String> cacheReuse = M3PolyglotCommands.command(
+                "java", engine, root, manifest, "all", "run", 900, false, false,
+                List.of(), "legacy", cache, true);
+        check(cacheOnly.equals(cacheReuse.subList(0, cacheReuse.size() - 1)),
+                "provider reuse requires implicit incremental state");
+        refuse(() -> M3PolyglotCommands.command(
+                "java", engine, root, manifest, "all", "plan", 900, false, false,
+                List.of(), "legacy", null, true));
+        refuse(() -> M3PolyglotCommands.command(
+                "java", engine, root, manifest, "all", "run", 900, false, false,
+                List.of(), "legacy", null, true));
+        System.out.println("PASS: Gradle adapter forwards explicit Maven cache/provider reuse with old signatures intact");
     }
 
     private static void check(boolean condition, String message) {

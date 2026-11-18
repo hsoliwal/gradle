@@ -56,8 +56,10 @@ semantically incorrect for an incompletely declared task.
 The Gradle bridge does not improve those keys. It deliberately does not
 enable a cache automatically, does not copy Maven cache logic into Gradle,
 and does not claim that the Maven cache supplies source/binary/behavioral
-equivalence. CodeQL, OpenRewrite, and pluggable M3 provider tasks are not
-cache candidates under the original Maven policy. The engine hashes
+equivalence. CodeQL, OpenRewrite, and unqualified M3 provider tasks remain
+excluded from cache admission. The original default policy continues to exclude
+all provider tasks; the explicit provider-reuse option described below adds a
+separate Maven-owned qualification path. The engine hashes
 stored blobs on reuse and rejects malformed or mismatched entries, but
 that establishes only stored-content integrity, not correct build context.
 
@@ -85,3 +87,58 @@ cache hit, changed source input miss, damaged blob refusal and cross-platform
 runs. In particular, a synthetic fake CLI TestKit test is an argument-boundary
 check, not a proof that Maven's real cache is correct or safe for arbitrary
 language tools.
+
+## Explicit provider-qualified reuse
+
+`providerReuse` defaults to `false`. With a reviewed Maven engine that supports
+`--provider-reuse`, the existing `m3PolyglotRun` task can request the original
+provider's eligibility check:
+
+```groovy
+tasks.named('m3PolyglotRun') {
+    incremental.set(true)
+    stateBackend.set('file')
+    providerReuse.set(true)
+}
+```
+
+Alternatively, select an existing external `localArtifactCacheDirectory` with
+`providerReuse.set(true)` to request output restoration without enabling
+incremental state. The option requires run mode and at least one of those
+reuse mechanisms. Planning or a stateless run with this option fails before
+starting the Maven CLI. Every existing Java command overload and every task's
+default argument vector remain unchanged when the property is false.
+
+The bridge forwards the literal flag to the same pinned Maven engine. Maven's
+provider contract owns the toolchain/context identity, declared input closure,
+output ownership and final decision. A request does not make an unqualified
+provider cacheable: ordinary execution remains the fallback. The initial
+qualified built-in path is the deliberately restricted explicit JDK compiler
+invocation accepted by the source-owned provider. LLVM, dynamic dependencies,
+processors and arbitrary external providers receive no new reuse permission
+from the Gradle flag.
+
+The initial JDK contract permits verified reuse and output restoration only in
+the same workspace. Its cache identity includes that workspace; a different
+checkout compiles again. It requires explicit UTF-8 sources, disabled annotation
+processing and implicit class generation, explicit `-Xprefer:source` selection,
+declared directory-only classpaths and sourcepaths, and one owned output directory
+matching the compiler's `-d` option. Source preference is required because javac's
+default source/class choice can depend on timestamps even when contents match.
+JAR classpaths, injected JVM/compiler options, unknown compiler flags, symlinked
+toolchains and an incomplete input declaration do not qualify. Maven verifies
+the supported JDK's toolchain contents as additional inputs on each reuse check.
+
+`m3PolyglotRun` remains an untracked Gradle task. A Maven `UP-TO-DATE` or
+`FROM-CACHE` message describes a selected manifest action only; it does not
+admit Gradle-native `JavaCompile`, task-cache or configuration-cache reuse.
+The old engine JAR must be upgraded and its SHA-256 re-pinned before selecting
+the new option. An old CLI that rejects the flag fails normally.
+
+The existing argument contract and TestKit boundary fixtures cover unchanged
+defaults, explicit forwarding and invalid combinations. The separate
+`M3PolyglotProviderReuseRealEngineTest` requires `M3_PROVIDER_REUSE_JAR` naming
+the source-built engine with this feature. It exercises the original JDK
+provider through the actual Gradle task, including warm reuse, same-workspace
+removed-output restoration and changed-source invalidation. Supplying an older engine through
+`M3_POLYGLOT_JAR` does not silently select this newer acceptance test.

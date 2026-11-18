@@ -1,0 +1,233 @@
+{
+  "schema": "M3_PROVIDER_REUSE_RESULT_ONLY_PROVENANCE_V1",
+  "canonical": {
+    "repository": "hsoliwal/com.synexia",
+    "task_revision": "8d0f142abfc70f7ac55dd7c56e8f4877594bdb81",
+    "task_revision_parent": "e8d771387b0d26333ef24497ac2fcb9aded1177f",
+    "crate": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118",
+    "recipe_id": "com.synexia.m3.PolyglotProviderReuse20261118",
+    "qualification_summary": {
+      "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/QUALIFICATION.md",
+      "sha256": "82a32a0400f1e82516d2b3263e0d6a5b20289e32011baeb6e862c1a20df106c4"
+    },
+    "source_custody": {
+      "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/qualification/gradle-FINAL_OUTPUT_CUSTODY.json",
+      "sha256": "cbbdae0531e4c90239e52e5f1a64f47a7c9bcfb97c50771e3b3f398e6962f317"
+    },
+    "native_evidence": {
+      "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/qualification/native/gradle-final-e143/GRADLE_VERIFICATION_SUMMARY.json",
+      "sha256": "56f029a11e5a31349f093130a514a2958d9f5ccdeff1178d0faed65ef146ce04"
+    },
+    "historical_owner_inspection_revision": "e8d771387b0d26333ef24497ac2fcb9aded1177f"
+  },
+  "target": {
+    "repository": "hsoliwal/gradle",
+    "publication_base_revision": "e143e1548b518a532c17e836bbe05184406fceea",
+    "qualified_upstream_context": "e143e1548b518a532c17e836bbe05184406fceea",
+    "source_output_count": 8
+  },
+  "contract": {
+    "provider_reuse_default": false,
+    "admitted_provider": "bounded JDK compiler invocation",
+    "javac_source_preference": "explicit -Xprefer:source",
+    "cache_scope": "same-workspace only",
+    "portable_downstream_generation": false,
+    "shared_existing_state_cache_and_scheduler": true,
+    "gradle_engine_artifact_sha256": "f14b6e11b0b70e4d0b539aa6d37d66702c78281711ec9f51b143085343a15cfb",
+    "declined_reuse_contract_or_unavailable_input_fingerprint": "ordinary execution",
+    "malformed_contract_or_unavailable_provider_implementation_identity": "IOException"
+  },
+  "source_recipe_chain": [
+    {
+      "stage": "primary-sdk-02",
+      "recipe": "com.synexia.m3.PolyglotProviderReuse20261118",
+      "dataset": "gradle",
+      "baseline_revision": "d32efb1f3d3d032c6d08c134d1a069aab162cf87",
+      "baseline_kind": "GIT_COMMIT",
+      "source_outputs": 8,
+      "tests": 5,
+      "test_status": "PASS_ZERO_FAILURES_ERRORS_SKIPS",
+      "sdk_inputs": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/qualification/sdk-02/crate/target/gradle/candidate/SDK_INPUTS.tsv",
+        "sha256": "e7aad4ea1d5258202741af25c3550f82e99f236b537e3fe4031d454c3611ca87"
+      },
+      "sdk_results": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/qualification/sdk-02/crate/target/gradle/candidate/SDK_RESULTS.tsv",
+        "sha256": "aabb30fbc11749a7ea881e125ed11bb5aba31f0a90077392a0b1ba8f046855b6"
+      },
+      "surefire_report": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/qualification/sdk-02/crate/target/gradle/surefire-reports/TEST-com.synexia.rewrite.M3TaskRecipeTest.xml",
+        "sha256": "e9123b4731eb3e64e292d3b3288ec493ed1828fad9bb5b2df8a1639b6c268ae6"
+      },
+      "manifests": [
+        {
+          "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/qualification/sdk-02/crate/datasets/gradle/resources/com/synexia/rewrite/hash-pinned-java/m3-polyglot-provider-reuse-20261118-gradle/manifest.tsv",
+          "sha256": "8349c94eb8365fdf8b5f71bb2d8163e145c5e55c0f3b2c7e5250be8f838ec7dc"
+        },
+        {
+          "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/qualification/sdk-02/crate/datasets/gradle/resources/com/synexia/rewrite/hash-pinned-text/m3-polyglot-provider-reuse-20261118-gradle/manifest.tsv",
+          "sha256": "ae71c38bd0bcc63d0782deef08ca0c6b0c9ae506f4333170bdaa7d31e818b21c"
+        }
+      ],
+      "receiver_fixed_point_changes": 0
+    },
+    {
+      "stage": "gradle-db-access-forward-sdk-01",
+      "recipe": "com.synexia.m3.PolyglotGradleDbAccessForward20261118",
+      "dataset": "gradle",
+      "baseline_revision": null,
+      "baseline_kind": "SDK_OUTPUT_SNAPSHOT",
+      "source_outputs": 4,
+      "tests": 5,
+      "test_status": "PASS_ZERO_FAILURES_ERRORS_SKIPS",
+      "sdk_inputs": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/gradle-db-access-forward-20261118/qualification/sdk-01/crate/target/gradle/candidate/SDK_INPUTS.tsv",
+        "sha256": "b3c328731892ad24973ac3ea219d4eb90d1662594048eb3b078ec277b59ed34b"
+      },
+      "sdk_results": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/gradle-db-access-forward-20261118/qualification/sdk-01/crate/target/gradle/candidate/SDK_RESULTS.tsv",
+        "sha256": "370ee6230af8a1b398dea9c1042cbf5d485dafb84ade512b4977c4d0f933c806"
+      },
+      "surefire_report": {
+        "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/gradle-db-access-forward-20261118/qualification/sdk-01/crate/target/gradle/surefire-reports/TEST-com.synexia.rewrite.M3TaskRecipeTest.xml",
+        "sha256": "fab10be5305e20c2363223da6e7610831045f4746b43f7669991416974c3de43"
+      },
+      "manifests": [
+        {
+          "path": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/gradle-db-access-forward-20261118/qualification/sdk-01/crate/datasets/gradle/resources/com/synexia/rewrite/hash-pinned-java/m3-polyglot-gradle-db-access-forward-20261118-gradle/manifest.tsv",
+          "sha256": "93e6a830d8d2956856c6b444a77d2add77a09f81e31cb7b5a0cc740d848e50fb"
+        }
+      ],
+      "receiver_fixed_point_changes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3PolyglotCommands.java",
+      "before_sha256": "a68e7afeffdf1b1affadaf0650bb37ccf3d218f02ef747aeb2359b063fc1b8c7",
+      "after_sha256": "78a4341d98652fc1a06eef0e95016dd4fed32723c3565a2b505bb72ad13deaea",
+      "mode": "100644",
+      "authority": "gradle-db-access-forward-20261118/sdk-01"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3PolyglotManifestTask.java",
+      "before_sha256": "5de80fc827d080910ec068f013956503cf6e67c4208758d256ccf73ff159f29d",
+      "after_sha256": "920df6b23eed969c54b1c4f500a03727a4845eea0993072e7c39aaac0f31a04b",
+      "mode": "100644",
+      "authority": "gradle-db-access-forward-20261118/sdk-01"
+    },
+    {
+      "path": "m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3QualityPlugin.java",
+      "before_sha256": "adab14a1ea3bc42b7e92dbe511cdbe18e170ecf9279ab55469672ef3e086504a",
+      "after_sha256": "4b5cc2f17df3d8dbd4f7667fd124346710d93bbcf1992db768f2137aa18e7b4e",
+      "mode": "100644",
+      "authority": "gradle-db-access-forward-20261118/sdk-01"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3PolyglotCacheArgsContractMain.java",
+      "before_sha256": "821705cc3fe038bfb05c2a1855e11ad780c8814004121c1c49ae9923b6a7fd99",
+      "after_sha256": "34fbf5a6689342b07a7750cc875119ac3c96b90ec9648dc9391e2aecf989bd91",
+      "mode": "100644",
+      "authority": "primary-sdk-02"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3PolyglotCommandsTest.java",
+      "before_sha256": "5ca00dc6c2c2a1a9e46de74c1fd0cd6d3f019f1730048052e3bd18106bbfd0bb",
+      "after_sha256": "969756cc76725519f3a85e0db1f53dbc5503c30f890588ac1f2953e38a985ded",
+      "mode": "100644",
+      "authority": "gradle-db-access-forward-20261118/sdk-01"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3PolyglotManifestTaskTest.java",
+      "before_sha256": "c45b56a1d64b7d9e8624e7d552dbab6b4c8cdcc13f1e79dabc5872df319aaaa1",
+      "after_sha256": "9de3ac1f2dcc0c6748c6cefdf68a8fde7bb3c65d37cdbeab52b0d220507e6355",
+      "mode": "100644",
+      "authority": "primary-sdk-02"
+    },
+    {
+      "path": "m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3PolyglotProviderReuseRealEngineTest.java",
+      "before_sha256": "ABSENT",
+      "after_sha256": "ebb274d4e6dfa0d7ec7403a6106d892c1e84ab9c16eb593a09f1519f096a785e",
+      "mode": "100644",
+      "authority": "primary-sdk-02"
+    },
+    {
+      "path": "m3/quality-bridge/docs/M3-POLYGLOT-CACHE.md",
+      "before_sha256": "ac398aae73593101140507adc467c6d6246057bd7d09826f85a9f4fbd5992f8c",
+      "after_sha256": "97eee153cd6a4cb965675893c48934dfd3ef68d12199c4f2c7b6fc7cf0c028d4",
+      "mode": "100644",
+      "authority": "primary-sdk-02"
+    }
+  ],
+  "native_qualification": {
+    "status": "PASS",
+    "gradle": "9.9.1",
+    "java_runtime": 21,
+    "java_release_target": 17,
+    "offline": true,
+    "targeted_native_tests": 26,
+    "test_suites": [
+      {
+        "name": "io.synexia.gradle.quality.M3PolyglotCommandsTest",
+        "tests": "10",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "time": "0.318"
+      },
+      {
+        "name": "io.synexia.gradle.quality.M3PolyglotManifestTaskTest",
+        "tests": "15",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "time": "37.812"
+      },
+      {
+        "name": "io.synexia.gradle.quality.M3PolyglotProviderReuseRealEngineTest",
+        "tests": "1",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "time": "10.955"
+      }
+    ],
+    "argv_contracts": {
+      "provider_reuse": "PASS",
+      "m3jdk_db_module_access": "PASS",
+      "lint": "-Xlint:all -Werror"
+    },
+    "original_task_binary": "PASS; actual emitted implementation; no template override",
+    "task_defaults": {
+      "providerReuse": false,
+      "m3DbModuleAccess": "none"
+    },
+    "real_engine_outcomes": [
+      "CACHED",
+      "UP-TO-DATE",
+      "FROM-CACHE",
+      "equal-size/equal-mtime source mutation invalidates reuse"
+    ],
+    "gradle_task_outcome_each_run": "SUCCESS",
+    "not_run": [
+      "Full Gradle core build",
+      "Entire quality-bridge test suite",
+      "Live upstream M3JDK DB module engine integration test (source compiled; argv contract executed)",
+      "Actual Java 17 runtime",
+      "Windows",
+      "macOS",
+      "Hosted CI",
+      "Performance measurements"
+    ]
+  },
+  "engine_jar_sha256": "f14b6e11b0b70e4d0b539aa6d37d66702c78281711ec9f51b143085343a15cfb",
+  "performance": "NOT_MEASURED",
+  "passive_receipt": {
+    "path": "m3/quality-bridge/docs/M3-PROVIDER-REUSE-PROVENANCE.json",
+    "packet": "m3-polyglot-provider-reuse-metadata-20261118",
+    "self_hash_included": false,
+    "authority": "synexia-openrewrite-recipes/recipe-crates/m3-polyglot-forks-20261117/followup-provider-reuse-20261118/metadata/qualification/sdk-02/crate/target/gradle/candidate/SDK_RESULTS.tsv",
+    "authority_revision": "Canonical followup to task_revision; exact metadata commit is recorded in the delivery PR.",
+    "executable_recipe_included": false
+  }
+}

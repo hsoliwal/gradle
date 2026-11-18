@@ -220,6 +220,81 @@ final class M3PolyglotCommandsTest {
     }
 
     @Test
+    void providerReuseIsExplicitAndPreservesEveryExistingCommandForm() {
+        File engine = temp.resolve("engine.jar").toFile();
+        File workspace = temp.resolve("project with spaces").toFile();
+        File manifest = new File(workspace, "m3-build.tsv");
+        File cache = temp.resolve("external cache with spaces").toFile();
+        for (boolean incremental : List.of(false, true)) {
+            for (File selectedCache : new File[] {null, cache}) {
+                List<String> original = M3PolyglotCommands.command(
+                        "java", engine, workspace, manifest, "compile", "run", 37,
+                        incremental, false, List.of(), "legacy", selectedCache);
+                List<String> disabled = M3PolyglotCommands.command(
+                        "java", engine, workspace, manifest, "compile", "run", 37,
+                        incremental, false, List.of(), "legacy", selectedCache, false);
+                assertEquals(original, disabled);
+                assertFalse(original.contains("--provider-reuse"));
+                if (incremental || selectedCache != null) {
+                    List<String> enabled = M3PolyglotCommands.command(
+                            "java", engine, workspace, manifest, "compile", "run", 37,
+                            incremental, false, List.of(), "legacy", selectedCache, true);
+                    assertEquals(original, enabled.subList(0, enabled.size() - 1));
+                    assertEquals("--provider-reuse", enabled.get(enabled.size() - 1));
+                    assertThrows(UnsupportedOperationException.class, () -> enabled.add("--unsafe"));
+                }
+            }
+        }
+    }
+
+    @Test
+    void providerReuseRequiresRunWithIncrementalStateOrAnArtifactCache() {
+        File engine = temp.resolve("engine.jar").toFile();
+        File workspace = temp.toFile();
+        File manifest = temp.resolve("m3-build.tsv").toFile();
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "compile", "plan", 37,
+                false, false, List.of(), "legacy", null, true));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "compile", "run", 37,
+                false, false, List.of(), "legacy", null, true));
+    }
+
+    @Test
+    void providerReuseAndM3JdkModuleAccessRemainIndependentSelections() {
+        File engine = temp.resolve("engine.jar").toFile();
+        File workspace = temp.toFile();
+        File manifest = temp.resolve("m3-build.tsv").toFile();
+        File cache = temp.resolve("explicit cache").toFile();
+        for (String selection : List.of("current-java-base", "current-named",
+                "legacy-java-base", "legacy-named")) {
+            List<String> moduleOnly = M3PolyglotCommands.command(
+                    "java", engine, workspace, manifest, "compile", "run", 37,
+                    true, false, List.of(), "m3db", cache, selection);
+            assertEquals(moduleOnly, M3PolyglotCommands.command(
+                    "java", engine, workspace, manifest, "compile", "run", 37,
+                    true, false, List.of(), "m3db", cache, selection, false));
+            List<String> both = M3PolyglotCommands.command(
+                    "java", engine, workspace, manifest, "compile", "run", 37,
+                    true, false, List.of(), "m3db", cache, selection, true);
+            assertEquals(moduleOnly, both.subList(0, both.size() - 1));
+            assertEquals("--provider-reuse", both.get(both.size() - 1));
+        }
+        List<String> providerOnly = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "compile", "run", 37,
+                false, false, List.of(), "legacy", cache, true);
+        assertEquals(providerOnly, M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "compile", "run", 37,
+                false, false, List.of(), "legacy", cache, "none", true));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "compile", "run", 37,
+                false, false, List.of(), "legacy", cache, "current-java-base", true));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "compile", "plan", 37,
+                false, false, List.of(), "legacy", null, "none", true));
+    }
+
+    @Test
     void binaryPinRejectsChangesAndMalformedHashes() throws Exception {
         Path jar = temp.resolve("polyglot.jar");
         Files.writeString(jar, "reviewed engine bytes", StandardCharsets.UTF_8);
