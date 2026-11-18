@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Opt-in consumer transformation. The target plugin must be installed in the
+# consuming Gradle build's pluginManagement/plugin repository before replay.
+# This recipe changes only plugin availability, never Gradle task dependencies.
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.synexia.gradle.recipe.EnableM3QualityBridge
+displayName: Enable the opt-in M3 Gradle quality bridge
+description: >-
+  Add the installed M3 Gradle quality plugin to a selected consumer build.
+  The operator must separately supply digest-pinned original Maven analyzer
+  and compiler artifacts and explicitly invoke the requested diagnostic task.
+  This recipe never attaches any M3 task to build, check, or compilation.
+recipeList:
+  - org.openrewrite.gradle.plugins.AddPlugin:
+      pluginId: io.synexia.m3.quality
+      version: '0.1.0-SNAPSHOT'
