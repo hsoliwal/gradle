@@ -30,6 +30,8 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
+      - name: Guard M3 cross-fork qualification lanes against lost merges
+        run: sh m3/quality-bridge/scripts/verify-quality-workflow.sh
       - name: Verify Java 17 portable backend argv contract without Gradle dependencies
         run: sh m3/quality-bridge/scripts/verify-portable-backends.sh
       - name: Verify original Maven JDK21 fingerprint argv contract without Gradle dependencies
