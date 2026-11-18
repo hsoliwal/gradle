@@ -70,6 +70,10 @@ final class M3ProjectDbRealEngineTest {
         assertTrue(answer.contains("\"question\""), answer);
         assertTrue(answer.contains("\"answers\""), answer);
         assertTrue(answer.contains("\"build\""), answer);
+        assertTrue(answer.contains("\"provenance\""), "Maven must preserve source-line provenance: " + answer);
+        assertTrue(answer.contains("\"file\":\"build.log\""), "Build errors must cite their original log: " + answer);
+        assertTrue(answer.contains("compilation failed"), "No unrelated or fabricated answer is acceptable: " + answer);
+        assertFalse(answer.contains("\"answers\":[]"), "A seeded build error must return evidence: " + answer);
         assertFalse(answer.contains("no evidence in the project database"),
                 "the original CLI was invoked with JSON output, not text fallback");
     }
