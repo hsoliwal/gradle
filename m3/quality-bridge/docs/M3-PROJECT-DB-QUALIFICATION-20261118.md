@@ -140,15 +140,52 @@ Maven parsers. The existing TaskRunner #194 transactional fix has not
 been exercised by this JDK-only compilation; that requires the full
 Maven polyglot module-state contract and its CI.
 
+## Successful original Maven JDK 17/21 CI
+
+The original Maven project-DB CI rerun on Maven #196 source
+`e1310509b624bc63240811a8dce01478d268a812`, including
+the #194 TaskRunner read-only planning fix, completed successfully:
+
+- [GitHub Actions run 44233563771](https://github.com/hsoliwal/maven/actions/runs/44233563771)
+- JDK 17 job `134564176348`: **SUCCESS**.
+- JDK 21 job `134564176690`: **SUCCESS**.
+
+Both logs show `BUILD SUCCESS` for the original polyglot storage
+owner and again for `tools/project-db/pom.xml verify`, including:
+
+| Executed original test | JDK 17 | JDK 21 |
+| --- | --- | --- |
+| Native Gradle-only module/JUnit source parser | PASS | PASS |
+| Persistent module-state contract | 71 checks PASS | 71 checks PASS |
+| Backend integration | 99 checks PASS | 99 checks PASS |
+| Portable growing-array receipt oracle | 117,044 PASS | 117,044 PASS |
+| Project database and retrieval | 62 checks PASS | 62 checks PASS |
+| Native Gradle JUnit evidence | 10 checks PASS | 10 checks PASS |
+
+This is **executed Maven source-owner CI**. It corrects the earlier
+historical #190 failing job receipt, but it is **not** a Gradle TestKit
+acceptance or a qualification of later Maven commits.
+
+Maven #202 subsequently added a second source-pinned **real Gradle
+TestKit consumer** job to the active Maven Actions workflow, using
+reviewed Gradle commit `e8dbf558fcc8a83c580914fbcc4cb10fe4281eb6`
+and the original Maven JARs built from Maven source. Maven #207 fixed
+the workflow guard's two-matrix count. Those new Gradle consumer jobs
+were **queued**, not yet proven green when this receipt was updated.
+The newer Maven #205/#208 early-pruned Gradle module traversal and
+symlink compatibility are independent follow-ups: exact-source Java17
+oracle tests passed, but they are not covered by run 44233563771.
+
 ## Blocked gates
 
 - Full Gradle TestKit, configuration-cache reuse and Gradle API
   compilation: NOT RUN locally; no Gradle distribution is installed.
-- Real Maven project-db JAR plus original M3IndexDB/IndexStore:
-  NOT RUN locally; Maven is not installed and GitHub/Maven Central
-  DNS is unavailable to this container.
-- Real-engine cross-fork JUnit, JDK 17/21 runtime, actual POM,
-  Surefire/Failsafe receipts and Windows/macOS: CI PENDING.
+- Original Maven project-DB and M3IndexDB/IndexStore CI:
+  JDK 17/21 PASS as recorded above. NOT RUN in this local container;
+  Maven is unavailable here.
+- Gradle TestKit with the source-built Maven JARs, Gradle's original
+  plugin/task interface, Windows/macOS, and independent build/cache
+  semantic qualification: CI PENDING.
 - M3JDK21 platform module provider, native Gradle non-JUnit build-data ingestion
   and Maven #186/#187 storage optimizations: NOT CLAIMED.
 - OpenRewrite source-sealed recipe replay, DIFF/LINT/COMPILE/TEST
