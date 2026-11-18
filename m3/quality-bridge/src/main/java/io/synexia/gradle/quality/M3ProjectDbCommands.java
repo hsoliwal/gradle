@@ -33,7 +33,7 @@ public final class M3ProjectDbCommands {
         }
         if ("query".equals(mode) && (question == null || question.isBlank()
                 || question.length() > MAX_QUESTION || !question.equals(question.trim())
-                || question.chars().anyMatch(Character::isISOControl))) {
+                || question.startsWith("--") || question.chars().anyMatch(Character::isISOControl))) {
             throw new IllegalArgumentException("M3 project DB question must be bounded text");
         }
         if (limit < 1 || limit > 50 || ("query".equals(mode) && buildLog != null)) {
