@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Maven / Gradle M3 convergence register
 
-Source review: 2026-11-17. Owners: `hsoliwal/maven` and `hsoliwal/gradle`.
+Source review updated: 2026-11-18. Owners: `hsoliwal/maven` and `hsoliwal/gradle`.
 This is an implementation register, not a claim that every Maven PR is
 applicable to Gradle. Preserve both public APIs, JVM compatibility,
 original authority for tools, source/license provenance, and native
@@ -15,13 +15,14 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | JDK-owned M3AST compiler facts | Maven #1, #7, #8 | Gradle #1, #2, #3, #6 | Native compiler option/worker integration exists; independently verify ABI and compilation |
 | Dependency sessions, build inputs and toolchain facts | Maven #23, #52, #54, #61–#65 | Gradle #6, #13 plus Gradle's original inputs and dependency APIs | Use native Gradle providers and dependency graph; no Maven API copy |
 | CodeQL, OpenRewrite, Checkstyle, PMD, SpotBugs, CPD, SARIF, Semgrep | Maven #72, #74, #76–#99 | Gradle #9–#23 | Existing opt-in pinned analyzer bridge; do not duplicate original parsers |
-| IDE delta exchange and environment inputs | Maven #78, #82, #92, #106 | Gradle #25 (Eclipse descriptor model only) | Partial; native Gradle delta/IDE wire integration requires separate source-qualified implementation |
+| IDE delta exchange and environment inputs | Maven #78, #82, #92, #106 | Gradle #25 and merged #33 | Native incremental Gradle IDE-delta export and digest-pinned review are additive and opt-in; Maven still owns authoritative generation classification |
 | Universal native language task graph / SPI | Maven #115, #120, #132 | Gradle #24, #25 | Reuse Maven's pinned CLI and provider JARs for manifest tasks; leave Gradle's original task model untouched |
-| Per-module content-verified incremental state | **Maven #143 merged** | Gradle #28 bridge, this stacked update | Forward `legacy|file|m3db`; opt-in, fail-closed, `@UntrackedTask`; never claim a native Gradle cache hit |
-| Portable module-state backends and whole-run locks | **Maven #147 merged** after #143 | This stacked update | Forward `sqlite|h2|ext-*` to the same pinned Maven CLI; no Gradle-side DB implementation or automatic dependency provision |
-| Competing DB store formats | Maven #144–#146 **open** | Not imported | Review independently before any state-format migration or replacement |
+| Per-module content-verified incremental state | Maven #143 and #144–#147 merged | Gradle merged #28 and #30/#31 | Use Maven-owned versioned module-store backends through one pinned CLI; no duplicate Gradle engine or automatic task-cache hits |
+| Portable module-state backends and whole-run locks | Maven #146/#147 merged, unified by #184 | Gradle #30/#31 | Forward `sqlite|h2|ext-*` to original Maven CLI; preserve storage owner and separately verify native/JDBC providers |
+| Module DB single-owner convergence | Maven #184 merged; #186 array-backed transactional staging and #187 mutable-code fingerprint fix merged | Gradle task-state proxy only | One storage owner IndexStore/M3IndexDB; new commit and fingerprint semantics must be qualified at pinned Maven source revisions |
 | Persistent syntax/atom fingerprints | **Maven #148 merged** in smart-builder | Opt-in `m3MachineFingerprints` original Java21 CLI proxy in this stacked update | Maven/JDK AST, canonical receipt validation and native MIndexDB own all syntax facts; Gradle supplies a pinned task admission boundary only |
-| Maven polyglot artifact restore cache | **Maven #149 merged** (after #155 plugin build repair) | Opt-in Gradle cache argv bridge | Only for reviewed, explicit Maven manifest tasks: validate an existing external cache directory, preserve Gradle task/cache semantics and refuse implicit enablement |
+| Maven polyglot artifact restore cache | Maven #149 merged (with #155 plugin build repair) | Gradle merged #34 | Explicit Maven manifest cache only, with separate audit of hidden compiler/toolchain inputs; no native Gradle cache eligibility |
+| Per-project build evidence database and CPU retrieval | Maven #184 merged (one IndexStore/M3IndexDB owner) | New opt-in `m3ProjectDbIngest`/`m3ProjectDbQuery` tasks | Reuse original ProjectDbCli and exact pinned plugin JARs; Maven target/ evidence only until separately qualified native Gradle source adapters exist |
 | Resource filtering API | **Maven #150 merged** | Gradle's Copy/Sync/filter/task inputs are native | Adapt capabilities only if semantics differ and tests justify additive APIs |
 | Code clustering and LSP front ends | Maven #113, #117, #124, #142 | No claim of native Gradle port | Future opt-in shared M3AST/LSP artifact integration, without running language servers automatically |
 | Browser AI review integration | Maven #138–#139 remove prior Chrome agent wiring | None here | Respect removed code; do not restore abandoned hooks |
