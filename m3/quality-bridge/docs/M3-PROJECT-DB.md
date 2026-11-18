@@ -49,6 +49,14 @@ An arbitrary source-directory store is refused to prevent accidental
 Each invocation is an untracked Gradle task because the real source corpus
 and Maven-managed state cannot be proven complete by Gradle's task inputs.
 
+A query **requires prior ingestion** into the selected store: the Gradle
+adapter checks for the existing Maven store directory and its protective
+.gitignore before launching the Maven CLI. A missing store fails before
+any external process starts rather than letting a question initialize an
+empty database. This is an admission check, not a new database format or
+an assertion that every record in an existing store is valid; the original
+Maven IndexStore remains responsible for reading and verifying artifacts.
+
 Results go to build/reports/m3/project-db/ingest.json and query.json,
 respectively. The Gradle bridge captures at most 1 MiB of source-pinned CLI
 stdout; it requires valid UTF-8 and a single JSON object, then atomically
