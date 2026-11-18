@@ -20,6 +20,22 @@ final class M3EclipseModelCommandsTest {
     Path workspace;
 
     @Test
+    void builderOwnershipUsesOneCliWithAnExplicitProviderClasspath() {
+        File engine = workspace.resolve("engine.jar").toFile();
+        File provider = workspace.resolve("adapter.jar").toFile();
+        File eclipse = workspace.resolve("project").toFile();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", engine.getAbsolutePath(),
+                "io.synexia.maven.polyglot.EclipseModelCli", "owners", eclipse.getAbsolutePath()),
+                M3EclipseModelCommands.owners("java", engine, eclipse));
+        String classpath = engine.getAbsolutePath() + File.pathSeparator + provider.getAbsolutePath();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", classpath,
+                "io.synexia.maven.polyglot.EclipseModelCli", "owners", eclipse.getAbsolutePath()),
+                M3EclipseModelCommands.owners("java", engine, eclipse, List.of(provider)));
+        assertThrows(NullPointerException.class,
+                () -> M3EclipseModelCommands.owners("java", engine, eclipse, List.of((File) null)));
+    }
+
+    @Test
     void usesOnlyPinnedMavenCliWithoutShellOrInferredCommands() {
         File engine = workspace.resolve("source owned engine.jar").toFile();
         File project = workspace.resolve("Eclipse work space").toFile();
