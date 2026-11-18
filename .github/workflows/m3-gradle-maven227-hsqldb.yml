@@ -1,0 +1,96 @@
+# SPDX-FileCopyrightText: 2026 Contributors to the Synexia Project
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle original Maven 227 HSQLDB JDBC acceptance
+on:
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven227-hsqldb.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven227-hsqldb.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-hsqldb-jdbc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Guard exact Maven owner and opt-in HSQLDB semantics
+        run: sh m3/quality-bridge/scripts/verify-maven227-hsqldb-workflow.sh
+      - name: Checkout exactly merged Maven 227
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 738eb1b78725d7f355b9f4fdb6d34dbad0024963
+          path: m3-maven-227
+          persist-credentials: false
+      - name: Build original Maven engine and qualify real HSQLDB backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C m3-maven-227 rev-parse HEAD)" = '738eb1b78725d7f355b9f4fdb6d34dbad0024963'
+          mvn -B -ntp -f m3-maven-227/tools/m3-polyglot-maven-plugin/pom.xml install
+          mvn -B -ntp -f m3-maven-227/tools/m3-polyglot-maven-plugin/pom.xml -Pm3-hsqldb verify
+          mvn -B -ntp -f m3-maven-227/tools/m3-polyglot-maven-plugin/pom.xml \
+            org.apache.maven.plugins:maven-dependency-plugin:3.7.1:copy \
+            -Dartifact=org.hsqldb:hsqldb:2.7.4 -DoutputDirectory="$GITHUB_WORKSPACE/m3-hsqldb-driver"
+          test -s m3-maven-227/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+          test -s m3-hsqldb-driver/hsqldb-2.7.4.jar
+      - name: Execute real Gradle TestKit on Maven HSQLDB driver and missing-driver refusal
+        shell: bash
+        env:
+          M3_REQUIRE_HSQLDB_REAL_ENGINE: '1'
+        run: |
+          set -euo pipefail
+          export M3_POLYGLOT_HSQLDB_JAR="$GITHUB_WORKSPACE/m3-maven-227/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_HSQLDB_DRIVER_JAR="$GITHUB_WORKSPACE/m3-hsqldb-driver/hsqldb-2.7.4.jar"
+          sha256sum "$M3_POLYGLOT_HSQLDB_JAR" "$M3_HSQLDB_DRIVER_JAR"
+          ./gradlew --no-daemon --stacktrace --console=plain \
+            -p m3/quality-bridge test \
+            --tests 'io.synexia.gradle.quality.M3HsqlDbRealEngineTest' --rerun-tasks
+      - name: Refuse skipped, missing or failed real HSQLDB TestKit receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          import xml.etree.ElementTree as ET
+          path = pathlib.Path('m3/quality-bridge/build/test-results/test/TEST-io.synexia.gradle.quality.M3HsqlDbRealEngineTest.xml')
+          assert path.is_file() and not path.is_symlink() and path.stat().st_size <= 1024 * 1024
+          root = ET.parse(path).getroot()
+          assert root.tag == 'testsuite' and root.attrib.get('name') == 'io.synexia.gradle.quality.M3HsqlDbRealEngineTest'
+          assert all(root.attrib.get(k) == v for k, v in [('tests', '3'), ('skipped', '0'), ('failures', '0'), ('errors', '0')])
+          expected = {
+              'missingHsqlDbDriverFailsBeforeToolExecutionWithoutFallingBackToEmbedded()',
+              'originalHsqlDbDriverReopensAndReusesContentVerifiedSealedState()',
+              'changedDriverShaIsRejectedByGradleBeforeStartingMaven()',
+          }
+          cases = [child for child in root if child.tag == 'testcase']
+          assert len(cases) == 3 and {case.attrib.get('name') for case in cases} == expected
+          assert all(case.attrib.get('classname') == root.attrib['name'] for case in cases)
+          assert all(next(root.iter(tag), None) is None for tag in ('failure', 'error', 'skipped'))
+          print('PASS: original Maven 227 HSQLDB via Gradle, three executed cases, zero skips')
+          PY
+      - name: Retain HSQLDB TestKit reports even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-gradle-maven227-hsqldb-jdk-${{ matrix.java }}
+          path: |
+            m3/quality-bridge/build/test-results/test/**
+            m3/quality-bridge/build/reports/tests/test/**
+          if-no-files-found: warn
+          retention-days: 14

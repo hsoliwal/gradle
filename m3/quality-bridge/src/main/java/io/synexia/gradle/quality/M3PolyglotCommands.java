@@ -147,12 +147,12 @@ public final class M3PolyglotCommands {
         };
     }
 
-    /** Match Maven #184+ backend spellings; aliases preserve Maven-owned storage. */
+    /** Match Maven #227 backend spellings; aliases preserve Maven-owned storage. */
     private static boolean validStateBackend(String backend) {
         return "legacy".equals(backend) || "embedded".equals(backend)
                 || "file".equals(backend) || "m3db".equals(backend)
                 || "native".equals(backend) || "sqlite".equals(backend)
-                || "h2".equals(backend)
+                || "h2".equals(backend) || "hsqldb".equals(backend)
                 || (backend != null && backend.matches("ext-[a-z0-9][a-z0-9-]{0,47}"));
     }
 
