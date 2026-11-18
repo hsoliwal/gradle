@@ -173,6 +173,19 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-build-context.json"));
         });
 
+        // The single original Eclipse invocation contains both selected
+        // IBuildConfiguration and captured IResourceDelta. No Gradle compile or
+        // cache decision is inferred from this advisory metadata.
+        project.getTasks().register("m3EclipseBuildHandoff", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("handoff");
+            task.setDescription("Inspect one Eclipse build's selected configuration and original delta");
+            task.getHandoffPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/build-handoff.ide"));
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-build-handoff.json"));
+        });
+
         // The Maven #184 project DB owns the data and deterministic retrieval.
         // These optional tasks neither reimplement indexes nor affect build/check.
         project.getTasks().register("m3ProjectDbIngest", M3ProjectDbTask.class, task -> {
