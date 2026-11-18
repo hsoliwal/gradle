@@ -152,11 +152,14 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
+      # Maven #190 introduces native Gradle JUnit source discovery.
+      # Maven #194 repairs TaskRunner's dry-run commitStaged null-store crash,
+      # observed on both JDK 17 and 21. Pin their merged superset, never master.
       - name: Check out exact merged Maven project database source
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: 2e15f2a4f0c92f6593167f573b0222e214a74b0f
+          ref: 64e5ce257c46207eac32407f00979cfc4a79767e
           path: m3-maven-project-db
           persist-credentials: false
       - name: Qualify and install original Maven M3IndexDB storage owner
