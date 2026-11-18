@@ -38,6 +38,8 @@ class M3QualityPluginTest {
         assertTrue(output.contains("m3PolyglotRun"));
         assertTrue(output.contains("m3PolyglotProviders"));
         assertTrue(output.contains("m3EclipseModel"));
+        assertTrue(output.contains("m3ProjectDbIngest"));
+        assertTrue(output.contains("m3ProjectDbQuery"));
         assertTrue(output.contains("m3IdeDeltaExport"));
         assertTrue(output.contains("m3IdeDeltaReview"));
     }
