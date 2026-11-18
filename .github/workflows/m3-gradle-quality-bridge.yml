@@ -221,6 +221,39 @@ jobs:
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3LlvmProviderRealEngineTest' --rerun-tasks
 
+  m3-maven206-portable-crossfork:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      # Pin Maven #206's optional DB providers independently of LLVM #203.
+      # Later #209 native builder changes and real-driver execution require
+      # a separate exact-source qualification boundary.
+      - name: Check out exact merged Maven #206 portable DB providers
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: fee3ca7cd8ca0b698d7308103836e99074479950
+          path: m3-maven-206
+          persist-credentials: false
+      - name: Qualify and install the original Maven #206 polyglot engine
+        run: |
+          mvn -B -ntp -f m3-maven-206/tools/m3-polyglot-maven-plugin/pom.xml install
+          test -s m3-maven-206/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Test original Maven #206 missing-optional-driver refusals through Gradle
+        run: |
+          export M3_PORTABLE_ENGINES_JAR="$GITHUB_WORKSPACE/m3-maven-206/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3PortableEnginesRealEngineTest' --rerun-tasks
+
   m3-llvm-pipeline-crossfork:
     runs-on: ubuntu-24.04
     timeout-minutes: 35

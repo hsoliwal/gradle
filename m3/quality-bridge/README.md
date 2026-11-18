@@ -283,6 +283,40 @@ back to another backend. The bridge does not accept arbitrary JDBC URLs or
 `derby`, which is not advertised by Maven's merged portable CLI. No database
 driver, MIndexDB native runtime, or backend is **bundled or downloaded**.
 
+#### Maven #206: real optional RocksDB/MapDB/LMDB storage providers
+
+Merged [Maven #206](https://github.com/hsoliwal/maven/pull/206) registers
+`ext-rocksdb-v1`, `ext-mapdb-v1` and `ext-lmdb-v1` through the original
+`M3ModuleDbBackendProvider` ServiceLoader. Gradle already accepts their
+`ext-*` IDs. To opt in, set `incremental=true`, choose **one** literal
+`stateBackend`, pin the Maven #206+ engine JAR, and provide the complete,
+separately SHA-256-pinned driver/transitive classpath as `providerJars`.
+The drivers remain explicitly installed by the operator: RocksDB JNI,
+MapDB 3.1.0 or LmdbJava 0.9.3 (see the Maven plugin's native profile).
+Gradle owns no database files, native handles, transactions or fallback.
+
+The independent JDK17/21 cross-fork lane confirms that the original Maven
+engine recognizes each of these three registrations and **refuses** to run
+any task without its optional driver; an unknown `ext-*` ID produces a
+distinct missing-provider refusal. Neither case may create an embedded
+`.m3/module.m3db` fallback or execute the requested language tool.
+The same source-pinned lane also builds a tiny **test-only** external
+`M3ModuleDbBackendProvider` JAR, binds its SHA-256 to `providerJars`,
+and verifies a successful original Maven sealed-image write, reopen and
+content-verified incremental skip. Tampering with that provider JAR must
+fail Gradle's digest admission before Maven runs. This only proves the
+general external SPI boundary; the fixture provider is never published
+or offered as a storage backend to users.
+Real driver reopen, native transaction durability, crash recovery and
+cache-hit qualification remain separate gates. In particular,
+[Maven #209](https://github.com/hsoliwal/maven/pull/209) subsequently
+merged builder-API hardening for MapDB/LMDB. It is **not** present in the
+source-pinned #206 negative-driver test lane; successful native transactions
+against that later revision still need independent qualification.
+The existing [opt-in OpenRewrite recipe](recipes/enable-m3-polyglot-state-bridge.yml)
+remains the consumer migration entry point; it does not select a database,
+install native drivers or attach any task to a Gradle lifecycle automatically.
+
 Maven's standalone engine verifies declared output contents for reuse and
 conservatively rehashes where ctime/file-key evidence is unavailable.
 Maven #147 now introduces module-wide execution locking and transactional
