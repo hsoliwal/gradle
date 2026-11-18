@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # M3 project DB Gradle bridge — qualification receipt (2026-11-18)
 
-Upstream contract: hsoliwal/maven#184, merge
-4ecaaf57ed86283e867ca7f8f8b78d0f38fdafaa.
+Upstream contract: hsoliwal/maven#184 and #190,
+source pin: merged #190 2e15f2a4f0c92f6593167f573b0222e214a74b0f.
 Receiving branch: hsoliwal/gradle
 feat/m3-gradle-project-db-cli-20261118.
 
@@ -50,7 +50,10 @@ and verified by git hash-object:
 Shell guard: **PASS**. YAML parsed into two jobs:
 standalone-gradle-bridge (19 steps) and m3-project-db-crossfork
 (6 steps), including JDK 17/21 matrices. Maven project-DB source is
-pinned to merge #184. The negative test replaced the
+pinned to merge #190 and now includes a second native
+Gradle-only JUnit XML TestKit case (without POM), requiring genuine
+source-line provenance and warm-ingest reuse. The original Maven
+#184 project DB JAR does not have this native Gradle scanner. The negative test replaced the
 M3ProjectDbRealEngineTest step with an unrelated selector: the guard
 refused it with 'found 0'; restoring the original workflow produced
 PASS again.
@@ -64,7 +67,7 @@ PASS again.
   DNS is unavailable to this container.
 - Real-engine cross-fork JUnit, JDK 17/21 runtime, actual POM,
   Surefire/Failsafe receipts and Windows/macOS: CI PENDING.
-- M3JDK21 platform module provider, native Gradle build-data ingestion
+- M3JDK21 platform module provider, native Gradle non-JUnit build-data ingestion
   and Maven #186/#187 storage optimizations: NOT CLAIMED.
 - OpenRewrite source-sealed recipe replay, DIFF/LINT/COMPILE/TEST
   compatibility gates and full Gradle distribution tests: PENDING.
