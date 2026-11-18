@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Contributors to the Synexia Project
 # SPDX-License-Identifier: Apache-2.0
-name: M3 Gradle original Maven 224 project DB six-case receipts
+name: M3 Gradle original Maven 230 secure project DB six-case receipts
 on:
   pull_request:
     paths:
@@ -28,43 +28,44 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Guard source owner, exact selectors and no-skip receipt
+      - name: Guard secure source owner, exact selectors and no-skip receipt
         run: sh m3/quality-bridge/scripts/verify-maven224-projectdb-junit-workflow.sh
-      - name: Checkout exactly merged Maven 224 and 223 source
+      - name: Checkout exactly merged Maven 230 including secure Java17 receipt verifier
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: 77f3b7fbbf847c28d591973bb153b00b5237712e
-          path: m3-maven-224
+          ref: d3385d6ca33f4ac7bdc2a9f3b2d02504b5976bed
+          path: m3-maven-230
           persist-credentials: false
-      - name: Verify original six-case receipt script bytes before any execution
+      - name: Verify original wrapper and secure Java17 XML parser bytes before any execution
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git -C m3-maven-224 rev-parse HEAD)" = '77f3b7fbbf847c28d591973bb153b00b5237712e'
-          printf '%s  %s\n' '10bd8356e383e53544f232df0834ef084871d26760954cd3076ee85db90c4573' 'm3-maven-224/tools/project-db/scripts/verify-gradle-testkit-results.sh' | sha256sum -c -
+          test "$(git -C m3-maven-230 rev-parse HEAD)" = 'd3385d6ca33f4ac7bdc2a9f3b2d02504b5976bed'
+          printf '%s  %s\n' '6b1a98534333c5563469c9ee83434b032d7f792d7cc7b67d727d22804db2456f' 'm3-maven-230/tools/project-db/scripts/verify-gradle-testkit-results.sh' | sha256sum -c -
+          printf '%s  %s\n' '0f2d667d6cafc6cf5463775177f57e71a71221173933c320b28fbd675945c979' 'm3-maven-230/tools/project-db/scripts/M3GradleTestKitReceiptMain.java' | sha256sum -c -
       - name: Build original Maven M3IndexDB state and project DB engines
         shell: bash
         run: |
           set -euo pipefail
-          mvn -B -ntp -f m3-maven-224/tools/m3-polyglot-maven-plugin/pom.xml install
-          mvn -B -ntp -f m3-maven-224/tools/project-db/pom.xml verify
-          test -s m3-maven-224/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
-          test -s m3-maven-224/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar
+          mvn -B -ntp -f m3-maven-230/tools/m3-polyglot-maven-plugin/pom.xml install
+          mvn -B -ntp -f m3-maven-230/tools/project-db/pom.xml verify
+          test -s m3-maven-230/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+          test -s m3-maven-230/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar
       - name: Execute only the original six Gradle TestKit project DB cases
         shell: bash
         run: |
           set -euo pipefail
-          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-224/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
-          export M3_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-224/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-230/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-230/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
           sha256sum "$M3_POLYGLOT_JAR" "$M3_PROJECT_DB_JAR"
           ./gradlew --no-daemon --stacktrace --console=plain \
             -p m3/quality-bridge test \
             --tests 'io.synexia.gradle.quality.M3ProjectDbRealEngineTest' \
             --tests 'io.synexia.gradle.quality.M3ProjectDbGradleNativeRealEngineTest' \
             --tests 'io.synexia.gradle.quality.M3ProjectDbTaskTest' --rerun-tasks
-      - name: Enforce Maven-owned six actual JUnit case receipts with zero skips
-        run: sh m3-maven-224/tools/project-db/scripts/verify-gradle-testkit-results.sh m3/quality-bridge/build/test-results/test
+      - name: Enforce Maven-owned secure Java17 parser on six actual JUnit case receipts
+        run: sh m3-maven-230/tools/project-db/scripts/verify-gradle-testkit-results.sh m3/quality-bridge/build/test-results/test
       - name: Retain executed TestKit evidence even on failure
         if: always()
         uses: actions/upload-artifact@v4
