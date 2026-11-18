@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 Contributors to the Synexia Project
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle source-owned Maven #222 Objective-C++ byte selection
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven222-objcxx-pin.yml'
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven222-objcxx-pin.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-owned-objective-cpp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Guard exact Maven source, recipe and acceptance selector
+        run: sh m3/quality-bridge/scripts/verify-maven222-objcxx-workflow.sh
+      - name: Checkout merged Maven #222 with original Objective-C++ test repairs
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 36bc166d236950a5b220236516f5da90cc044571
+          path: m3-maven-objcxx222
+          persist-credentials: false
+      - name: Verify original Maven native and synthetic selection contracts
+        run: |
+          command -v clang
+          command -v clang++
+          mvn -B -ntp -f m3-maven-objcxx222/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-objcxx222/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Prove distinct clang and clang++ receipts through original Gradle TestKit
+        shell: bash
+        run: |
+          set -euo pipefail
+          LLVM_BIN_DIR="$(dirname "$(command -v clang++)")"
+          export M3_LLVM222_HOME="$(dirname "$LLVM_BIN_DIR")"
+          test -x "$M3_LLVM222_HOME/bin/clang++"
+          export M3_LLVM222_CLANGXX_SHA256="$(sha256sum "$(realpath "$M3_LLVM222_HOME/bin/clang++")" | cut -d' ' -f1)"
+          export M3_POLYGLOT_LLVM222_JAR="$GITHUB_WORKSPACE/m3-maven-objcxx222/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3Llvm222ObjectiveCppRealEngineTest' --rerun-tasks
