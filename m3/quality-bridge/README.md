@@ -181,9 +181,12 @@ is intentional: native headers, sysroots, ABI, response files and generated
 inputs do not yet form a complete M3DB cache key. CI smoke does **not**
 qualify the user's own LLVM fork binary, Flang, `llc`, Objective-C,
 cross-compilation, linking, LLVM/MLIR passes or Windows/macOS. Follow-up
-[Maven #199](https://github.com/hsoliwal/maven/pull/199) is still an
-independent draft for shared LLVM-home and binary-pin selection; do not
-infer that its unmerged behavior exists in Maven #198. The opt-in
+[Maven #199](https://github.com/hsoliwal/maven/pull/199) subsequently
+**merged** shared LLVM-home and binary-pin selection, and
+[Maven #219](https://github.com/hsoliwal/maven/pull/219) later merged
+compiler/CMake/Clang-AST alias convergence. Neither feature is implicitly
+included in the **older** original Maven #198 binary pinned in this
+TestKit lane; qualify newer source revisions independently. The opt-in
 [OpenRewrite consumer recipe](recipes/enable-m3-llvm-provider-bridge.yml)
 installs the plugin only and requires SDK replay before promotion.
 
@@ -320,6 +323,53 @@ configuration-cache or task output-cache equivalence. The opt-in
 [OpenRewrite consumer recipe](recipes/enable-m3-polyglot-state-bridge.yml)
 adds only plugin availability; it is a reviewed-replay gate, not an automatic
 state migration or a compiler execution recipe.
+
+#### Maven #220: explicit access to M3JDK-owned M3DB
+
+Merged [Maven #220](https://github.com/hsoliwal/maven/pull/220) at
+`c19789716fab23db8b46180f9fd8982bdff298d0` prefers the current
+`jdk.m3.db.M3DB` platform engine, accepts the older
+`jdk.m3.indexdb.M3IndexDB` and refuses `m3db` / `native` when neither
+platform nor a separately reviewed donor database runtime is installed.
+This is **Maven's** runtime binding and storage implementation, not a
+replacement of Gradle's native task state or build cache.
+
+When a reviewed M3JDK distribution is actually installed, the Gradle
+run task can export the appropriate M3JDK package to the digest-pinned,
+original Maven polyglot CLI:
+
+```groovy
+tasks.named('m3PolyglotRun') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    javaExecutable.set('/reviewed/M3jdk21/bin/java') // explicitly installed JDK
+    incremental.set(true)
+    stateBackend.set('m3db') // 'native' is the original Maven alias
+    m3DbModuleAccess.set('current-java-base')
+}
+```
+
+The literal `current-java-base` adds only
+`--add-exports=java.base/jdk.m3.db=ALL-UNNAMED`. Use `current-named` for
+`--add-modules=jdk.m3.db` plus the matching package export, or the
+`legacy-java-base` / `legacy-named` choices for `jdk.m3.indexdb`.
+`none` (the default) adds **no JVM arguments**, maintaining the exact
+old Maven CLI argv. This is a closed set, not an arbitrary JVM option
+escape hatch. Module access is allowed only on an explicitly incremental
+`m3PolyglotRun` using the `m3db` or `native` backend. Planning and
+all other backends refuse it. Merely selecting a JVM flag cannot create
+the M3JDK database module or overcome Java access validation.
+
+The offline command contract is
+`sh m3/quality-bridge/scripts/verify-m3jdk-db-module-access.sh`.
+Dedicated `.github/workflows/m3-gradle-m3jdk-db-module-access.yml`
+pins the merged #220 producer, runs its real Maven `verify` and on
+stock Java 17/21 checks **native-backend refusal** and **injection
+refusal** through real Gradle TestKit. This test does not assert positive
+patched-JDK deployment, output-cache hits, or reusable Gradle up-to-date
+facts. The [opt-in OpenRewrite recipe](recipes/enable-m3jdk-db-module-access.yml)
+only installs plugin availability; the reviewed M3JDK and Maven source
+pin, module selection, and actual recipe replay remain operator gates.
 
 ### Maven PR #148: opt-in original JDK 21 AST/atom fingerprints
 

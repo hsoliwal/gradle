@@ -21,6 +21,7 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | Rebar3/Erlang and Composer/PHP native phases | **Maven #212 merged** (`95bc17f8212350af1632e16990e985f8a2ee72cb`) | Original Mavenizer → `m3-build.tsv` → existing opt-in Gradle `m3PolyglotPlan`; independent source-pinned JDK17/21 real TestKit lane in this change | Mavenizer owns command detection, POM/profile and manifest generation; Gradle plans the same manifest without running native tools, inventing Composer install, or duplicating phase rules |
 | Per-module content-verified incremental state | **Maven #143, #144–#146, #157 merged** | Gradle #28, #30, #31 merged | Forward only the qualified Maven CLI selections; do not copy lifecycle goals or assume Gradle cache hits |
 | Portable module-state backends and whole-run locks | **Maven #147 merged**, later **#184** one-owner consolidation | Gradle #30–#31 merged | Preserve Maven-owned module leases, transaction generations and storage; Gradle does not supply JDBC/native drivers automatically |
+| Current M3JDK database platform binding | **Maven #220 merged** (`c19789716fab23db8b46180f9fd8982bdff298d0`) | Explicit `m3DbModuleAccess` selector on `m3PolyglotRun`; independent Java 17 command contract and Maven #220 source-pinned JDK17/21 real-engine refusal CI | Current `jdk.m3.db.M3DB` / legacy `jdk.m3.indexdb.M3IndexDB` remain M3JDK-owned; Gradle offers four fixed JVM module-visibility choices, never installs engines, forks database code or assumes cache equivalence |
 | M3IndexDB unified per-project state, native Gradle JUnit evidence and RAG | **Maven #184, #186–#188, #190–#196 merged** | Gradle #37 and #41 merged | Maven reads native Gradle JUnit XML from projects without POMs; original IndexStore retains one storage owner; dry-run #194 fix source-pinned, no Gradle task/cache/ABI ingestion or duplicated parser |
 | Persistent syntax/atom fingerprints | **Maven #148 merged** in smart-builder | Gradle #32 merged, `m3MachineFingerprints` CLI proxy | Maven/JDK AST, canonical receipt validation and native MIndexDB own syntax facts; Gradle supplies a pinned task boundary only |
 | Maven polyglot artifact restore cache | **Maven #149 merged** (after #155 plugin repair) | Gradle #34–#35 merged | Explicit original Maven cache import only; preserve Gradle task/cache semantics and refuse implicit enablement |
@@ -28,7 +29,7 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | Code clustering and LSP front ends | Maven #113, #117, #124, #142, #156, #168 | Gradle #36 merged for Eclipse builder registry | Future shared M3AST/LSP artifacts; do not start language servers automatically or duplicate Eclipse models |
 | Generic Eclipse language-builder SPI | **Maven #189, #192, #197 merged** | **Gradle #36, #40, #42 merged** | Original Eclipse source owner, ServiceLoader, selected configuration and same-invocation handoff wire remain authoritative; no builder execution or cache skip from advisory facts |
 | Bounded Eclipse/PDE and polyglot authoring descriptors | **Maven #211 merged** (`2b4ea06f34d785b78a7811ca59cf6d24efb02287`) | Gradle #47 `m3EclipseModel` original-engine TestKit; independent JDK17/21 source-pinned CI lane in Gradle #51 | Original Maven owns manifest, plugin/fragment, `*.target`, `*.product`, native build descriptor discovery and SHA-256; Gradle does not clone parser, skip builds or follow symlinks |
-| LLVM original compiler toolchain SPI | **Maven #198 merged**, #199 open draft | Original `m3PolyglotProviders`/`m3PolyglotPlan`/`m3PolyglotRun` source-pinned TestKit proof | Original Maven provider chooses clang/clang++/flang/llc; Gradle supplies explicit execution boundary only, no binary provisioning or assumed native cache key |
+| LLVM original compiler toolchain SPI | **Maven #198, #199, #213, #217, #219 merged**; #214 closed without merge | Gradle #44/#48 original provider proof; #50 open for Maven #210 executable-byte evidence | Original Maven provider chooses clang/clang++/flang/llc and later LLVM-home aliases; old #198 source pin does not prove newer alias semantics, native binaries or cache equivalence |
 | Optional native LLVM/MLIR/LLD pipeline provider | **Maven #203 merged** (`3441dc1e91a2835b7b6bca608ffb9676565d9eff`) | Gradle's v1 inventory validator now admits Maven's appended `assembler`, `linker`, `optimizer` slugs; independent Java17 contract, source-pinned original provider JAR, TestKit and JDK17/21 CI | The original Maven SPI/ServiceLoader owns `opt`, `mlir-opt`, `llvm-as`, `llvm-link`, `mlir-translate`, LLD, lit and FileCheck; SHA-256 pin both JARs; Gradle never forks tool dispatch, state or LLVM parsers |
 | Browser AI review integration | Maven #138–#139 remove prior Chrome agent wiring | None here | Respect removed code; do not restore abandoned hooks |
 
@@ -39,6 +40,37 @@ execution, artifact transforms, variant selection, Worker API and Problems API)
 remains in Gradle. M3JDK21 is the eventual shared owner for reusable facts,
 state fingerprints, language structures and transformations where a compatible
 versioned contract is available.
+
+## Maven #220 current M3JDK database module-access boundary
+
+The merged Maven #220 source at
+`c19789716fab23db8b46180f9fd8982bdff298d0` prefers the current
+M3JDK-owned `jdk.m3.db.M3DB`, retains legacy
+`jdk.m3.indexdb.M3IndexDB`, and refuses `m3db`/`native` storage when
+neither a visible platform class nor a reviewed installed donor runtime
+is present. Its original `IndexStores` and `DirectoryStateBackend`
+remain the only implementation of the database binding and backend.
+
+Gradle's existing `m3PolyglotRun` now offers an **explicit**
+`m3DbModuleAccess` property, default `none`. Fixed choices are
+`current-java-base`, `current-named`, `legacy-java-base` and
+`legacy-named`; these emit only the corresponding `--add-exports` and,
+for named modules, `--add-modules` JVM arguments ahead of the existing
+Maven polyglot CLI. Any other value is refused. An export requires
+`mode=run`, `incremental=true` and `stateBackend=m3db` or `native`;
+planning, other backends and the original no-export command remain
+unchanged. The operator must separately supply and digest-pin the
+original Maven #220 engine and explicitly select an appropriate M3JDK
+Java executable. Gradle installs no JDK or native database.
+
+An offline Java 17 command-contract proof checks all selections and
+rejections. The separate `.github/workflows/m3-gradle-m3jdk-db-module-access.yml`
+checks out exactly merged Maven #220, runs Maven's original `verify`
+and exercises the actual Java 17/21 Gradle TestKit launcher. On stock
+JDKs it **must fail closed** for absent M3JDK native storage, not
+create `.m3/maven-build-db` or execute user tasks. A positive
+patched-M3JDK/named-module runtime deployment remains a separate
+qualification gate; CI does not imply it was installed.
 
 ## Maven #212 native Rebar3 and Composer manifest boundary
 
