@@ -73,6 +73,7 @@ public abstract class M3ProjectDbTask extends DefaultTask {
         Path log = getBuildLog().isPresent() ? absolute(getBuildLog().get().getAsFile()) : null;
         try {
             requirePaths(root, build, store, report, log);
+            if (plugin.equals(engine)) throw new IOException("M3 project DB and storage JARs must be distinct");
             M3PolyglotCommands.verifyEngine(plugin, getProjectDbSha256().get());
             M3PolyglotCommands.verifyEngine(engine, getPolyglotSha256().get());
             List<File> jars = M3ProviderClasspath.verify(
@@ -103,8 +104,13 @@ public abstract class M3ProjectDbTask extends DefaultTask {
 
     private static void requirePaths(Path root, Path build, Path store, Path report, Path log)
             throws IOException {
-        if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS) || !build.startsWith(root)
-                || !store.startsWith(root) || store.equals(root) || !report.startsWith(build)
+        boolean approvedStore = store.startsWith(build)
+                || store.startsWith(root.resolve(".mvn/project-db"))
+                || store.startsWith(root.resolve(".m3/project-db"))
+                || store.startsWith(root.resolve("target/project-db"));
+        if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)
+                || !build.startsWith(root) || build.equals(root)
+                || !approvedStore || store.equals(root) || !report.startsWith(build)
                 || !report.toString().endsWith(".json") || report.startsWith(store)
                 || (log != null && (!log.startsWith(root)
                         || !Files.isRegularFile(log, LinkOption.NOFOLLOW_LINKS)))) {
@@ -131,8 +137,11 @@ public abstract class M3ProjectDbTask extends DefaultTask {
         if (value.endsWith("\r\n")) value = value.substring(0, value.length() - 2);
         else if (value.endsWith("\n")) value = value.substring(0, value.length() - 1);
         if (value.indexOf('\r') >= 0 || value.indexOf('\n') >= 0 || value.indexOf('\0') >= 0
-                || !value.startsWith("{") || !value.endsWith("}")
-                || !value.contains("build") || ("query".equals(mode) && !value.contains("\"answers\""))) {
+                || !value.endsWith("}")
+                || ("ingest".equals(mode) && (!value.startsWith("{\"build\":")
+                        || !value.contains("\"status\":")))
+                || ("query".equals(mode) && (!value.startsWith("{\"question\":")
+                        || !value.contains("\"build\":") || !value.contains("\"answers\":[")))) {
             throw new IOException("Maven project database returned an invalid one-line JSON result");
         }
         return value + "\n";
