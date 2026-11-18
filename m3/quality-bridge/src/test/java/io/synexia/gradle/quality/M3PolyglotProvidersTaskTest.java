@@ -47,6 +47,33 @@ class M3PolyglotProvidersTaskTest {
     }
 
     @Test
+    void acceptsMergedMaven203AssemblerLinkerAndOptimizerCapabilities() throws Exception {
+        fixture();
+        String inventory = "M3-POLYGLOT-PROVIDERS-V1\n"
+                + "provider\tjdk\tcompiler\tjava\n"
+                + "provider\tllvm-tools\tassembler,interpreter,linker,optimizer,transpiler"
+                + "\tcoff,elf,filecheck,lit,llvm-ir,macho,mlir,wasm\n";
+        String digest = engine(inventory);
+        configuration(digest);
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotProviders", "--stacktrace").build();
+        assertEquals(inventory,
+                Files.readString(workspace.resolve("build/reports/m3/polyglot-providers.tsv")));
+    }
+
+    @Test
+    void refusesUndeclaredFutureCapabilityWithoutPublishingPartialInventory() throws Exception {
+        fixture();
+        String digest = engine("M3-POLYGLOT-PROVIDERS-V1\n"
+                + "provider\tllvm-tools\tassembler,optimizer,unreviewed\tllvm-ir,mlir\n");
+        configuration(digest);
+        String refusal = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotProviders", "--stacktrace").buildAndFail().getOutput();
+        assertTrue(refusal.contains("M3 Maven provider inventory refused"), refusal);
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/polyglot-providers.tsv")));
+    }
+
+    @Test
     void refusesWrongEngineDigest() throws Exception {
         fixture();
         engine("M3-POLYGLOT-PROVIDERS-V1\nprovider\tjdk\tcompiler\tjava\n");

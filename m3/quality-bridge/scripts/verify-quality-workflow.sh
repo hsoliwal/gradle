@@ -45,5 +45,8 @@ require_once "ref: f92096f8d3eb135d28cf698335a4423ef9179e9d"
 # smoke is mandatory in CI but is not proof of the user's LLVM fork ABI.
 require_once "ref: 83284eb8de8758fa9ffa84ca6c2d764e67c183c8"
 require_once "test --tests '*M3LlvmProviderRealEngineTest' --rerun-tasks"
+require_once "ref: fee3ca7cd8ca0b698d7308103836e99074479950"
+require_once "test --tests '*M3LlvmToolsRealEngineTest' --rerun-tasks"
+require_once "test --tests '*M3PortableEnginesRealEngineTest' --rerun-tasks"
 
 printf '%s\n' "PASS: source-pinned M3 Gradle/Maven CI lanes retained"

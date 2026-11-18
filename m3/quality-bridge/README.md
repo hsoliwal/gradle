@@ -141,11 +141,60 @@ is intentional: native headers, sysroots, ABI, response files and generated
 inputs do not yet form a complete M3DB cache key. CI smoke does **not**
 qualify the user's own LLVM fork binary, Flang, `llc`, Objective-C,
 cross-compilation, linking, LLVM/MLIR passes or Windows/macOS. Follow-up
-[Maven #199](https://github.com/hsoliwal/maven/pull/199) is still an
-independent draft for shared LLVM-home and binary-pin selection; do not
-infer that its unmerged behavior exists in Maven #198. The opt-in
+[Maven #199](https://github.com/hsoliwal/maven/pull/199) subsequently
+merged shared LLVM-home and binary-pin selection; do not infer that this
+newer behavior exists in the older source-pinned #198 CI engine. The opt-in
 [OpenRewrite consumer recipe](recipes/enable-m3-llvm-provider-bridge.yml)
 installs the plugin only and requires SDK replay before promotion.
+
+### Maven #203: opt-in LLVM/MLIR/LLD tools and additive SPI roles
+
+Merged [Maven #203](https://github.com/hsoliwal/maven/pull/203) extends the
+existing `M3ToolProvider` capability vocabulary with `assembler`, `linker`
+and `optimizer`. The original Maven CLI still owns the same
+`M3-POLYGLOT-PROVIDERS-V1` inventory format. The Gradle bridge now admits
+these **exact** new capabilities while retaining sorted rows and refusing
+unrecognized role names. Nothing is compiled, linked or optimized during
+provider discovery or `m3PolyglotPlan`.
+
+Maven's **separate** `m3-llvm-tools-provider` JAR is installed only when
+requested. Keep that JAR and its source-compatible Maven polyglot engine
+independently SHA-256 pinned on all selected Gradle tasks:
+
+```groovy
+['m3PolyglotProviders', 'm3PolyglotPlan', 'm3PolyglotRun'].each { taskName ->
+    tasks.named(taskName) {
+        engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+        engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+        providerJars.from(layout.projectDirectory.file('vendor/m3-llvm-tools-provider.jar'))
+        providerJarSha256.put('m3-llvm-tools-provider.jar',
+                providers.gradleProperty('m3.llvm.tools.sha256'))
+    }
+}
+```
+
+The example from Maven #203 declares
+`@m3:llvm-tools:optimizer:llvm-ir` (`opt`) followed by
+`@m3:llvm-tools:assembler:llvm-ir` (`llvm-as`) and
+`@m3:llvm-tools:linker:llvm-ir` (`llvm-link`). Other explicit providers
+select `mlir-opt`, `mlir-translate`, LLD's target-specific drivers,
+`llvm-lit` or `FileCheck`; their existence and target ABI are **not**
+inferred. The Maven adapter accepts task-local `--m3-llvm-bin=` or
+`--m3-llvm-home=` plus an optional `--m3-llvm-sha256=` of the actual
+executable. A missing selected binary, conflicting selectors or wrong
+digest fails during planning, before native execution; a PATH default
+is not a fallback for a missing explicit selection.
+
+JDK17/21 CI checks the *original*, separately built Maven #203 provider
+against the source-pinned merged Maven #206 superset at
+`fee3ca7cd8ca0b698d7308103836e99074479950`. It uses the original
+three-stage LLVM manifest and source fixture, checks no-tool planning,
+an explicit SHA-pinned dummy executable, wrong-digest and conflicting-selector
+refusal, and tampered-provider JAR refusal. This is **not** real LLVM/MLIR/LLD
+execution, fork-compiled toolchain qualification, a Gradle cache hit or an
+OpenRewrite SDK recipe replay. The existing
+[opt-in plugin recipe](recipes/enable-m3-llvm-provider-bridge.yml) is reused;
+no build/check lifecycle is bound automatically.
 
 ### Maven PRs #143 and #147: opt-in portable module-local state
 
@@ -189,6 +238,30 @@ providers, duplicate JAR names or mismatched pins fail rather than falling
 back to another backend. The bridge does not accept arbitrary JDBC URLs or
 `derby`, which is not advertised by Maven's merged portable CLI. No database
 driver, MIndexDB native runtime, or backend is **bundled or downloaded**.
+
+#### Maven #206: real optional RocksDB/MapDB/LMDB storage providers
+
+Merged [Maven #206](https://github.com/hsoliwal/maven/pull/206) registers
+`ext-rocksdb-v1`, `ext-mapdb-v1` and `ext-lmdb-v1` through the original
+`M3ModuleDbBackendProvider` ServiceLoader. Gradle already accepts their
+`ext-*` IDs. To opt in, set `incremental=true`, choose **one** literal
+`stateBackend`, pin the Maven #206+ engine JAR, and provide the complete,
+separately SHA-256-pinned driver/transitive classpath as `providerJars`.
+The drivers remain explicitly installed by the operator: RocksDB JNI,
+MapDB 3.1.0 or LmdbJava 0.9.3 (see the Maven plugin's native profile).
+Gradle owns no database files, native handles, transactions or fallback.
+
+The independent JDK17/21 cross-fork lane confirms that the original Maven
+engine recognizes each of these three registrations and **refuses** to run
+any task without its optional driver; an unknown `ext-*` ID produces a
+distinct missing-provider refusal. Neither case may create an embedded
+`.m3/module.m3db` fallback or execute the requested language tool.
+Real driver reopen, native transaction durability, crash recovery and
+cache-hit qualification remain separate gates. In particular,
+[Maven #209](https://github.com/hsoliwal/maven/pull/209) subsequently
+merged builder-API hardening for MapDB/LMDB. It is **not** present in the
+source-pinned #206 negative-driver test lane; successful native transactions
+against that later revision still need independent qualification.
 
 Maven's standalone engine verifies declared output contents for reuse and
 conservatively rehashes where ctime/file-key evidence is unavailable.
