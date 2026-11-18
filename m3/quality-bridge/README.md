@@ -207,6 +207,13 @@ engine recognizes each of these three registrations and **refuses** to run
 any task without its optional driver; an unknown `ext-*` ID produces a
 distinct missing-provider refusal. Neither case may create an embedded
 `.m3/module.m3db` fallback or execute the requested language tool.
+The same source-pinned lane also builds a tiny **test-only** external
+`M3ModuleDbBackendProvider` JAR, binds its SHA-256 to `providerJars`,
+and verifies a successful original Maven sealed-image write, reopen and
+content-verified incremental skip. Tampering with that provider JAR must
+fail Gradle's digest admission before Maven runs. This only proves the
+general external SPI boundary; the fixture provider is never published
+or offered as a storage backend to users.
 Real driver reopen, native transaction durability, crash recovery and
 cache-hit qualification remain separate gates. In particular,
 [Maven #209](https://github.com/hsoliwal/maven/pull/209) subsequently
