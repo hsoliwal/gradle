@@ -68,6 +68,34 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void importsOnlyExplicitEclipseConfigurationPacket() throws Exception {
+        fixture();
+        Path context = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"))
+                .resolve("build-context.ide");
+        Files.writeString(context, "M3-ECLIPSE-BUILD-CONTEXT-V1\nowner-source\n");
+        String report = "{\"schema\":\"m3-eclipse-build-context-v1\","
+                + "\"project\":\"fixture\",\"selectedConfiguration\":\"Debug\","
+                + "\"activeConfiguration\":\"Release\"}\r\n";
+        String digest = engine(report);
+        configuration(digest, "m3EclipseBuildContext");
+        Files.writeString(workspace.resolve("build.gradle"), "\ntasks.named('m3EclipseBuildContext') {\n"
+                + "  contextPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-context.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+
+        Path output = workspace.resolve("build/reports/m3/eclipse-build-context.json");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("tasks", "--all").build();
+        assertFalse(Files.exists(output), "configuring a Gradle plugin cannot trigger Eclipse builds");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseBuildContext", "--stacktrace").build();
+        assertEquals(report.replace("\r\n", "\n"), Files.readString(output));
+        assertTrue(Files.readString(context).startsWith("M3-ECLIPSE-BUILD-CONTEXT-V1"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-builders.json")),
+                "the build context cannot silently execute other Eclipse tasks");
+    }
+
+    @Test
     void refusesUnpinnedEclipseBuilderEngineWithoutCreatingAnOwnerReport() throws Exception {
         fixture();
         engine("{\"schema\":\"m3-eclipse-builder-owners-v1\",\"builders\":[]}\\n");
