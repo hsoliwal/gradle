@@ -119,6 +119,27 @@ The existing source-identical JDK-only Maven #190 parser proof remains
 valid, but a merged source pin, passed parser, or historical CI failure
 does **not** establish a passing full Maven polyglot/project-DB build.
 
+## Re-executed against merged Maven #194
+
+The JDK-only native Gradle evidence test was re-run after the #194
+Maven source revision was pinned. Exact GitHub blob hashes for
+Modules, Sources, Source, Chunk, Text, SurefireParser and
+GradleSourceDiscoveryContractMain were rechecked. All seven remain
+identical to the source-identical hashes recorded earlier in this
+receipt. On OpenJDK 21:
+
+~~~sh
+javac --release 17 -encoding UTF-8 -Xlint:all -Werror -d classes \
+  Modules.java Sources.java Source.java Chunk.java Text.java \
+  SurefireParser.java GradleSourceDiscoveryContractMain.java
+java -cp classes org.apache.maven.plugins.projectdb.GradleSourceDiscoveryContractMain
+~~~
+
+**PASS**: native Gradle module and JUnit case evidence via the original
+Maven parsers. The existing TaskRunner #194 transactional fix has not
+been exercised by this JDK-only compilation; that requires the full
+Maven polyglot module-state contract and its CI.
+
 ## Blocked gates
 
 - Full Gradle TestKit, configuration-cache reuse and Gradle API
