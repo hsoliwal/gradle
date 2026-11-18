@@ -48,6 +48,15 @@ final class M3ProjectDbTaskTest {
     }
 
     @Test
+    void queryRequiresPriorIngestWithoutCreatingAnEmptyDatabase() throws Exception {
+        fixture();
+        String output = run("m3ProjectDbQuery", true);
+        assertTrue(output.contains("query requires an existing ingested database"), output);
+        assertFalse(Files.exists(root.resolve("m3-projectdb-argv.txt")));
+        assertFalse(Files.exists(root.resolve("build/m3/project-db")));
+    }
+
+    @Test
     void refusesTamperedJarBeforeStartingExternalEngine() throws Exception {
         fixture();
         Files.writeString(root.resolve("project-db.jar"), "replaced bytes");
@@ -118,8 +127,12 @@ final class M3ProjectDbTaskTest {
                     public static void main(String[] args) throws Exception {
                         java.nio.file.Files.writeString(java.nio.file.Path.of("m3-projectdb-argv.txt"),
                                 String.join("\\n", args) + "\\n");
-                        if ("ingest".equals(args[0])) System.out.println("{\\"build\\":\\"b0001\\",\\"status\\":\\"green\\"}");
-                        else System.out.println("{\\"question\\":\\"why\\",\\"build\\":\\"b0001\\",\\"answers\\":[]}");
+                        if ("ingest".equals(args[0])) {
+                            java.nio.file.Path store = java.nio.file.Path.of(args[3]);
+                            java.nio.file.Files.createDirectories(store.resolve("db"));
+                            java.nio.file.Files.writeString(store.resolve(".gitignore"), "*\\n");
+                            System.out.println("{\\"build\\":\\"b0001\\",\\"status\\":\\"green\\"}");
+                        } else System.out.println("{\\"question\\":\\"why\\",\\"build\\":\\"b0001\\",\\"answers\\":[]}");
                     }
                 }
                 """);
