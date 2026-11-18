@@ -2,9 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 name: M3 Gradle analyzer bridge
 on:
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - 'm3/MAVEN_GRADLE_CONVERGENCE.md'
+      - '.github/workflows/m3-gradle-quality-bridge.yml'
   pull_request:
     paths:
       - 'm3/quality-bridge/**'
+      - 'm3/MAVEN_GRADLE_CONVERGENCE.md'
       - '.github/workflows/m3-gradle-quality-bridge.yml'
   workflow_dispatch:
 permissions:
@@ -76,6 +83,14 @@ jobs:
           export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-polyglot/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3PolyglotRealEngineTest' --rerun-tasks
+
+      # Maven #149 is not qualified by argv alone: verify actual cache
+      # restoration using the same source-pinned JAR in distinct Gradle checkouts.
+      - name: Verify Maven #149 cache reuse across Gradle TestKit checkouts
+        run: |
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-polyglot/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3PolyglotCacheRealEngineTest' --rerun-tasks
 
       # Exact same Maven review commit also contains merged #148. Only JDK21
       # can execute its original compiler/JavacTask-based AST producer.
