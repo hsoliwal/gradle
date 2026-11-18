@@ -176,6 +176,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
 
     private static void eclipseDefaults(Project project, M3EclipseModelTask task) {
         task.setGroup("verification");
+        task.getProviderJarSha256().convention(java.util.Map.of());
         task.getJavaExecutable().convention(
                 project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
         task.getEclipseProject().convention(project.getLayout().getProjectDirectory());
