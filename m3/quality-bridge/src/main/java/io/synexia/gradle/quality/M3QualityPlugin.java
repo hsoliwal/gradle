@@ -146,13 +146,21 @@ public final class M3QualityPlugin implements Plugin<Project> {
         // Eclipse project descriptors have one Maven-owned parser. Gradle merely
         // supplies an explicit task boundary and immutable engine provenance.
         project.getTasks().register("m3EclipseModel", M3EclipseModelTask.class, task -> {
-            task.setGroup("verification");
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("model");
             task.setDescription("Inspect an Eclipse project through the pinned Maven project-model CLI");
-            task.getJavaExecutable().convention(
-                    project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
-            task.getEclipseProject().convention(project.getLayout().getProjectDirectory());
             task.getModelReport().convention(
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-model.json"));
+        });
+
+        // Arbitrary builder IDs and natures are inventoried by Maven's SPI.
+        // Unbound providers remain unbound; this task cannot invoke an Eclipse builder.
+        project.getTasks().register("m3EclipseBuilders", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("owners");
+            task.setDescription("Inspect Eclipse JDT/CDT/Rust and arbitrary language builder ownership");
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-builders.json"));
         });
 
         // An original OpenRewrite plugin owns recipe discovery, dry-run, and apply.
@@ -164,6 +172,13 @@ public final class M3QualityPlugin implements Plugin<Project> {
                 task.dependsOn(project.getTasks().named("rewriteDryRun"));
             });
         });
+    }
+
+    private static void eclipseDefaults(Project project, M3EclipseModelTask task) {
+        task.setGroup("verification");
+        task.getJavaExecutable().convention(
+                project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+        task.getEclipseProject().convention(project.getLayout().getProjectDirectory());
     }
 
     private static void polyglotDefaults(Project project, M3PolyglotManifestTask task) {
