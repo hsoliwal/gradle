@@ -41,4 +41,9 @@ require_once "  workflow_dispatch:"
 # of the original Maven #149 cache and the earlier converter source pins.
 require_once "ref: f92096f8d3eb135d28cf698335a4423ef9179e9d"
 
+# Maven #198 is an independent, merge-pinned LLVM SPI producer. A host Clang
+# smoke is mandatory in CI but is not proof of the user's LLVM fork ABI.
+require_once "ref: 83284eb8de8758fa9ffa84ca6c2d764e67c183c8"
+require_once "test --tests '*M3LlvmProviderRealEngineTest' --rerun-tasks"
+
 printf '%s\n' "PASS: source-pinned M3 Gradle/Maven CI lanes retained"
