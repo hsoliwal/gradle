@@ -41,6 +41,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
     private static final int MAX_REPORT_BYTES = 16 * 1024 * 1024;
     private static final byte[] MODEL_PREFIX = "{\"schema\":\"m3-eclipse-project-v1\""
             .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] OWNERS_PREFIX = "{\"schema\":\"m3-eclipse-builder-owners-v1\""
+            .getBytes(StandardCharsets.UTF_8);
 
     @Input
     public abstract Property<String> getJavaExecutable();
@@ -57,6 +59,10 @@ public abstract class M3EclipseModelTask extends DefaultTask {
 
     @OutputFile
     public abstract RegularFileProperty getModelReport();
+
+    /** "model" retains the original v1 schema; "owners" selects the generic builder-owner report. */
+    @Input
+    public abstract Property<String> getReportMode();
 
     @Inject
     protected abstract ExecOperations getExecOperations();
@@ -83,8 +89,13 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             rejectLinkedPath(checkout, report);
             M3PolyglotCommands.verifyEngine(engine, getEngineSha256().get());
 
-            List<String> command = M3EclipseModelCommands.inspect(
-                    getJavaExecutable().get(), engine.toFile(), root.toFile());
+            String mode = getReportMode().get();
+            if (!"model".equals(mode) && !"owners".equals(mode)) {
+                throw new IOException("unsupported Eclipse report mode: " + mode);
+            }
+            List<String> command = "owners".equals(mode)
+                    ? M3EclipseModelCommands.owners(getJavaExecutable().get(), engine.toFile(), root.toFile())
+                    : M3EclipseModelCommands.inspect(getJavaExecutable().get(), engine.toFile(), root.toFile());
             M3BoundedOutput output = new M3BoundedOutput(MAX_REPORT_BYTES, "Eclipse model");
             getExecOperations().exec(spec -> {
                 spec.setExecutable(command.get(0));
@@ -101,8 +112,9 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 json = Arrays.copyOf(json, json.length - 1);
                 json[json.length - 1] = '\n';
             }
-            if (json.length < MODEL_PREFIX.length + 2
-                    || !Arrays.equals(Arrays.copyOf(json, MODEL_PREFIX.length), MODEL_PREFIX)
+            byte[] expectedPrefix = "owners".equals(mode) ? OWNERS_PREFIX : MODEL_PREFIX;
+            if (json.length < expectedPrefix.length + 2
+                    || !Arrays.equals(Arrays.copyOf(json, expectedPrefix.length), expectedPrefix)
                     || json[json.length - 2] != '}' || json[json.length - 1] != '\n') {
                 throw new IOException("Maven Eclipse model schema or encoding mismatch");
             }
