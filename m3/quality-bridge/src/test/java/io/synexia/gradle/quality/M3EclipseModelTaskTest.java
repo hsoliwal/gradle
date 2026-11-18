@@ -205,6 +205,60 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void reviewsCargoSourceFactsOnlyThroughOriginalPinnedMavenCodec() throws Exception {
+        fixture();
+        Path owner = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Files.writeString(owner.resolve("cargo-build-facts.ide"),
+                "M3-CARGO-BUILD-FACTS-V1\nsource-owner-fixture\n");
+        Files.writeString(owner.resolve("build-handoff.ide"),
+                "M3-ECLIPSE-BUILD-HANDOFF-V1\nsource-owner-fixture\n");
+        String report = "{\"schema\":\"m3-cargo-build-facts-v1\","
+                + "\"project\":\"fixture\",\"manifestSha256\":\"" + "a".repeat(64) + "\","
+                + "\"authorizesBuildSkipping\":false}\r\n";
+        String digest = engine(report);
+        configuration(digest, "m3EclipseCargoFacts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseCargoFacts') {\n"
+                + "  cargoPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/cargo-build-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        Path output = workspace.resolve("build/reports/m3/eclipse-cargo-facts.json");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("tasks", "--all").build();
+        assertFalse(Files.exists(output), "Cargo facts inspection must never launch during Gradle configuration");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseCargoFacts", "--stacktrace").build();
+        assertEquals(report.replace("\r\n", "\n"), Files.readString(output));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-cdt-facts.json")));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-jdt-facts.json")));
+    }
+
+    @Test
+    void rejectsCargoSourceOwnerSchemaSubstitutionBeforeReportPublication() throws Exception {
+        fixture();
+        Path owner = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Files.writeString(owner.resolve("cargo-build-facts.ide"),
+                "M3-CARGO-BUILD-FACTS-V1\nowner-fixture\n");
+        Files.writeString(owner.resolve("build-handoff.ide"),
+                "M3-ECLIPSE-BUILD-HANDOFF-V1\nowner-fixture\n");
+        String digest = engine("{\"schema\":\"m3-cdt-compiler-facts-v1\"}\n");
+        configuration(digest, "m3EclipseCargoFacts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseCargoFacts') {\n"
+                + "  cargoPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/cargo-build-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        var result = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseCargoFacts", "--stacktrace").buildAndFail();
+        assertTrue(result.getOutput().contains("M3 Eclipse model inspection refused"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-cargo-facts.json")));
+    }
+
+    @Test
     void reviewsCdtFactsOnlyThroughOriginalPinnedMavenCodec() throws Exception {
         fixture();
         Path original = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));

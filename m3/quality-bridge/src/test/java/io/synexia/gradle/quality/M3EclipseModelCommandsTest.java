@@ -36,6 +36,21 @@ final class M3EclipseModelCommandsTest {
     }
 
     @Test
+    void cargoSourceFactsStayWithOneExactOriginalEclipseInvocation() {
+        File engine = workspace.resolve("engine.jar").toFile();
+        File cargo = workspace.resolve("rust facts.ide").toFile();
+        File eclipse = workspace.resolve("eclipse invocation.ide").toFile();
+        File adapter = workspace.resolve("corrosion.jar").toFile();
+        String classpath = engine.getAbsolutePath() + File.pathSeparator + adapter.getAbsolutePath();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", classpath,
+                "io.synexia.maven.polyglot.EclipseModelCli", "cargo-facts",
+                cargo.getAbsolutePath(), eclipse.getAbsolutePath()),
+                M3EclipseModelCommands.cargo("java", engine, cargo, eclipse, List.of(adapter)));
+        assertThrows(NullPointerException.class,
+                () -> M3EclipseModelCommands.cargo("java", engine, cargo, null, List.of()));
+    }
+
+    @Test
     void cdtScannerFactsKeepExactOriginalOwnerPathsAndActiveCdtSeparate() {
         File engine = workspace.resolve("engine.jar").toFile();
         File cdt = workspace.resolve("cdt scanner.ide").toFile();

@@ -858,6 +858,49 @@ native compilation or restore an M3DB cache without complete independent
 source-owner evidence. The original CDT and LLVM toolchains remain in
 charge of compiler invocations.
 
+### Source-owned Corrosion/Cargo build facts
+
+The optional `m3EclipseCargoFacts` task is a thin, untracked
+consumer of the original Corrosion/Cargo owner packet
+`M3-CARGO-BUILD-FACTS-V1`. An authorized Corrosion workflow must
+explicitly export this evidence after an offline/locked native
+`cargo metadata` invocation. Gradle does **not** execute Cargo,
+rustc, rust-analyzer, build.rs or shell scripts to produce it.
+
+```groovy
+tasks.named('m3EclipseCargoFacts') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+    cargoPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/cargo-build-facts.ide'))
+    handoffPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/build-handoff.ide'))
+}
+```
+
+Both source-owned packets must be existing project-local, regular,
+non-symlink files; Gradle validates their byte budgets, the Maven
+engine JAR SHA-256 and each optional provider JAR pin. The original
+Maven Java 17 codec checks the versioned Cargo packet and exact
+project, selected Eclipse `IBuildConfiguration` and invocation ID.
+Gradle does not duplicate the native Cargo metadata resolver.
+A validated report is atomically published to
+`build/reports/m3/eclipse-cargo-facts.json` under the separate
+`m3-cargo-build-facts-v1` JSON schema.
+
+The `M3EclipseCargoRealEngineTest` optionally checks the real,
+source-built Maven engine via `M3_POLYGLOT_JAR` and refuses a
+foreign Eclipse selection without overwriting previous evidence.
+If the JAR is absent, the test **skips** and does not constitute
+acceptance. CI must enforce one executed, non-skipped case.
+
+The packet is advisory: it hashes original Cargo.lock, manifests and
+reported dependency metadata bytes but does not identify the rustc
+binary, target-specific flags, generated outputs or ABI. It never
+authorizes Gradle task skipping, Maven goal skipping, or M3DB cache
+restoration.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
