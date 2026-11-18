@@ -49,6 +49,25 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void runsReadOnlyBuilderOwnerInventoryOnlyWhenExplicitlyRequested() throws Exception {
+        fixture();
+        String report = "{\"schema\":\"m3-eclipse-builder-owners-v1\",\"project\":\"fixture\","
+                + "\"builders\":[],\"unboundNatures\":[]}\r\n";
+        String digest = engine(report);
+        configuration(digest, "m3EclipseBuilders");
+
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("tasks", "--all").build();
+        Path out = workspace.resolve("build/reports/m3/eclipse-builders.json");
+        assertFalse(Files.exists(out), "registration must not execute any Eclipse adapter");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseBuilders", "--stacktrace").build();
+        assertEquals(report.replace("\r\n", "\n"), Files.readString(out));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-model.json")),
+                "owner inventory cannot silently activate the original model task");
+    }
+
+    @Test
     void refusesWrongDigestWithoutPublishingAnUnverifiedReport() throws Exception {
         fixture();
         engine("{\"schema\":\"m3-eclipse-project-v1\"}\n");
@@ -67,8 +86,12 @@ class M3EclipseModelTaskTest {
     }
 
     private void configuration(String digest) throws IOException {
+        configuration(digest, "m3EclipseModel");
+    }
+
+    private void configuration(String digest, String taskName) throws IOException {
         Files.writeString(workspace.resolve("build.gradle"), "plugins { id 'io.synexia.m3.quality' }\n"
-                + "tasks.named('m3EclipseModel') {\n"
+                + "tasks.named('" + taskName + "') {\n"
                 + "  engineJar.set(layout.projectDirectory.file('engine.jar'))\n"
                 + "  engineSha256.set('" + digest + "')\n"
                 + "  eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))\n"
