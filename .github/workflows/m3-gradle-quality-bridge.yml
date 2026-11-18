@@ -42,6 +42,8 @@ jobs:
         run: sh m3/quality-bridge/scripts/verify-ide-delta.sh
       - name: Verify Maven #149 local-cache Java 17 argv contract
         run: sh m3/quality-bridge/scripts/verify-polyglot-cache-args.sh
+      - name: Qualify Maven #184 project DB CLI command contract
+        run: sh m3/quality-bridge/scripts/verify-project-db-args.sh
       - name: Test standalone bridge, canonical reports and Gradle TestKit
         run: |
           chmod +x gradlew
@@ -136,3 +138,44 @@ jobs:
           export M3_SMART_BUILDER_JAR="$GITHUB_WORKSPACE/m3-maven-polyglot/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3MachineFingerprintRealEngineTest' --rerun-tasks
+
+  m3-project-db-crossfork:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Check out exact merged Maven project database source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 2e15f2a4f0c92f6593167f573b0222e214a74b0f
+          path: m3-maven-project-db
+          persist-credentials: false
+      - name: Qualify and install original Maven M3IndexDB storage owner
+        run: |
+          mvn -B -ntp -f m3-maven-project-db/tools/m3-polyglot-maven-plugin/pom.xml install
+          test -s m3-maven-project-db/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Qualify original project DB ingestion, retrieval and CLI
+        run: |
+          mvn -B -ntp -f m3-maven-project-db/tools/project-db/pom.xml verify
+          test -s m3-maven-project-db/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar
+      - name: Cross-verify Gradle task against original Maven project DB engine
+        run: |
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-project-db/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-project-db/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3ProjectDbRealEngineTest' --rerun-tasks
+      - name: Verify native Gradle-only JUnit evidence reaches Maven M3IndexDB
+        run: |
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-project-db/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-project-db/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3ProjectDbGradleNativeRealEngineTest' --rerun-tasks

@@ -173,6 +173,23 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-build-context.json"));
         });
 
+        // The Maven #184 project DB owns the data and deterministic retrieval.
+        // These optional tasks neither reimplement indexes nor affect build/check.
+        project.getTasks().register("m3ProjectDbIngest", M3ProjectDbTask.class, task -> {
+            projectDbDefaults(project, task);
+            task.getMode().convention("ingest");
+            task.getResultReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/project-db/ingest.json"));
+            task.setDescription("Ingest Maven project build evidence through the pinned M3IndexDB CLI");
+        });
+        project.getTasks().register("m3ProjectDbQuery", M3ProjectDbTask.class, task -> {
+            projectDbDefaults(project, task);
+            task.getMode().convention("query");
+            task.getResultReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/project-db/query.json"));
+            task.setDescription("Query original Maven project database using CPU-only deterministic retrieval");
+        });
+
         // An original OpenRewrite plugin owns recipe discovery, dry-run, and apply.
         // The alias exists only if that plugin is explicitly applied in the project.
         project.getPluginManager().withPlugin("org.openrewrite.rewrite", applied -> {
@@ -190,6 +207,18 @@ public final class M3QualityPlugin implements Plugin<Project> {
         task.getJavaExecutable().convention(
                 project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
         task.getEclipseProject().convention(project.getLayout().getProjectDirectory());
+    }
+
+    private static void projectDbDefaults(Project project, M3ProjectDbTask task) {
+        task.setGroup("verification");
+        task.getJavaExecutable().convention(
+                project.getProviders().gradleProperty("m3.projectdb.java").orElse("java"));
+        task.getAdditionalJarSha256().convention(java.util.Map.of());
+        task.getSourceProject().convention(project.getLayout().getProjectDirectory());
+        task.getStorageDirectory().convention(
+                project.getLayout().getBuildDirectory().dir("m3/project-db"));
+        task.getTopK().convention(5);
+        task.getQuestion().convention("");
     }
 
     private static void polyglotDefaults(Project project, M3PolyglotManifestTask task) {

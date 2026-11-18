@@ -865,3 +865,28 @@ prove toolchain, environment or undeclared inputs; only audited native
 tool tasks should opt in. See
 [the experimental polyglot-cache contract](docs/M3-POLYGLOT-CACHE.md)
 for examples, limitations and acceptance gates.
+
+## Per-project M3IndexDB and CPU-only build-evidence retrieval
+
+Maven #184 and merged #190 provide one M3IndexDB/IndexStore project
+database for polyglot receipts, Surefire/Failsafe results, dependency
+trees, POM evidence, build logs, code-clustering facts and native Gradle
+JUnit reports under build/test-results. Gradle-only modules are discovered
+from build/settings descriptors, without a POM. The Gradle fork now offers
+two **opt-in, untracked** tasks which delegate to the **original, separately
+SHA-256-pinned Maven ProjectDbCli** and its polyglot storage-engine JAR:
+
+- m3ProjectDbIngest: ingest a Maven project's original local build evidence
+  into an ignored project database, writing an ingest JSON receipt
+- m3ProjectDbQuery: query the existing database using Maven's deterministic
+  CPU-only BM25/hash-vector/facet retrieval, writing a JSON report with the
+  original per-hit file, line and build id when matching evidence is present
+
+Neither task runs by applying this plugin or joins build/check. Maven
+#190 recognizes Gradle JUnit XML test reports with original file/line
+provenance; it does **not** import Gradle's task graph, dependency
+resolution, compiler outputs or cache generations. No invented build-cache
+authorization, source rewrite, LLM-generated answer or database fork is
+introduced. The two Maven JARs and optional external providers must be
+installed and pinned explicitly. See [Project DB bridge contract](docs/M3-PROJECT-DB.md)
+and [qualification receipt](docs/M3-PROJECT-DB-QUALIFICATION-20261118.md).
