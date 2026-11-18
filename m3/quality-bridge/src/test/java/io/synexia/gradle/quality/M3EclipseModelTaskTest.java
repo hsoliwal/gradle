@@ -68,6 +68,17 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void refusesUnpinnedEclipseBuilderEngineWithoutCreatingAnOwnerReport() throws Exception {
+        fixture();
+        engine("{\"schema\":\"m3-eclipse-builder-owners-v1\",\"builders\":[]}\\n");
+        configuration("0".repeat(64), "m3EclipseBuilders");
+        var result = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseBuilders", "--stacktrace").buildAndFail();
+        assertTrue(result.getOutput().contains("M3 Eclipse model inspection refused"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-builders.json")));
+    }
+
+    @Test
     void refusesWrongDigestWithoutPublishingAnUnverifiedReport() throws Exception {
         fixture();
         engine("{\"schema\":\"m3-eclipse-project-v1\"}\n");
