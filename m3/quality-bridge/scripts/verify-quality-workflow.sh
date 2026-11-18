@@ -17,7 +17,6 @@ require_once() {
 }
 
 require_once "ref: b47e9a1e9173502c19de9bb6657a4f88b3267487"
-require_once "ref: f92096f8d3eb135d28cf698335a4423ef9179e9d"
 require_once "ref: 89de67b38249ea914ef252b765e59d2002780e1b"
 require_once "test --tests '*M3PolyglotRealEngineTest' --rerun-tasks"
 require_once "test --tests '*M3PolyglotCacheRealEngineTest' --rerun-tasks"
@@ -31,5 +30,9 @@ require_once "run: sh m3/quality-bridge/scripts/verify-machine-fingerprint-args.
 require_once "  push:"
 require_once "  pull_request:"
 require_once "  workflow_dispatch:"
+
+# Newer Maven #184/#188 producer qualification is deliberately independent
+# of the original Maven #149 cache and the earlier converter source pins.
+require_once "ref: f92096f8d3eb135d28cf698335a4423ef9179e9d"
 
 printf '%s\n' "PASS: source-pinned M3 Gradle/Maven CI lanes retained"
