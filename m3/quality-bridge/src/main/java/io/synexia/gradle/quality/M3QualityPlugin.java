@@ -229,6 +229,31 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.setDescription("Query original Maven project database using CPU-only deterministic retrieval");
         });
 
+        // Maven's standalone Java/JNI review owners retain evidence admission
+        // and report formats. Register lazily, without executing or attaching
+        // review work to the native Gradle build lifecycle.
+        project.getTasks().register("m3PreBuildAdvice", M3BuildAdviceTask.class, task -> {
+            smartReviewDefaults(project, task);
+            task.getPhase().convention("pre-build");
+            task.getRequireAtomPattern().convention(false);
+            task.getPreparationRequired().convention(false);
+            task.setDescription("Review existing project facts through the pinned Maven pre-build adviser");
+        });
+        project.getTasks().register("m3PostBuildAdvice", M3BuildAdviceTask.class, task -> {
+            smartReviewDefaults(project, task);
+            task.getPhase().convention("post-build");
+            task.getRequireAtomPattern().convention(false);
+            task.getPreparationRequired().convention(false);
+            task.getBuildOutcome().convention(project.getProviders().gradleProperty("m3.smart.buildOutcome"));
+            task.setDescription("Review an explicitly observed build outcome through the pinned Maven adviser");
+        });
+        project.getTasks().register("m3CodeAgent", M3CodeAgentTask.class, task -> {
+            smartReviewDefaults(project, task);
+            task.getSourceRoot().convention(project.getLayout().getProjectDirectory().dir("src/main/java"));
+            task.getRequireMachineEvidence().convention(false);
+            task.setDescription("Nominate existing recipes through the pinned Maven source-bound coding adviser");
+        });
+
         // An original OpenRewrite plugin owns recipe discovery, dry-run, and apply.
         // The alias exists only if that plugin is explicitly applied in the project.
         project.getPluginManager().withPlugin("org.openrewrite.rewrite", applied -> {
@@ -258,6 +283,25 @@ public final class M3QualityPlugin implements Plugin<Project> {
                 project.getLayout().getBuildDirectory().dir("m3/project-db"));
         task.getTopK().convention(5);
         task.getQuestion().convention("");
+    }
+
+    private static void smartReviewDefaults(Project project, M3SmartReviewTask task) {
+        task.setGroup("verification");
+        task.getJavaExecutable().convention(
+                project.getProviders().gradleProperty("m3.smart.java").orElse("java"));
+        task.getProjectDirectory().convention(project.getLayout().getProjectDirectory());
+        task.getBuildDirectory().convention(project.getLayout().getBuildDirectory());
+        task.getProviderJarSha256().convention(java.util.Map.of());
+        task.getTimeoutSeconds().convention(120);
+        task.getBackend().convention(project.getProviders().gradleProperty("m3.smart.backend").orElse("none"));
+        task.getOptionLlm().convention(project.getProviders().gradleProperty("optionllm")
+                .map(M3QualityPlugin::optionLlm).orElse(false));
+    }
+
+    private static boolean optionLlm(String value) {
+        if (value.isEmpty() || "true".equals(value)) return true;
+        if ("false".equals(value)) return false;
+        throw new org.gradle.api.GradleException("optionllm must be empty, true or false");
     }
 
     private static void polyglotDefaults(Project project, M3PolyglotManifestTask task) {

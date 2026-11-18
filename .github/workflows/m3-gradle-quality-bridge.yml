@@ -114,7 +114,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: f92096f8d3eb135d28cf698335a4423ef9179e9d
+          ref: ff1b0939e8ac962352d5fe4f4461808e867ef670
           path: m3-maven-state-aliases
           persist-credentials: false
       - name: Verify Maven original #184 backend contract and module DB
@@ -293,3 +293,31 @@ jobs:
           export M3_MAVEN_LLVM_PIPELINE_FIXTURES="$GITHUB_WORKSPACE/m3-maven-llvm-tools/tools/m3-llvm-tools-provider/example/llvm-ir"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3LlvmToolsProviderRealEngineTest' --rerun-tasks
+
+  m3-smart-review-crossfork:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      # Native Java/JNI review entry points belong to this exact Maven source.
+      # The new Gradle boundary runs advice and recipe nomination explicitly.
+      - name: Check out original Maven native smart-review source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: ff1b0939e8ac962352d5fe4f4461808e867ef670
+          path: m3-maven-smart-review
+          persist-credentials: false
+      - name: Qualify original Maven smart-review owner
+        run: |
+          mvn -B -ntp -f m3-maven-smart-review/tools/m3-smart-builder/pom.xml verify
+          test -s m3-maven-smart-review/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Verify native smart-review reports and configuration-cache reuse through Gradle
+        run: |
+          export M3_SMART_BUILDER_JAR="$GITHUB_WORKSPACE/m3-maven-smart-review/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3SmartReviewRealEngineTest' --rerun-tasks

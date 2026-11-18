@@ -21,6 +21,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
@@ -62,11 +63,17 @@ public abstract class M3ProjectDbTask extends DefaultTask {
 
     @Inject protected abstract ExecOperations getExecOperations();
 
+    /** Gradle supplies a configuration-cache-compatible layout service for this task. */
+    @Inject
+    protected ProjectLayout getM3ProjectLayout() {
+        throw new UnsupportedOperationException("Gradle injects the project layout service");
+    }
+
     @TaskAction
     public void runProjectDb() {
         Path root = absolute(getSourceProject().get().getAsFile());
         Path store = absolute(getStorageDirectory().get().getAsFile());
-        Path build = absolute(getProject().getLayout().getBuildDirectory().get().getAsFile());
+        Path build = absolute(getM3ProjectLayout().getBuildDirectory().get().getAsFile());
         Path report = absolute(getResultReport().get().getAsFile());
         Path plugin = absolute(getProjectDbJar().get().getAsFile());
         Path engine = absolute(getPolyglotJar().get().getAsFile());

@@ -5,17 +5,24 @@
 package io.synexia.gradle.quality;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.HexFormat;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
+import javax.inject.Inject;
 import javax.tools.ToolProvider;
 
+import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
+import org.gradle.testkit.runner.TaskOutcome;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -27,6 +34,37 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class M3EclipseModelTaskTest {
     @TempDir
     Path workspace;
+    private boolean declaredPluginClasspath;
+
+    @Test
+    void retainsOriginalBinaryTaskSurfaceWithOnlyConcreteLayoutInjection() throws Exception {
+        Set<String> actual = Arrays.stream(M3EclipseModelTask.class.getDeclaredMethods())
+                .filter(method -> Modifier.isPublic(method.getModifiers()) || Modifier.isProtected(method.getModifiers()))
+                .map(method -> method.getName() + "(" + Arrays.stream(method.getParameterTypes())
+                        .map(Class::getName).collect(Collectors.joining(",")) + "):"
+                        + method.getReturnType().getName() + ":" + Modifier.toString(method.getModifiers()))
+                .collect(Collectors.toSet());
+        assertEquals(Set.of(
+                "getContextPacket():org.gradle.api.file.RegularFileProperty:public abstract",
+                "getEclipseProject():org.gradle.api.file.DirectoryProperty:public abstract",
+                "getEngineJar():org.gradle.api.file.RegularFileProperty:public abstract",
+                "getEngineSha256():org.gradle.api.provider.Property:public abstract",
+                "getExecOperations():org.gradle.process.ExecOperations:protected abstract",
+                "getHandoffPacket():org.gradle.api.file.RegularFileProperty:public abstract",
+                "getJavaExecutable():org.gradle.api.provider.Property:public abstract",
+                "getM3ProjectLayout():org.gradle.api.file.ProjectLayout:protected",
+                "getModelReport():org.gradle.api.file.RegularFileProperty:public abstract",
+                "getProviderJarSha256():org.gradle.api.provider.MapProperty:public abstract",
+                "getProviderJars():org.gradle.api.file.ConfigurableFileCollection:public abstract",
+                "getReportMode():org.gradle.api.provider.Property:public abstract",
+                "inspectEclipseProject():void:public"
+                ), actual);
+        assertEquals(1, M3EclipseModelTask.class.getConstructors().length);
+        assertEquals(0, M3EclipseModelTask.class.getConstructors()[0].getParameterCount());
+        var injection = M3EclipseModelTask.class.getDeclaredMethod("getM3ProjectLayout");
+        assertTrue(injection.isAnnotationPresent(Inject.class));
+        assertFalse(Modifier.isAbstract(injection.getModifiers()));
+    }
 
     @Test
     void explicitlyDelegatesToPinnedMavenReaderWithoutTouchingTheDescriptor() throws Exception {
@@ -40,8 +78,7 @@ class M3EclipseModelTaskTest {
         assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-model.json")),
                 "registering the plugin must not invoke its Maven CLI");
 
-        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
-                .withArguments("m3EclipseModel", "--stacktrace").build();
+        runTwiceWithConfigurationCache("m3EclipseModel", false);
         assertEquals(validJson.replace("\r\n", "\n"),
                 Files.readString(workspace.resolve("build/reports/m3/eclipse-model.json")));
         assertEquals("<projectDescription><name>fixture</name></projectDescription>\n",
@@ -60,8 +97,7 @@ class M3EclipseModelTaskTest {
                 .withArguments("tasks", "--all").build();
         Path out = workspace.resolve("build/reports/m3/eclipse-builders.json");
         assertFalse(Files.exists(out), "registration must not execute any Eclipse adapter");
-        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
-                .withArguments("m3EclipseBuilders", "--stacktrace").build();
+        runTwiceWithConfigurationCache("m3EclipseBuilders", false);
         assertEquals(report.replace("\r\n", "\n"), Files.readString(out));
         assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-model.json")),
                 "owner inventory cannot silently activate the original model task");
@@ -87,8 +123,7 @@ class M3EclipseModelTaskTest {
         GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
                 .withArguments("tasks", "--all").build();
         assertFalse(Files.exists(output), "configuring a Gradle plugin cannot trigger Eclipse builds");
-        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
-                .withArguments("m3EclipseBuildContext", "--stacktrace").build();
+        runTwiceWithConfigurationCache("m3EclipseBuildContext", false);
         assertEquals(report.replace("\r\n", "\n"), Files.readString(output));
         assertTrue(Files.readString(context).startsWith("M3-ECLIPSE-BUILD-CONTEXT-V1"));
         assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-builders.json")),
@@ -116,8 +151,7 @@ class M3EclipseModelTaskTest {
         GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
                 .withArguments("tasks", "--all").build();
         assertFalse(Files.exists(output), "task registration must not execute an Eclipse builder");
-        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
-                .withArguments("m3EclipseBuildHandoff", "--stacktrace").build();
+        runTwiceWithConfigurationCache("m3EclipseBuildHandoff", false);
         assertEquals(report.replace("\r\n", "\n"), Files.readString(output));
         assertTrue(Files.readString(packet).startsWith("M3-ECLIPSE-BUILD-HANDOFF-V1"));
         assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-build-context.json")),
@@ -144,8 +178,7 @@ class M3EclipseModelTaskTest {
         GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
                 .withArguments("tasks", "--all").build();
         assertFalse(Files.exists(output), "reconciliation must not run at Gradle configuration time");
-        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
-                .withArguments("m3EclipseReconcile", "--stacktrace").build();
+        runTwiceWithConfigurationCache("m3EclipseReconcile", false);
         assertEquals(report.replace("\r\n", "\n"), Files.readString(output));
         assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-build-handoff.json")),
                 "reconciliation must not execute the other advisory task");
@@ -166,8 +199,7 @@ class M3EclipseModelTaskTest {
                 + "  handoffPacket.set(layout.projectDirectory.file("
                 + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
                 java.nio.file.StandardOpenOption.APPEND);
-        var result = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
-                .withArguments("m3EclipseBuildHandoff", "--stacktrace").buildAndFail();
+        var result = runTwiceWithConfigurationCache("m3EclipseBuildHandoff", true);
         assertTrue(result.getOutput().contains("M3 Eclipse model inspection refused"));
         assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-build-handoff.json")));
     }
@@ -177,8 +209,7 @@ class M3EclipseModelTaskTest {
         fixture();
         engine("{\"schema\":\"m3-eclipse-builder-owners-v1\",\"builders\":[]}\\n");
         configuration("0".repeat(64), "m3EclipseBuilders");
-        var result = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
-                .withArguments("m3EclipseBuilders", "--stacktrace").buildAndFail();
+        var result = runTwiceWithConfigurationCache("m3EclipseBuilders", true);
         assertTrue(result.getOutput().contains("M3 Eclipse model inspection refused"));
         assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-builders.json")));
     }
@@ -188,10 +219,99 @@ class M3EclipseModelTaskTest {
         fixture();
         engine("{\"schema\":\"m3-eclipse-project-v1\"}\n");
         configuration("0".repeat(64));
-        var result = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
-                .withArguments("m3EclipseModel", "--stacktrace").buildAndFail();
+        var result = runTwiceWithConfigurationCache("m3EclipseModel", true);
         assertTrue(result.getOutput().contains("M3 Eclipse model inspection refused"));
         assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-model.json")));
+    }
+
+    @Test
+    void directTaskRetainsCustomBuildDirectoryAndRechecksEngineAfterReplay() throws Exception {
+        fixture();
+        String json = "{\"schema\":\"m3-eclipse-project-v1\",\"source\":\"synthetic\"}\n";
+        String digest = engine(json);
+        configuration(digest);
+        declarePluginClasspath();
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\n@org.gradle.api.tasks.UntrackedTask(because = 'Fixture keeps delegated execution untracked')\n"
+                + "abstract class DerivedEclipseTask extends io.synexia.gradle.quality.M3EclipseModelTask {}\n"
+                + "tasks.register('directEclipse', DerivedEclipseTask) {\n"
+                + "  javaExecutable.set('java')\n"
+                + "  engineJar.set(layout.projectDirectory.file('engine.jar'))\n"
+                + "  engineSha256.set('" + digest + "')\n"
+                + "  providerJarSha256.set([:])\n"
+                + "  eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))\n"
+                + "  reportMode.set('model')\n"
+                + "  modelReport.set(layout.buildDirectory.file('reports/direct-eclipse.json'))\n"
+                + "}\n"
+                + "tasks.named('directEclipse').get()\n"
+                + "layout.buildDirectory.set(layout.projectDirectory.dir('custom-build'))\n",
+                java.nio.file.StandardOpenOption.APPEND);
+
+        Path report = workspace.resolve("custom-build/reports/direct-eclipse.json");
+        runTwiceWithConfigurationCache("directEclipse", false);
+        assertEquals(json, Files.readString(report));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-model.json")));
+
+        Files.delete(report);
+        Files.writeString(workspace.resolve("engine.jar"), "changed after configuration was cached");
+        BuildResult refused = runWithConfigurationCache("directEclipse", true);
+        assertTrue(refused.getOutput().contains("Reusing configuration cache"), refused.getOutput());
+        assertTrue(refused.getOutput().contains("SHA-256 mismatch"), refused.getOutput());
+        assertFalse(Files.exists(report), "configuration reuse must not bypass the original engine digest check");
+    }
+
+    @Test
+    void refusesReportOutsideCustomBuildDirectoryOnCachedRuns() throws Exception {
+        fixture();
+        String digest = engine("{\"schema\":\"m3-eclipse-project-v1\"}\n");
+        configuration(digest);
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\nlayout.buildDirectory.set(layout.projectDirectory.dir('custom-build'))\n"
+                + "tasks.named('m3EclipseModel') {\n"
+                + "  modelReport.set(layout.projectDirectory.file('build/rejected.json'))\n"
+                + "}\n", java.nio.file.StandardOpenOption.APPEND);
+
+        BuildResult refused = runTwiceWithConfigurationCache("m3EclipseModel", true);
+        assertTrue(refused.getOutput().contains("project-local Eclipse descriptor and build JSON report"),
+                refused.getOutput());
+        assertFalse(Files.exists(workspace.resolve("build/rejected.json")));
+    }
+
+    /** The serialized script subclass needs its superclass on a declared buildscript classpath. */
+    private void declarePluginClasspath() throws java.io.IOException {
+        var metadata = new java.util.Properties();
+        try (var stream = getClass().getClassLoader().getResourceAsStream("plugin-under-test-metadata.properties")) {
+            if (stream == null) throw new java.io.IOException("plugin-under-test metadata is missing");
+            metadata.load(stream);
+        }
+        String entries = metadata.getProperty("implementation-classpath");
+        if (entries == null || entries.isBlank()) throw new java.io.IOException("plugin classpath is empty");
+        String classpath = Arrays.stream(entries.split(java.util.regex.Pattern.quote(java.io.File.pathSeparator)))
+                .map(path -> "'" + path.replace("\\", "\\\\").replace("'", "\\'") + "'")
+                .collect(Collectors.joining(", "));
+        Path buildFile = workspace.resolve("build.gradle");
+        String script = Files.readString(buildFile);
+        String pluginDeclaration = "plugins { id 'io.synexia.m3.quality' }";
+        assertTrue(script.startsWith(pluginDeclaration));
+        Files.writeString(buildFile, "buildscript { dependencies { classpath files(" + classpath + ") } }\n"
+                + "apply plugin: 'io.synexia.m3.quality'" + script.substring(pluginDeclaration.length()));
+        declaredPluginClasspath = true;
+    }
+
+    private BuildResult runWithConfigurationCache(String task, boolean fail) {
+        var runner = GradleRunner.create().withProjectDir(workspace.toFile())
+                .withArguments(task, "--configuration-cache", "--configuration-cache-problems=fail", "--stacktrace");
+        if (!declaredPluginClasspath) runner.withPluginClasspath();
+        return fail ? runner.buildAndFail() : runner.build();
+    }
+
+    private BuildResult runTwiceWithConfigurationCache(String task, boolean fail) {
+        BuildResult first = runWithConfigurationCache(task, fail);
+        assertTrue(first.getOutput().contains("Configuration cache entry stored"), first.getOutput());
+        BuildResult second = runWithConfigurationCache(task, fail);
+        assertTrue(second.getOutput().contains("Reusing configuration cache"), second.getOutput());
+        assertEquals(fail ? TaskOutcome.FAILED : TaskOutcome.SUCCESS, second.task(":" + task).getOutcome());
+        return second;
     }
 
     private void fixture() throws IOException {
