@@ -132,9 +132,7 @@ public abstract class M3PolyglotProvidersTask extends DefaultTask {
                     || fields[1].compareTo(previous) <= 0) {
                 throw new IOException("invalid or unsorted M3 provider inventory row");
             }
-            // Maven #203 extends the original SPI without changing the V1
-            // inventory envelope. Retain exact, sorted capability admission.
-            tokens(fields[2], "(assembler|atomizer|compiler|interpreter|linker|optimizer|patternizer|transpiler)");
+            tokens(fields[2], "(compiler|interpreter|transpiler|atomizer|patternizer)");
             tokens(fields[3], "[a-z][a-z0-9+._-]{0,63}");
             previous = fields[1];
         }

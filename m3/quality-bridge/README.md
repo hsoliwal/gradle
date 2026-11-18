@@ -147,55 +147,6 @@ newer behavior exists in the older source-pinned #198 CI engine. The opt-in
 [OpenRewrite consumer recipe](recipes/enable-m3-llvm-provider-bridge.yml)
 installs the plugin only and requires SDK replay before promotion.
 
-### Maven #203: opt-in LLVM/MLIR/LLD tools and additive SPI roles
-
-Merged [Maven #203](https://github.com/hsoliwal/maven/pull/203) extends the
-existing `M3ToolProvider` capability vocabulary with `assembler`, `linker`
-and `optimizer`. The original Maven CLI still owns the same
-`M3-POLYGLOT-PROVIDERS-V1` inventory format. The Gradle bridge now admits
-these **exact** new capabilities while retaining sorted rows and refusing
-unrecognized role names. Nothing is compiled, linked or optimized during
-provider discovery or `m3PolyglotPlan`.
-
-Maven's **separate** `m3-llvm-tools-provider` JAR is installed only when
-requested. Keep that JAR and its source-compatible Maven polyglot engine
-independently SHA-256 pinned on all selected Gradle tasks:
-
-```groovy
-['m3PolyglotProviders', 'm3PolyglotPlan', 'm3PolyglotRun'].each { taskName ->
-    tasks.named(taskName) {
-        engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
-        engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
-        providerJars.from(layout.projectDirectory.file('vendor/m3-llvm-tools-provider.jar'))
-        providerJarSha256.put('m3-llvm-tools-provider.jar',
-                providers.gradleProperty('m3.llvm.tools.sha256'))
-    }
-}
-```
-
-The example from Maven #203 declares
-`@m3:llvm-tools:optimizer:llvm-ir` (`opt`) followed by
-`@m3:llvm-tools:assembler:llvm-ir` (`llvm-as`) and
-`@m3:llvm-tools:linker:llvm-ir` (`llvm-link`). Other explicit providers
-select `mlir-opt`, `mlir-translate`, LLD's target-specific drivers,
-`llvm-lit` or `FileCheck`; their existence and target ABI are **not**
-inferred. The Maven adapter accepts task-local `--m3-llvm-bin=` or
-`--m3-llvm-home=` plus an optional `--m3-llvm-sha256=` of the actual
-executable. A missing selected binary, conflicting selectors or wrong
-digest fails during planning, before native execution; a PATH default
-is not a fallback for a missing explicit selection.
-
-JDK17/21 CI checks the *original*, separately built Maven #203 provider
-against the source-pinned merged Maven #206 superset at
-`fee3ca7cd8ca0b698d7308103836e99074479950`. It uses the original
-three-stage LLVM manifest and source fixture, checks no-tool planning,
-an explicit SHA-pinned dummy executable, wrong-digest and conflicting-selector
-refusal, and tampered-provider JAR refusal. This is **not** real LLVM/MLIR/LLD
-execution, fork-compiled toolchain qualification, a Gradle cache hit or an
-OpenRewrite SDK recipe replay. The existing
-[opt-in plugin recipe](recipes/enable-m3-llvm-provider-bridge.yml) is reused;
-no build/check lifecycle is bound automatically.
-
 ### Maven PRs #143 and #147: opt-in portable module-local state
 
 Maven [PR #143](https://github.com/hsoliwal/maven/pull/143) has merged the
@@ -262,6 +213,9 @@ cache-hit qualification remain separate gates. In particular,
 merged builder-API hardening for MapDB/LMDB. It is **not** present in the
 source-pinned #206 negative-driver test lane; successful native transactions
 against that later revision still need independent qualification.
+The existing [opt-in OpenRewrite recipe](recipes/enable-m3-polyglot-state-bridge.yml)
+remains the consumer migration entry point; it does not select a database,
+install native drivers or attach any task to a Gradle lifecycle automatically.
 
 Maven's standalone engine verifies declared output contents for reuse and
 conservatively rehashes where ctime/file-key evidence is unavailable.
