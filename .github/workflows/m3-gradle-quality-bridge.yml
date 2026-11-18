@@ -182,3 +182,39 @@ jobs:
           export M3_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-project-db/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3ProjectDbGradleNativeRealEngineTest' --rerun-tasks
+
+  m3-llvm-crossfork:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      # Maven #198 contributes the LLVM drivers to the original provider SPI.
+      # Pin merged source; the installed host Clang is independently hashed.
+      - name: Check out merged Maven original LLVM provider source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 83284eb8de8758fa9ffa84ca6c2d764e67c183c8
+          path: m3-maven-llvm-provider
+          persist-credentials: false
+      - name: Qualify original Maven LLVM compiler provider and SPI tests
+        run: |
+          mvn -B -ntp -f m3-maven-llvm-provider/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-llvm-provider/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Verify LLVM provider discovery, no-tool planning and real host Clang from Gradle
+        run: |
+          export M3_POLYGLOT_LLVM_JAR="$GITHUB_WORKSPACE/m3-maven-llvm-provider/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_MAVEN_LLVM_FIXTURES="$GITHUB_WORKSPACE/m3-maven-llvm-provider/tools/m3-polyglot-maven-plugin/examples/llvm-native"
+          export M3_LLVM_CLANG="$(command -v clang)"
+          test -x "$M3_LLVM_CLANG"
+          export M3_LLVM_CLANG_SHA256="$(sha256sum "$M3_LLVM_CLANG" | cut -d ' ' -f1)"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3LlvmProviderRealEngineTest' --rerun-tasks

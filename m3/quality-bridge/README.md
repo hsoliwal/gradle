@@ -77,6 +77,7 @@ tasks.named('m3PolyglotRun') {
 
 Invoke `./gradlew m3PolyglotPlan` to validate and display the dependency order,
 then explicitly invoke `./gradlew m3PolyglotRun` to execute native commands.
+
 Both tasks refuse a missing JAR, missing digest, mismatch, symlinked JAR or
 manifest outside the workspace. An absolute, existing, regular manifest is
 required. No tool is downloaded and no model is invoked. These are untracked
@@ -91,6 +92,60 @@ tasks always re-execute. An input stamp is not proof of toolchain, environment,
 ABI, output-content or transitive-dependency equivalence; do not use it as an
 unqualified build-cache correctness claim. Rewrite application requires explicit
 separate approval and the source-owned recipe/compile/test gates.
+
+### Original Maven #198 LLVM compiler provider, available from Gradle
+
+Merged [Maven #198](https://github.com/hsoliwal/maven/pull/198) introduces the
+opt-in `@m3:llvm:compiler:` provider through the **existing** Maven-owned
+`M3ToolProvider` SPI. Gradle needs no second LLVM parser, driver, scheduler,
+dependency graph, atomizer or toolchain installation: its existing
+`m3PolyglotProviders`, `m3PolyglotPlan` and `m3PolyglotRun` delegate to the
+same source-pinned `PolyglotCli` with an externally installed original LLVM
+compiler. The language identifiers are `c`, `cpp`, `objc`, `objcpp`,
+`fortran` and `llvm-ir`, with original drivers `clang`, `clang++`, `flang`
+and `llc` selected by Maven—not Gradle.
+
+For example, supply the verified newer Maven polyglot JAR in the common
+configuration above, and place this in an explicit `m3-build.tsv`:
+
+```text
+M3-POLYGLOT-TASKS-V1
+task	compile	@m3:llvm:compiler:c	.
+arg	compile	--m3-llvm-bin=/opt/llvm-reviewed/bin
+arg	compile	-c
+arg	compile	hello.c
+arg	compile	-o
+arg	compile	hello.o
+input	compile	hello.c
+output	compile	hello.o
+```
+
+`./gradlew m3PolyglotPlan` must leave the compiler unexecuted, even when
+the selected binary is not installed; only a deliberate
+`./gradlew m3PolyglotRun` executes Clang. The `--m3-llvm-bin=` selector is
+consumed by Maven's original provider and must occur at most once; no shell
+is involved. The Maven CLI JAR is SHA-256 pinned; Gradle validates the returned
+provider inventory against the original versioned schema.
+No LLVM source/binaries are vendored into this fork; the
+[`hsoliwal/llvm-project`](https://github.com/hsoliwal/llvm-project)
+source revision reviewed by Maven is `591f3d1edf0a9ee718d17a0ee70dd013b3c01908`
+(Apache-2.0 WITH LLVM-exception). A Clang installed on another host is
+**not** thereby proven to be built from that revision.
+
+Gradle's cross-fork CI adds a source-pinned Maven #198 provider build and
+real Gradle TestKit using Maven's exact source-pinned `hello.c` and two-stage
+Clang/`llc` manifest: inventory contains LLVM, dry-run planning refuses
+duplicate selectors without starting a tool, and an explicitly located,
+SHA-256-observed **host** Clang emits LLVM IR twice. Re-execution
+is intentional: native headers, sysroots, ABI, response files and generated
+inputs do not yet form a complete M3DB cache key. CI smoke does **not**
+qualify the user's own LLVM fork binary, Flang, `llc`, Objective-C,
+cross-compilation, linking, LLVM/MLIR passes or Windows/macOS. Follow-up
+[Maven #199](https://github.com/hsoliwal/maven/pull/199) is still an
+independent draft for shared LLVM-home and binary-pin selection; do not
+infer that its unmerged behavior exists in Maven #198. The opt-in
+[OpenRewrite consumer recipe](recipes/enable-m3-llvm-provider-bridge.yml)
+installs the plugin only and requires SDK replay before promotion.
 
 ### Maven PRs #143 and #147: opt-in portable module-local state
 
