@@ -27,6 +27,7 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | Resource filtering API | **Maven #150 merged** | Gradle's Copy/Sync/filter/task inputs are native | Adapt capabilities only if semantics differ and tests justify additive APIs |
 | Code clustering and LSP front ends | Maven #113, #117, #124, #142, #156, #168 | Gradle #36 merged for Eclipse builder registry | Future shared M3AST/LSP artifacts; do not start language servers automatically or duplicate Eclipse models |
 | Generic Eclipse language-builder SPI | **Maven #189, #192, #197 merged** | **Gradle #36, #40, #42 merged** | Original Eclipse source owner, ServiceLoader, selected configuration and same-invocation handoff wire remain authoritative; no builder execution or cache skip from advisory facts |
+| Bounded Eclipse/PDE and polyglot authoring descriptors | **Maven #211 merged** (`2b4ea06f34d785b78a7811ca59cf6d24efb02287`) | Gradle #47 `m3EclipseModel` original-engine TestKit; independent JDK17/21 source-pinned CI lane in Gradle #51 | Original Maven owns manifest, plugin/fragment, `*.target`, `*.product`, native build descriptor discovery and SHA-256; Gradle does not clone parser, skip builds or follow symlinks |
 | LLVM original compiler toolchain SPI | **Maven #198 merged**, #199 open draft | Original `m3PolyglotProviders`/`m3PolyglotPlan`/`m3PolyglotRun` source-pinned TestKit proof | Original Maven provider chooses clang/clang++/flang/llc; Gradle supplies explicit execution boundary only, no binary provisioning or assumed native cache key |
 | Optional native LLVM/MLIR/LLD pipeline provider | **Maven #203 merged** (`3441dc1e91a2835b7b6bca608ffb9676565d9eff`) | Gradle's v1 inventory validator now admits Maven's appended `assembler`, `linker`, `optimizer` slugs; independent Java17 contract, source-pinned original provider JAR, TestKit and JDK17/21 CI | The original Maven SPI/ServiceLoader owns `opt`, `mlir-opt`, `llvm-as`, `llvm-link`, `mlir-translate`, LLD, lit and FileCheck; SHA-256 pin both JARs; Gradle never forks tool dispatch, state or LLVM parsers |
 | Browser AI review integration | Maven #138–#139 remove prior Chrome agent wiring | None here | Respect removed code; do not restore abandoned hooks |
@@ -64,6 +65,28 @@ The recipe at `m3/quality-bridge/recipes/enable-m3-native-manifest-bridge.yml`
 only enables the plugin in an explicitly selected consumer; Mavenizer
 generation and native execution remain separate opt-ins. Hosted CI and
 independent recipe replay must qualify the proof before promotion.
+
+## Maven #211 Eclipse descriptor qualification boundary
+
+Maven #211 extends the original `EclipseProjectModel` to inspect bounded
+Eclipse/PDE/OSGi and native-language authoring metadata without reading
+generated output directories, traversing arbitrary source trees or
+following symlinks. Gradle #47 already calls the original Maven
+`EclipseModelCli` from the opt-in `m3EclipseModel` task and has an optional
+positive TestKit acceptance. The additive cross-fork lane introduced in
+Gradle #51
+pins Maven's **merged** #211 source at
+`2b4ea06f34d785b78a7811ca59cf6d24efb02287`, executes Maven's original
+`verify`, and runs Gradle's real-engine TestKit on Java 17 and 21. The
+original Maven implementation must refuse 129 immediate `*.target` files
+and symlinked `plugin.xml` rather than publishing successful model evidence.
+
+These facts are **diagnostic**; they are not effective compiler inputs,
+resolved target platform, proven native toolchain, cache validity or
+compilation authorization. The OpenRewrite install recipe remains opt-in,
+and Maven/Gradle ownership boundaries, public APIs and default lifecycle
+behavior remain unchanged. Hosted CI outcomes and independent recipe
+replay, rather than the existence of test code, decide qualification.
 
 ## Imported contract from merged Maven #143, #147 and later M3DB reconciliation
 

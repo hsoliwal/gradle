@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Recipe-first, opt-in consumer plugin installation for original Maven #211.
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.synexia.gradle.recipe.EnableM3EclipseDescriptorBridge
+displayName: Enable source-owned Eclipse and PDE descriptor review in Gradle
+description: >-
+  Make the M3 Gradle quality plugin available for the explicitly invoked
+  m3EclipseModel task. An original SHA-256-pinned Maven #211 polyglot JAR
+  owns PDE, OSGi, native build and Eclipse model parsing and descriptor hashing.
+  The recipe does not invoke the reader, start a language server, modify
+  an Eclipse project, or attach the task to Gradle's build or check lifecycle.
+recipeList:
+  - org.openrewrite.gradle.plugins.AddPlugin:
+      pluginId: io.synexia.m3.quality
+      version: '0.1.0-SNAPSHOT'

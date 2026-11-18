@@ -633,6 +633,26 @@ descriptor changes in Maven PR #211. No task is automatically bound to
 `build`, `check` or `compileJava`, and source hashes alone never
 authorize cache restoration.
 
+The independent GitHub Actions lane
+`.github/workflows/m3-gradle-eclipse-descriptors.yml` checks out **exactly**
+merged Maven #211 (`2b4ea06f34d785b78a7811ca59cf6d24efb02287`),
+builds and verifies its original polyglot JAR, and invokes these TestKit
+checks with `M3_POLYGLOT_JAR` set on **both Java 17 and 21**. Alongside the
+positive native-descriptor SHA-256/change test, the cross-fork acceptance
+checks Maven's original bounded `*.target`/`*.product` admission (129
+descriptors refused) and rejection of a symlinked `plugin.xml` without
+reading its external contents. The shell guard
+`m3/quality-bridge/scripts/verify-eclipse-descriptor-workflow.sh` refuses
+the accidental removal of the exact producer revision or real-engine
+TestKit selector. This is a CI specification, **not** evidence of a
+passing hosted run before the workflow has executed.
+
+For recipe-first adoption, the additive, opt-in OpenRewrite recipe
+`m3/quality-bridge/recipes/enable-m3-eclipse-descriptor-bridge.yml`
+only installs the quality plugin. A consumer still configures the original
+Maven engine JAR and digest and explicitly calls `m3EclipseModel`; the
+recipe does not attempt to parse descriptors or register a source mutation.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
