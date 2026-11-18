@@ -58,6 +58,40 @@ M3ProjectDbRealEngineTest step with an unrelated selector: the guard
 refused it with 'found 0'; restoring the original workflow produced
 PASS again.
 
+## Original Maven #190 Gradle-source parser — executed
+
+The exact seven source files from the **merged** Maven #190 source revision
+were materialized locally. Git blob identity was checked against the
+original GitHub source readbacks, not inferred from filenames:
+
+| JDK-only original source | Git blob SHA-1 |
+| --- | --- |
+| Modules.java | 0d02389f19c214aa23b03e764ce68de45f61ce4f |
+| Sources.java | 756ba5bb21190afa32d6e2a77f161b03783ca193 |
+| Source.java | 64f4d9860cc330cd957529ff7c611defae6f70e8 |
+| Chunk.java | a35fdd29d302b5b94a9008b4adb4fb7606bc8fa6 |
+| Text.java | cf324b80d0c116edfe272f48af70a7815f6efddd |
+| SurefireParser.java | e3fb07ec9ac3772ff9b563a00bb032c45ff6f631 |
+| GradleSourceDiscoveryContractMain.java | 60e56b0c5314c40acf7176d85edb74b34d46d11f |
+
+Executed using OpenJDK 21 with Java 17 API/bytecode targeting:
+
+~~~sh
+javac --release 17 -encoding UTF-8 -Xlint:all -Werror -d classes \
+    Source.java Sources.java Modules.java Chunk.java Text.java \
+    SurefireParser.java GradleSourceDiscoveryContractMain.java
+java -cp classes org.apache.maven.plugins.projectdb.GradleSourceDiscoveryContractMain
+~~~
+
+**PASS**: native Gradle module discovery without a POM; original Gradle
+JUnit failure/passing-case parsing; source-file/line provenance;
+no accidental discovery of build outputs as project modules.
+
+This is an executed **source-identical JDK-only** gate, not a Maven
+plugin descriptor, full ProjectDb storage, Gradle TestKit or cross-OS
+qualification result. Maven's native database and full incremental
+catalog/derived-query cases remain separate integration gates.
+
 ## Blocked gates
 
 - Full Gradle TestKit, configuration-cache reuse and Gradle API
