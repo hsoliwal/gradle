@@ -20,12 +20,13 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | Universal native language task graph / SPI | Maven #115, #120, #132 | Gradle #24, #25 | Reuse Maven's pinned CLI and provider JARs for manifest tasks; leave Gradle's original task model untouched |
 | Per-module content-verified incremental state | **Maven #143, #144–#146, #157 merged** | Gradle #28, #30, #31 merged | Forward only the qualified Maven CLI selections; do not copy lifecycle goals or assume Gradle cache hits |
 | Portable module-state backends and whole-run locks | **Maven #147 merged**, later **#184** one-owner consolidation | Gradle #30–#31 merged | Preserve Maven-owned module leases, transaction generations and storage; Gradle does not supply JDBC/native drivers automatically |
-| M3IndexDB unified per-project state, native Gradle JUnit evidence and RAG | **Maven #184, #186–#188 and #190 merged** | Gradle #37 original project DB CLI | Maven #190 reads native Gradle JUnit XML from projects without POMs; original IndexStore retains one storage owner; no Gradle task/cache/ABI ingestion or duplicated parser |
+| M3IndexDB unified per-project state, native Gradle JUnit evidence and RAG | **Maven #184, #186–#188, #190 and #194 merged** | Gradle #37–#39 merged; source-pinned #194 native Gradle JUnit proof | Maven #190 reads native Gradle JUnit XML from projects without POMs; #194 repairs dry-run DB storage; original IndexStore retains one owner; no duplicate Gradle parser |
 | Persistent syntax/atom fingerprints | **Maven #148 merged** in smart-builder | Gradle #32 merged, `m3MachineFingerprints` CLI proxy | Maven/JDK AST, canonical receipt validation and native MIndexDB own syntax facts; Gradle supplies a pinned task boundary only |
 | Maven polyglot artifact restore cache | **Maven #149 merged** (after #155 plugin repair) | Gradle #34–#35 merged | Explicit original Maven cache import only; preserve Gradle task/cache semantics and refuse implicit enablement |
 | Resource filtering API | **Maven #150 merged** | Gradle's Copy/Sync/filter/task inputs are native | Adapt capabilities only if semantics differ and tests justify additive APIs |
-| Code clustering and LSP front ends | Maven #113, #117, #124, #142, #156, #168 | Gradle #36 open for Eclipse builder registry | Future shared M3AST/LSP artifacts; do not start language servers automatically or duplicate Eclipse models |
-| Generic Eclipse language-builder SPI | **Maven #189 open** | **Gradle #36 open** | Keep both drafts independent until original Eclipse owner/ServiceLoader evidence and CI gates pass |
+| Code clustering and LSP front ends | Maven #113, #117, #124, #142, #156, #168 | Gradle #36 merged for Eclipse builder registry | Future shared M3AST/LSP artifacts; do not start language servers automatically or duplicate Eclipse models |
+| Generic Eclipse language-builder SPI and same-invocation handoff | **Maven #189, #195 and #197 merged** | **Gradle #36, #40 and #42 merged** | Maven owns Eclipse parser and provider ServiceLoader; Gradle exports exact builder registries and explicitly schedules invocation; unknown natures stay unbound |
+| Original LLVM compiler provider | **Maven #198 merged** at `83284eb8de8758fa9ffa84ca6c2d764e67c183c8` | Existing Gradle #24–#25 SPI/plan plus separately pinned JDK17/21 TestKit lane | Source-owned `clang`/`clang++`/`flang`/`llc` discovery and read-only plan only; no LLVM installation, automatic compilation, provider-owned cache skips or unmerged #199 consumption |
 | Browser AI review integration | Maven #138–#139 remove prior Chrome agent wiring | None here | Respect removed code; do not restore abandoned hooks |
 
 Maven-specific behavior (Resolver, enforcer, Mavenizer POM generation,
@@ -59,14 +60,13 @@ The Gradle task stays explicitly untracked: it is not intrinsically
 cacheable, and no implicit attachment to `build` or `check` exists.
 Existing command overloads and plugin tasks are preserved.
 
-Maven's later merged #184 adds explicit `embedded` and `native` spellings;
-those two aliases are not yet accepted by the original Gradle selector in
-this compiler-diagnostics batch. Do not silently treat an unrecognized
-selection as a different backend. The Maven plugin's current default uses
-the embedded M3IndexDB and `legacy` is its compatibility alias. The source
-revision in Gradle's existing portable-cache CI is intentionally pinned to
-the earlier merged #149, so later #184–#188 behavior needs a **separately
-reviewed** updated pin and native-store regression matrix.
+Maven's merged #184 adds explicit `embedded` and `native` spellings. Gradle
+#39 now admits both through the existing selector with no implicit backend
+substitution. The Maven plugin's current default uses embedded M3IndexDB and
+`legacy` is its compatibility alias. Gradle CI keeps the original merged #149
+cache pin while independently pinning Maven #184 for storage aliases and #194
+for native Gradle JUnit/project-DB ingestion. Native provider round trips and
+cross-platform recovery still require separate verification.
 
 ## Imported original Maven #160 and #178 compiler-diagnostic boundary
 

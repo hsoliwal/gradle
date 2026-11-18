@@ -182,3 +182,36 @@ jobs:
           export M3_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-project-db/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3ProjectDbGradleNativeRealEngineTest' --rerun-tasks
+
+  m3-llvm-provider-crossfork:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      # Maven #198 introduces LLVM compilers through the original M3ToolProvider
+      # SPI. Its merge revision is pinned separately from Maven #149/#194.
+      # Later unmerged LLVM toolchain experiments are not part of this proof.
+      - name: Check out exact merged Maven LLVM provider source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 83284eb8de8758fa9ffa84ca6c2d764e67c183c8
+          path: m3-maven-llvm
+          persist-credentials: false
+      - name: Verify original Maven #198 LLVM provider, no LLVM installation required
+        run: |
+          mvn -B -ntp -f m3-maven-llvm/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-llvm/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Cross-verify Maven LLVM discovery, read-only plan and selector refusal in Gradle
+        run: |
+          export M3_POLYGLOT_LLVM_JAR="$GITHUB_WORKSPACE/m3-maven-llvm/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3PolyglotLlvmRealEngineTest' --rerun-tasks

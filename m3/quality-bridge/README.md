@@ -282,6 +282,48 @@ M3File identities/digests and M3String immutable atoms remain in their own
 compiler/M3JDK owners, while Maven owns provider discovery and execution
 orchestration and Gradle stays an explicit proxy.
 
+#### Optional original LLVM compiler provider (Maven #198)
+
+Maven's merged #198 adds `@m3:llvm:compiler:c|cpp|objc|objcpp|fortran|llvm-ir`
+to its own `M3ToolProvider` inventory. The language-to-driver mapping remains
+in Maven: `clang`, `clang++`, `flang` and `llc`, respectively. Gradle does
+not ship LLVM, choose a compiler automatically, alter language configurations
+or implement the provider independently. Set the same SHA-256-pinned Maven
+engine JAR on `m3PolyglotProviders` and `m3PolyglotPlan` to discover and plan
+these tasks; use `m3PolyglotRun` only when native compilation is intentional.
+
+For example, an explicitly selected manifest can contain:
+
+```text
+M3-POLYGLOT-TASKS-V1
+task\tcompile\t@m3:llvm:compiler:c\t.
+arg\tcompile\t--m3-llvm-bin=toolchains/llvm/bin
+arg\tcompile\t-S
+arg\tcompile\t-emit-llvm
+arg\tcompile\thello.c
+arg\tcompile\t-o
+arg\tcompile\thello.ll
+input\tcompile\thello.c
+output\tcompile\thello.ll
+```
+
+The optional `--m3-llvm-bin=<directory>` is consumed by the Maven provider;
+all remaining compiler flags are passed as argument vectors, without a shell.
+Relative directories are resolved against the manifest workspace. On a plan,
+the original engine validates this selector but does not invoke a compiler.
+Providers are explicitly excluded from Maven's incremental/cache skip path
+until native headers, sysroots, generated files, ABIs and toolchain dependencies
+have complete evidence. This does not change Gradle's native caches.
+
+CI builds and tests the **original** Maven #198 merge
+`83284eb8de8758fa9ffa84ca6c2d764e67c183c8`, then runs a JDK 17/21
+Gradle TestKit lane for actual provider discovery, read-only planning and
+malformed/duplicate-selector refusal. That lane installs **no** LLVM compiler
+and claims no successful native compilation. Maven #199 remains a draft and
+is not imported. Canonical Synexia recipe replay, native toolchain
+fingerprints and full platform/toolchain qualification remain independent
+release gates.
+
 ## Read-only Eclipse project model (Maven-owned parser)
 
 The explicit `m3EclipseModel` task now delegates to the **same**
