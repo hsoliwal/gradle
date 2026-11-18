@@ -36,6 +36,17 @@ final class M3EclipseModelCommandsTest {
     }
 
     @Test
+    void modelReconciliationPreservesBothOriginalPathArguments() {
+        File engine = workspace.resolve("engine.jar").toFile();
+        File project = workspace.resolve("Eclipse project").toFile();
+        File packet = workspace.resolve("build-handoff.ide").toFile();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", engine.getAbsolutePath(),
+                "io.synexia.maven.polyglot.EclipseModelCli", "reconcile",
+                project.getAbsolutePath(), packet.getAbsolutePath()),
+                M3EclipseModelCommands.reconcile("java", engine, project, packet, List.of()));
+    }
+
+    @Test
     void invocationHandoffUsesOnePinnedMavenCliWithOriginalPacketPath() {
         File engine = workspace.resolve("engine.jar").toFile();
         File packet = workspace.resolve("eclipse invocation.ide").toFile();
