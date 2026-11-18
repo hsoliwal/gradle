@@ -30,3 +30,19 @@ how conflicts are resolved. A pull request is never left open, and never closed,
    - branches and closed pull requests whose commits never reached the default branch.
    Restore every genuine loss by this same rule, in a commit that names the commit or pull request that lost
    it. Record deliberate removals, with their reason, in the same commit.
+8. **All the way back, then record the last check.**
+   - The first audit covers the whole history: every merge since the first commit, every branch, and every
+     closed pull request.
+   - Each audit appends one row to `.github/HISTORY_AUDIT.tsv` with these columns:
+     `checked_at` (UTC), `ref`, `last_checked_commit`, `merges_audited`, `branches_checked`,
+     `closed_prs_checked`, `findings`, `restored`, `tool`.
+   - The next audit starts from the last row's `last_checked_commit` (`git log <last_checked_commit>..<ref>`),
+     so nothing is checked twice and nothing is skipped.
+9. **Licence: Apache.**
+   - New and absorbed code is Apache-2.0, or a licence compatible with Apache-2.0 (MIT, BSD, ISC, 0BSD, public
+     domain). A repository whose own licence is different (EPL-2.0, for example) keeps that licence for its files.
+   - Code under an incompatible licence is never copied. Atomize and patternize it, take the algorithm, and write
+     a new implementation from the pattern (by hand or with an LLM) under Apache-2.0. Record the source as a
+     reference, not as a copy.
+   - Copyright protects the expression, not the algorithm. A patent can still cover an algorithm, so check the
+     source for patents before shipping its algorithm.
