@@ -1,8 +1,9 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # M3 Gradle → Maven project database and CPU-only retrieval
 
-Source owner: merged Maven [PR #184](https://github.com/hsoliwal/maven/pull/184),
-commit 4ecaaf57ed86283e867ca7f8f8b78d0f38fdafaa.
+Source owner: Maven [PR #184](https://github.com/hsoliwal/maven/pull/184),
+extended by merged [PR #190](https://github.com/hsoliwal/maven/pull/190),
+source pin 2e15f2a4f0c92f6593167f573b0222e214a74b0f.
 The original ProjectDbCli and M3IndexDB/IndexStore code remain Maven/JDK
 owned. This Gradle component never copies storage, retrieval, parser or MCP
 implementations. This is not Gradle's local/remote build cache and cannot
@@ -66,15 +67,21 @@ establishes identity of JAR bytes, not semantic correctness of the source.
 
 ## What is actually indexed
 
-This first bridge is a **consumer of Maven project evidence**, not a claim
-that Gradle's own build/ tree has become a Maven module. Maven's original
-PR #184 ingests the material it knows how to discover: per-module polyglot
-receipts, target/surefire-reports and target/failsafe-reports, effective POMs,
-dependency-tree text, clustering TSV, Maven build events and an explicitly
-provided build log. Gradle's native build/reports/test, classpath resolution,
-configuration cache and task graph are NOT automatically ingested, converted
-or given successful-build authority here. Adding those requires separate
-versioned source-owned Gradle ingestion adapters and parity tests.
+This bridge retains the original Maven project evidence supported by
+PR #184: polyglot receipts, target/surefire-reports and
+target/failsafe-reports, effective POMs, dependency-tree text,
+clustering TSV, Maven build events and an explicit build log.
+Merged Maven #190 additionally recognizes Gradle project/module
+descriptors without any POM and ingests native
+build/test-results/<testTask>/TEST-*.xml from the existing
+SurefireParser/IndexStore pipeline. The test's original source
+frame, report path, and build identifier remain retrievable.
+
+This **does not ingest** Gradle's native dependency resolution,
+configuration cache, compiler ABI, task graph, arbitrary build outputs
+or build-cache generation. A Gradle JUnit report establishes its
+declared test outcome only: it does not authorize skipping Gradle
+tasks or classify an entire build as successful.
 
 The Maven original project database uses one storage interface (M3IndexDB
 through IndexStore), sharing the source-owned backend contract with
@@ -94,8 +101,12 @@ construction, query/ingest isolation, bounded questions, no-shell invocation
 and refusals. Gradle TestKit checks task registration, SHA-256 pinning,
 source/store boundaries and JSON reports, including a fake CLI that does
 not claim storage integration. The cross-fork CI job checks out exactly
-Maven #184, builds its original Java 17 plugin/storage owner, runs Maven's
-project-DB tests, then invokes the actual JAR from Gradle on JDK 17 and 21.
+merged Maven #190 (which includes #184), builds its Java 17
+project-DB/IndexStore owner, runs the Maven project-DB contracts,
+and invokes the original JAR from Gradle on JDK 17 and 21.
+A separate real-engine TestKit fixture contains **no POM** and
+requires native Gradle XML failures to retain source-line provenance,
+with a second ingest reusing unchanged test-report bytes.
 
 The newer merged Maven #186 array-backed batched receipts and #187
 engine-transcript safety fix are **not** silently claimed qualified by this
