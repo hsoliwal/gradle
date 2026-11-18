@@ -389,6 +389,47 @@ and the original builder/nature order. It is read-only metadata. It does not
 enable Gradle task skipping, M3DB output reuse, live Eclipse JDT/CDT/Rust
 compilation, or replace the IDE's native progress/cancellation.
 
+### Eclipse single-invocation handoff (any language plugin)
+
+The opt-in \`m3EclipseBuildHandoff\` task consumes the Maven-authored Java
+17 \`EclipseModelCli handoff\` command through the **same pinned engine JAR**.
+It never parses Eclipse resources independently or starts JDT, CDT,
+Corrosion/Cargo, PyDev, PDE, Tycho or any language server. The original
+m2e builder may produce a \`M3-ECLIPSE-BUILD-HANDOFF-V1\` packet, only under
+its existing capture switch, which binds the actual selected
+\`IBuildConfiguration\` to the source-owner \`IResourceDelta\` from one
+m2e invocation.
+
+\`\`\`groovy
+plugins { id 'io.synexia.m3.quality' }
+
+tasks.named('m3EclipseBuildHandoff') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+    handoffPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/build-handoff.ide'))
+}
+\`\`\`
+
+Run \`./gradlew m3EclipseBuildHandoff\` **only after the source owner has
+explicitly exported that packet**. The task refuses a missing, symlinked,
+out-of-project or over-budget packet before executing the pinned Maven
+reader. The Maven decoder validates its content. Gradle verifies the
+distinct \`m3-eclipse-build-handoff-v1\` JSON schema and atomically writes
+\`build/reports/m3/eclipse-build-handoff.json\`, up to 24 MiB. Existing
+\`m3EclipseModel\`, \`m3EclipseBuilders\` and \`m3EclipseBuildContext\`
+tasks are unchanged.
+
+The handoff's UUID distinguishes invocations. Its separate stable,
+workspace-scoped configuration identity can be derived by the Maven
+codec but is **not** a complete Gradle cache key or source generation.
+Unknown plugin natures and builders remain source-owned, and the output
+never authorizes goal skipping, Gradle task outcome reuse, compiler
+substitution, or M3DB artifact restoration. Actual input/output and
+toolchain eligibility must be qualified in the appropriate original
+Eclipse and language-specific build owners.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
