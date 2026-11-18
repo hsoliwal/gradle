@@ -96,6 +96,54 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void importsOneEclipseBuildInvocationWithoutStartingAnyOtherBuilder() throws Exception {
+        fixture();
+        Path packet = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"))
+                .resolve("build-handoff.ide");
+        Files.writeString(packet, "M3-ECLIPSE-BUILD-HANDOFF-V1\noriginal-owner-fixture\n");
+        String report = "{\"schema\":\"m3-eclipse-build-handoff-v1\",\"project\":\"fixture\","
+                + "\"selectedConfiguration\":\"Debug\",\"activeConfiguration\":\"Release\","
+                + "\"deltaComplete\":true,\"changes\":[]}\r\n";
+        String digest = engine(report);
+        configuration(digest, "m3EclipseBuildHandoff");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseBuildHandoff') {\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+
+        Path output = workspace.resolve("build/reports/m3/eclipse-build-handoff.json");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("tasks", "--all").build();
+        assertFalse(Files.exists(output), "task registration must not execute an Eclipse builder");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseBuildHandoff", "--stacktrace").build();
+        assertEquals(report.replace("\r\n", "\n"), Files.readString(output));
+        assertTrue(Files.readString(packet).startsWith("M3-ECLIPSE-BUILD-HANDOFF-V1"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-build-context.json")),
+                "handoff cannot silently run the separate Eclipse context task");
+    }
+
+    @Test
+    void rejectsHandoffSchemaSubstitutionBeforePublishingReport() throws Exception {
+        fixture();
+        Path packet = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"))
+                .resolve("build-handoff.ide");
+        Files.writeString(packet, "M3-ECLIPSE-BUILD-HANDOFF-V1\nsource\n");
+        String digest = engine("{\"schema\":\"m3-eclipse-build-context-v1\"}\n");
+        configuration(digest, "m3EclipseBuildHandoff");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseBuildHandoff') {\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        var result = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseBuildHandoff", "--stacktrace").buildAndFail();
+        assertTrue(result.getOutput().contains("M3 Eclipse model inspection refused"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-build-handoff.json")));
+    }
+
+    @Test
     void refusesUnpinnedEclipseBuilderEngineWithoutCreatingAnOwnerReport() throws Exception {
         fixture();
         engine("{\"schema\":\"m3-eclipse-builder-owners-v1\",\"builders\":[]}\\n");
