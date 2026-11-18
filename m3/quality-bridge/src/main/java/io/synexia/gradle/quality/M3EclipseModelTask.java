@@ -61,6 +61,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             .getBytes(StandardCharsets.UTF_8);
     private static final byte[] CARGO_PREFIX = "{\"schema\":\"m3-cargo-build-facts-v1\""
             .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] TYCHO_PREFIX = "{\"schema\":\"m3-tycho-final-p2-facts-v1\""
+            .getBytes(StandardCharsets.UTF_8);
 
     @Input
     public abstract Property<String> getJavaExecutable();
@@ -116,6 +118,12 @@ public abstract class M3EclipseModelTask extends DefaultTask {
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getCargoPacket();
 
+    /** Final p2 platform IU evidence from the actual Tycho owner, not .target metadata. */
+    @Optional
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract RegularFileProperty getTychoPacket();
+
     /** "model" retains the original v1 schema; "owners" selects the generic builder-owner report. */
     @Input
     public abstract Property<String> getReportMode();
@@ -157,22 +165,26 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             if (!"model".equals(mode) && !"owners".equals(mode)
                     && !"context".equals(mode) && !"handoff".equals(mode)
                     && !"reconcile".equals(mode) && !"jdt".equals(mode)
-                    && !"cdt".equals(mode) && !"cargo".equals(mode)) {
+                    && !"cdt".equals(mode) && !"cargo".equals(mode)
+                    && !"tycho".equals(mode)) {
                 throw new IOException("unsupported Eclipse report mode: " + mode);
             }
             Path packet = null;
             if ("context".equals(mode) || "handoff".equals(mode)
                     || "reconcile".equals(mode) || "jdt".equals(mode)
-                    || "cdt".equals(mode) || "cargo".equals(mode)) {
+                    || "cdt".equals(mode) || "cargo".equals(mode)
+                    || "tycho".equals(mode)) {
                 var declared = ("handoff".equals(mode) || "reconcile".equals(mode)
-                        || "jdt".equals(mode) || "cdt".equals(mode) || "cargo".equals(mode))
+                        || "jdt".equals(mode) || "cdt".equals(mode)
+                        || "cargo".equals(mode) || "tycho".equals(mode))
                         ? getHandoffPacket() : getContextPacket();
                 if (!declared.isPresent()) {
                     throw new IOException("Eclipse source-owner packet was not supplied");
                 }
                 packet = declared.get().getAsFile().toPath().toAbsolutePath().normalize();
                 long maxBytes = ("handoff".equals(mode) || "reconcile".equals(mode)
-                        || "jdt".equals(mode) || "cdt".equals(mode) || "cargo".equals(mode))
+                        || "jdt".equals(mode) || "cdt".equals(mode)
+                        || "cargo".equals(mode) || "tycho".equals(mode))
                         ? 12L * 1024 * 1024 : 1024L * 1024;
                 if (!packet.startsWith(root) || !Files.isRegularFile(packet, LinkOption.NOFOLLOW_LINKS)
                         || Files.size(packet) > maxBytes) {
@@ -219,6 +231,19 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 }
                 rejectLinkedPath(checkout, cargoPacket);
             }
+            Path tychoPacket = null;
+            if ("tycho".equals(mode)) {
+                if (!getTychoPacket().isPresent()) {
+                    throw new IOException("Tycho FINAL p2 source-owner packet was not supplied");
+                }
+                tychoPacket = getTychoPacket().get().getAsFile().toPath().toAbsolutePath().normalize();
+                if (!tychoPacket.startsWith(root)
+                        || !Files.isRegularFile(tychoPacket, LinkOption.NOFOLLOW_LINKS)
+                        || Files.size(tychoPacket) > 16 * 1024) {
+                    throw new IOException("Tycho FINAL p2 source-owner facts must be a project-local file under 16 KiB");
+                }
+                rejectLinkedPath(checkout, tychoPacket);
+            }
             List<String> command = switch (mode) {
                 case "owners" -> M3EclipseModelCommands.owners(
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
@@ -236,6 +261,9 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                         installedProviders);
                 case "cargo" -> M3EclipseModelCommands.cargo(
                         getJavaExecutable().get(), engine.toFile(), cargoPacket.toFile(), packet.toFile(),
+                        installedProviders);
+                case "tycho" -> M3EclipseModelCommands.tychoFinalP2(
+                        getJavaExecutable().get(), engine.toFile(), tychoPacket.toFile(), packet.toFile(),
                         installedProviders);
                 default -> M3EclipseModelCommands.inspect(
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
@@ -265,6 +293,7 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 case "jdt" -> JDT_PREFIX;
                 case "cdt" -> CDT_PREFIX;
                 case "cargo" -> CARGO_PREFIX;
+                case "tycho" -> TYCHO_PREFIX;
                 default -> MODEL_PREFIX;
             };
             if (json.length < expectedPrefix.length + 2

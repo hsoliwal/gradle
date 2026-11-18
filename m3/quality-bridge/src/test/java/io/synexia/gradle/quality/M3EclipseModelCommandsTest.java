@@ -36,6 +36,23 @@ final class M3EclipseModelCommandsTest {
     }
 
     @Test
+    void tychoFinalP2FactsUseOnlyOriginalSourceOwnerPacketsAndMavenReader() {
+        File engine = workspace.resolve("engine.jar").toFile();
+        File tycho = workspace.resolve("p2 facts.ide").toFile();
+        File eclipse = workspace.resolve("eclipse invocation.ide").toFile();
+        File provider = workspace.resolve("tycho.jar").toFile();
+        String classpath = engine.getAbsolutePath() + File.pathSeparator + provider.getAbsolutePath();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", classpath,
+                "io.synexia.maven.polyglot.EclipseModelCli", "tycho-final-p2",
+                tycho.getAbsolutePath(), eclipse.getAbsolutePath()),
+                M3EclipseModelCommands.tychoFinalP2(
+                        "java", engine, tycho, eclipse, List.of(provider)));
+        assertThrows(NullPointerException.class,
+                () -> M3EclipseModelCommands.tychoFinalP2(
+                        "java", engine, tycho, null, List.of()));
+    }
+
+    @Test
     void cargoSourceFactsStayWithOneExactOriginalEclipseInvocation() {
         File engine = workspace.resolve("engine.jar").toFile();
         File cargo = workspace.resolve("rust facts.ide").toFile();

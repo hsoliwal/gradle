@@ -35,6 +35,23 @@ public final class M3EclipseModelCommands {
         return command(javaExecutable, engineJar, eclipseProject, providers, true);
     }
 
+    /** Only final Tycho/p2 source-owner identities; never resolves the target. */
+    public static List<String> tychoFinalP2(String javaExecutable, File engineJar, File tychoFacts,
+            File eclipseHandoff, List<File> providers) {
+        String java = M3QualityCommands.executable(javaExecutable);
+        Objects.requireNonNull(engineJar, "engineJar");
+        Objects.requireNonNull(tychoFacts, "tychoFacts");
+        Objects.requireNonNull(eclipseHandoff, "eclipseHandoff");
+        Objects.requireNonNull(providers, "providers");
+        StringBuilder classpath = new StringBuilder(engineJar.getAbsolutePath());
+        for (File provider : providers) {
+            classpath.append(File.pathSeparator).append(
+                    Objects.requireNonNull(provider, "provider").getAbsolutePath());
+        }
+        return List.of(java, "-Dfile.encoding=UTF-8", "-cp", classpath.toString(),
+                MAIN_CLASS, "tycho-final-p2", tychoFacts.getAbsolutePath(), eclipseHandoff.getAbsolutePath());
+    }
+
     /** Original Corrosion/Cargo locked/offline metadata; never runs Cargo here. */
     public static List<String> cargo(String javaExecutable, File engineJar, File cargoFacts,
             File eclipseHandoff, List<File> providers) {
