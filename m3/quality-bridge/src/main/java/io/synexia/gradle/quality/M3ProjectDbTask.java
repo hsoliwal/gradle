@@ -73,6 +73,7 @@ public abstract class M3ProjectDbTask extends DefaultTask {
         Path log = getBuildLog().isPresent() ? absolute(getBuildLog().get().getAsFile()) : null;
         try {
             requirePaths(root, build, store, report, log);
+            if ("query".equals(getMode().get())) requireExistingStore(store);
             if (plugin.equals(engine)) throw new IOException("M3 project DB and storage JARs must be distinct");
             M3PolyglotCommands.verifyEngine(plugin, getProjectDbSha256().get());
             M3PolyglotCommands.verifyEngine(engine, getPolyglotSha256().get());
@@ -118,6 +119,15 @@ public abstract class M3ProjectDbTask extends DefaultTask {
         }
         for (Path path : List.of(root, build, store, report)) rejectLinks(root, path);
         if (log != null) rejectLinks(root, log);
+    }
+
+    /** A query must not silently create an empty Maven project database. */
+    private static void requireExistingStore(Path store) throws IOException {
+        if (!Files.isDirectory(store, LinkOption.NOFOLLOW_LINKS)
+                || !Files.isDirectory(store.resolve("db"), LinkOption.NOFOLLOW_LINKS)
+                || !Files.isRegularFile(store.resolve(".gitignore"), LinkOption.NOFOLLOW_LINKS)) {
+            throw new IOException("M3 project DB query requires an existing ingested database");
+        }
     }
 
     private static void rejectLinks(Path root, Path file) throws IOException {
