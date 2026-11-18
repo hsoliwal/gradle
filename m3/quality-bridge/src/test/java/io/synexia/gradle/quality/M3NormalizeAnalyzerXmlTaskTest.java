@@ -171,6 +171,7 @@ final class M3NormalizeAnalyzerXmlTaskTest {
                 .withArguments("tasks", "--all")
                 .build();
         assertTrue(result.getOutput().contains("m3NormalizeAnalyzerXml"));
+        assertTrue(result.getOutput().contains("m3NormalizeCompilerDiagnostics"));
         assertTrue(result.getOutput().contains("m3ReviewAnalysis"));
     }
 }

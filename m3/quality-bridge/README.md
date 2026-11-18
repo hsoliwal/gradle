@@ -139,14 +139,42 @@ Maven's standalone engine verifies declared output contents for reuse and
 conservatively rehashes where ctime/file-key evidence is unavailable.
 Maven #147 now introduces module-wide execution locking and transactional
 storage choices; those guarantees belong to the Maven engine and require
-cross-process, native and filesystem-specific qualification. Competing
-[#144](https://github.com/hsoliwal/maven/pull/144)–
-[#146](https://github.com/hsoliwal/maven/pull/146) proposals must not be
-blindly combined. Maven [#148](https://github.com/hsoliwal/maven/pull/148)
+cross-process, native and filesystem-specific qualification. The subsequent
+merged #144–#146 designs were reconciled by Maven #184 into one owning DB;
+this Gradle task never copies their layouts. Maven [#148](https://github.com/hsoliwal/maven/pull/148)
 merged native MIndexDB-backed syntax fingerprint persistence for its own
 smart-builder goal; this Gradle task does not imply that the separate goal
 or its native runtime is installed. Unsupported future backend names fail
 closed, and no Gradle task/output-cache hit is asserted by the M3 state.
+
+#### Maven #184: explicit M3IndexDB state-backend aliases
+
+The separately merged [Maven #184](https://github.com/hsoliwal/maven/pull/184)
+unifies canonical per-module state. The same Maven-owned Java polyglot CLI accepts
+two additional literal selectors: `embedded` (the original `.m3/module.m3db`
+archive; `legacy` aliases it), and `native` (the original
+`.m3/maven-build-db` directory store; `m3db` aliases it). Gradle now forwards
+either exact spelling **only for an explicitly incremental `m3PolyglotRun`**:
+
+```groovy
+tasks.named('m3PolyglotRun') {
+    incremental.set(true)
+    stateBackend.set('embedded') // alias 'legacy'; Maven-owned archive
+    // stateBackend.set('native') // alias 'm3db'; Maven-owned directory
+}
+```
+
+The default remains `legacy` for existing Gradle consumers, with unchanged
+argv. These two additional selectors require a **newer source-pinned Maven
+engine**, not the older pinned #149 binary. CI builds the original Maven
+polyglot JAR from `f92096f8d3eb135d28cf698335a4423ef9179e9d`, verifies
+the donor's own tests, then checks both alias pairs through real Gradle
+TestKit invocations: persistent generation reuse, separate archive/directory
+shapes and output-tamper invalidation. These imports never claim Gradle
+configuration-cache or task output-cache equivalence. The opt-in
+[OpenRewrite consumer recipe](recipes/enable-m3-polyglot-state-bridge.yml)
+adds only plugin availability; it is a reviewed-replay gate, not an automatic
+state migration or a compiler execution recipe.
 
 ### Maven PR #148: opt-in original JDK 21 AST/atom fingerprints
 
@@ -286,6 +314,81 @@ that OS-shared M3String storage or AST adapters already exist in Gradle. The
 M3AST compiler option in this fork remains an independent explicit JavaCompile
 setting; neither task silently enables the other.
 
+## Generic Eclipse language builders (JDT, CDT, RustDT, Corrosion, PyDev, PDE, LSP4E, future plugins)
+
+`m3EclipseBuilders` is an opt-in, read-only companion to `m3EclipseModel`.
+Both tasks delegate to the Maven-authored `EclipseModelCli`, without a second
+parser, Eclipse OSGi runtime or compiler in Gradle. The new report uses
+`m3-eclipse-builder-owners-v1` and preserves original builder order,
+exact extension IDs, registered adapter IDs, unbound natures and descriptor
+hashes. The Maven source owns the versioned `M3EclipseBuilderProvider`
+ServiceLoader interface. Unknown builders remain **unbound**, rather than
+being assigned to javac, clang, cargo or a guessed build command.
+
+```groovy
+plugins { id 'io.synexia.m3.quality' }
+
+tasks.named('m3EclipseBuilders') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+
+    // Optional installed Eclipse builder descriptors; every JAR is separately pinned.
+    // providerJars.from(layout.projectDirectory.file('vendor/eclipse-adapter.jar'))
+    // providerJarSha256.put('eclipse-adapter.jar',
+    //     providers.gradleProperty('m3.eclipse.adapter.sha256'))
+}
+```
+
+Invoke `./gradlew m3EclipseBuilders` explicitly to produce
+`build/reports/m3/eclipse-builders.json`. Merely applying the plugin does
+not execute this task, invoke Eclipse builders, start LSPs, install toolchains,
+resolve CDT build configurations or import Maven projects. The same strict
+checksum validator used by the existing polyglot adapter verifies supplied
+engine and provider JARs. The output is versioned JSON, atomically published
+only after successful CLI completion; it does not authorize task/cache skipping.
+
+Maven now reads **immediate** arbitrary `.settings/` files (bounded and
+without following symlinks) so vendor-specific Eclipse language metadata is
+visible in either model. Nested Eclipse workspaces, actual `IResourceDelta`,
+JDT working copies, `IBuildConfiguration`, CDT `ICBuildConfiguration`,
+Rust/Cargo execution, markers and cancellation still belong to Eclipse or
+their installed owners. Later qualified IDE plugins should exchange those
+real facts through the existing M3 IDE delta wire instead of fabricating them.
+
+### Per-configuration Eclipse build evidence
+
+A separate \`m3EclipseBuildContext\` task now reviews an explicit packet
+written by the original Eclipse/m2e owner. It invokes the **same pinned**
+Maven \`EclipseModelCli context <packet>\` reader and writes
+\`build/reports/m3/eclipse-build-context.json\` with schema
+\`m3-eclipse-build-context-v1\`. It is never attached to the regular
+Gradle \`build\`, \`compileJava\`, or \`check\` tasks.
+
+\`\`\`groovy
+tasks.named('m3EclipseBuildContext') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+    contextPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/build-context.ide'))
+}
+\`\`\`
+
+The parent \`target/ide\` directory and the packet must be supplied explicitly
+by the Eclipse owner (see \`hsoliwal/m2e-core\` PR #18). Gradle checks that the
+packet exists **inside** the selected Eclipse project, is a regular no-follow
+file, and is bounded to 1 MiB. It also checks the original Maven engine JAR
+and any separately provided adapter JARs against their required SHA-256 pins.
+Maven's original parser validates strict canonical UTF-8, records, identities
+and configuration consistency; Gradle does **not** fork the format parser.
+
+The packet distinguishes the **selected** \`IBuildConfiguration\` from the
+currently active one, retaining actual named and default-empty configurations
+and the original builder/nature order. It is read-only metadata. It does not
+enable Gradle task skipping, M3DB output reuse, live Eclipse JDT/CDT/Rust
+compilation, or replace the IDE's native progress/cancellation.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
@@ -325,6 +428,53 @@ source file. Priority 1/2/3-4 maps to ERROR/WARNING/INFO for presentation
 only, not a new SpotBugs detector threshold. Original SpotBugs processing
 errors prohibit COMPLETE, and the original detector, suppressions and
 SpotBugs Maven/Gradle tasks remain authoritative.
+
+### Maven #160 and #178: original ECJ and javac compiler diagnostics
+
+The **additional** opt-in `m3NormalizeCompilerDiagnostics` Gradle task runs the
+same digest-pinned `io.synexia.maven.analysis.NormalizeCli` as
+`m3NormalizeAnalyzerXml`. It defaults to `JAVAC`, `PARTIAL` and distinct
+`build/reports/m3/import/compiler-analysis.{tsv,sha256}` outputs. Select `ECJ`
+for an existing Eclipse Compiler for Java XML `-log` report. The legacy task,
+property names, default Checkstyle format and output locations are unchanged.
+
+```groovy
+plugins { id 'io.synexia.m3.quality' }
+
+tasks.named('m3NormalizeCompilerDiagnostics') {
+    adapterJar.set(layout.projectDirectory.file('vendor/m3-analyzer-report-adapter.jar'))
+    adapterSha256.set(providers.gradleProperty('m3.adapter.sha256'))
+    originalReport.set(layout.projectDirectory.file('build/reports/compiler/javac-utf8.log'))
+    format.set('JAVAC')       // or 'ECJ' for ECJ's existing XML -log file
+    originalStatus.set('PARTIAL') // COMPLETE only if the original compiler attests it
+}
+```
+
+Run `./gradlew m3NormalizeCompilerDiagnostics` explicitly. The task does not
+invoke or replace Gradle `JavaCompile`, the original Eclipse JDT/ECJ compiler,
+`javac`, the original source analysis, or their toolchains and plugins. ECJ's
+log uses source-bound `ecj.<problem-id>` rules and preserves its absent column
+as zero. The Java 21 javac format uses file/line/column when reported, produces
+`javac.<lint-key>` warning rules, and maps `Note:` messages to INFO; both
+normalize to M3-STATIC-ANALYSIS-V1. The original Maven parser owns the complete
+grammar and secure XML handling. No second parser is introduced in Gradle.
+
+For a report that may claim `COMPLETE`, capture the original javac diagnostic
+stream in **English, UTF-8**, e.g. with
+`-J-Duser.language=en -J-Dstderr.encoding=UTF-8`. The corrected Maven
+[#178](https://github.com/hsoliwal/maven/pull/178) adapter refuses a
+`COMPLETE` claim on unreadable/non-English lines; it also rejects truncated
+"only showing the first N errors" summaries as complete. ECJ's original
+DOCTYPE is accepted without loading it, while foreign DOCTYPE/entity inputs
+are refused. A genuine compiler crash must remain `FAILED` or `PARTIAL`.
+
+Existing `m3ReviewAnalysis` may consume this task's two output providers
+only when explicitly wired, just like the Checkstyle/PMD task. The SHA-256
+sidecar proves byte custody, not source completeness or compiler success.
+The source-pinned [OpenRewrite opt-in plugin recipe](recipes/enable-m3-quality-bridge.yml)
+can make the bridge available to a consumer build; activation and actual
+compiler-log selection remain separate. It has not been replayed through
+an OpenRewrite SDK in this environment and is a promotion gate, not a proof.
 
 ## Optional incremental analysis comparison
 
@@ -653,7 +803,8 @@ normalization. The original Semgrep binary/license stays external.
 The focused Gradle CI workflow now includes a **real Maven-to-Gradle
 integration test**, in addition to the original immutable-argv and
 incorrect-SHA refusal tests. The workflow checks out Maven fork commit
-89de67b38249ea914ef252b765e59d2002780e1b, builds the original
+26efa14266288f8cb11c6232bbdc8ea94ae26134 (including the #178
+non-English javac refusal fix), builds the original
 tools/m3-analyzer-report-adapter Java 17 plugin/shaded converter, and
 passes that exact JAR to a Gradle TestKit fixture on both JDK 17 and 21.
 No engine is copied into the Gradle fork.
@@ -673,6 +824,16 @@ dedicated GitHub matrix job explicitly builds and supplies the JAR
 so that the case is not skipped there. Source ownership, tool/rule
 completeness and production analyzer parity require separate tests;
 passing a JAR smoke never authorizes Gradle build cache reuse.
+
+The same pinned Maven source supplies genuine ECJ 3.45.0 and javac 21.0.9
+test fixtures. An additional Gradle TestKit lane invokes the original
+adapter for both and verifies their common file/line/severity facts, seven
+findings (two errors and five warnings), and matching SHA-256 sidecars.
+Another test refuses a German javac log as `COMPLETE` before any success
+report is published. These cases require both `M3_ADAPTER_JAR` and
+`M3_ADAPTER_COMPILER_FIXTURES` locally; GitHub CI supplies the source-pinned
+binary and inputs. No live compiler execution is claimed by a report-import
+test.
 
 ## Native Gradle IDE deltas for Maven and other hosts
 
@@ -704,7 +865,6 @@ prove toolchain, environment or undeclared inputs; only audited native
 tool tasks should opt in. See
 [the experimental polyglot-cache contract](docs/M3-POLYGLOT-CACHE.md)
 for examples, limitations and acceptance gates.
-
 
 ## Per-project M3IndexDB and CPU-only build-evidence retrieval
 

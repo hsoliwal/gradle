@@ -54,19 +54,17 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.getFailOnIntroducedErrors().convention(false);
         });
 
-        // Explicit, originally executed XML reports only; no analyzer invocation.
+        // Explicit, originally executed reports only; no analyzer invocation.
         project.getTasks().register("m3NormalizeAnalyzerXml", M3NormalizeAnalyzerXmlTask.class, task -> {
-            task.setGroup("verification");
+            analyzerDefaults(project, task, "CHECKSTYLE", "analysis");
             task.setDescription("Normalize existing Checkstyle/PMD XML using an explicitly pinned Java adapter");
-            task.getJavaExecutable().convention(
-                    project.getProviders().gradleProperty("m3.analysis.java").orElse("java"));
-            task.getFormat().convention("CHECKSTYLE");
-            task.getOriginalStatus().convention("PARTIAL");
-            task.getProjectRoot().convention(project.getLayout().getProjectDirectory());
-            task.getNormalizedReport().convention(
-                    project.getLayout().getBuildDirectory().file("reports/m3/import/analysis.tsv"));
-            task.getNormalizedSha256().convention(
-                    project.getLayout().getBuildDirectory().file("reports/m3/import/analysis.sha256"));
+        });
+
+        // Maven #160 + #178 own the ECJ and javac parsers, error handling and
+        // incomplete-log refusals. This additional Gradle task is opt-in.
+        project.getTasks().register("m3NormalizeCompilerDiagnostics", M3NormalizeAnalyzerXmlTask.class, task -> {
+            analyzerDefaults(project, task, "JAVAC", "compiler-analysis");
+            task.setDescription("Normalize an existing ECJ XML or English UTF-8 javac log through Maven");
         });
 
         // Native Gradle InputChanges is the source owner; Maven's v1 wire is
@@ -146,13 +144,33 @@ public final class M3QualityPlugin implements Plugin<Project> {
         // Eclipse project descriptors have one Maven-owned parser. Gradle merely
         // supplies an explicit task boundary and immutable engine provenance.
         project.getTasks().register("m3EclipseModel", M3EclipseModelTask.class, task -> {
-            task.setGroup("verification");
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("model");
             task.setDescription("Inspect an Eclipse project through the pinned Maven project-model CLI");
-            task.getJavaExecutable().convention(
-                    project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
-            task.getEclipseProject().convention(project.getLayout().getProjectDirectory());
             task.getModelReport().convention(
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-model.json"));
+        });
+
+        // Arbitrary builder IDs and natures are inventoried by Maven's SPI.
+        // Unbound providers remain unbound; this task cannot invoke an Eclipse builder.
+        project.getTasks().register("m3EclipseBuilders", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("owners");
+            task.setDescription("Inspect Eclipse JDT/CDT/Rust and arbitrary language builder ownership");
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-builders.json"));
+        });
+
+        // Eclipse itself exports the actual IBuildConfiguration of the owning
+        // builder. This separate packet must not be guessed from a .cproject.
+        project.getTasks().register("m3EclipseBuildContext", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("context");
+            task.setDescription("Read an explicit Eclipse-owner build-configuration packet via pinned Maven CLI");
+            task.getContextPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/build-context.ide"));
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-build-context.json"));
         });
 
         // The Maven #184 project DB owns the data and deterministic retrieval.
@@ -183,6 +201,14 @@ public final class M3QualityPlugin implements Plugin<Project> {
         });
     }
 
+    private static void eclipseDefaults(Project project, M3EclipseModelTask task) {
+        task.setGroup("verification");
+        task.getProviderJarSha256().convention(java.util.Map.of());
+        task.getJavaExecutable().convention(
+                project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+        task.getEclipseProject().convention(project.getLayout().getProjectDirectory());
+    }
+
     private static void projectDbDefaults(Project project, M3ProjectDbTask task) {
         task.setGroup("verification");
         task.getJavaExecutable().convention(
@@ -207,5 +233,19 @@ public final class M3QualityPlugin implements Plugin<Project> {
         task.getIncremental().convention(false);
         task.getStateBackend().convention("legacy");
         task.getApproveRewriteApply().convention(false);
+    }
+
+    private static void analyzerDefaults(Project project, M3NormalizeAnalyzerXmlTask task,
+            String format, String reportName) {
+        task.setGroup("verification");
+        task.getJavaExecutable().convention(
+                project.getProviders().gradleProperty("m3.analysis.java").orElse("java"));
+        task.getFormat().convention(format);
+        task.getOriginalStatus().convention("PARTIAL");
+        task.getProjectRoot().convention(project.getLayout().getProjectDirectory());
+        task.getNormalizedReport().convention(
+                project.getLayout().getBuildDirectory().file("reports/m3/import/" + reportName + ".tsv"));
+        task.getNormalizedSha256().convention(
+                project.getLayout().getBuildDirectory().file("reports/m3/import/" + reportName + ".sha256"));
     }
 }

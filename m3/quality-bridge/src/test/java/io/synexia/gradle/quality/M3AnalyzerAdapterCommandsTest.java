@@ -102,6 +102,25 @@ final class M3AnalyzerAdapterCommandsTest {
     }
 
     @Test
+    void originalMavenCompilerDiagnosticReadersAreExplicitAndShellFree() {
+        for (String format : List.of("ECJ", "JAVAC")) {
+            var args = M3AnalyzerAdapterCommands.normalize(
+                    "java", new File("m3-analyzer-report-adapter.jar"), new File("."),
+                    new File("build/reports/compiler.log"),
+                    new File("build/reports/m3/import/compiler-analysis.tsv"),
+                    new File("build/reports/m3/import/compiler-analysis.sha256"), format, "PARTIAL");
+            assertEquals("io.synexia.maven.analysis.NormalizeCli", args.get(3));
+            assertEquals(format, args.get(4));
+            assertEquals("PARTIAL", args.get(5));
+            assertEquals(10, args.size());
+            assertFalse(args.contains("javac"));
+            assertFalse(args.contains("ecj"));
+            assertFalse(args.contains("sh"));
+            assertThrows(UnsupportedOperationException.class, () -> args.add("--compile"));
+        }
+    }
+
+    @Test
     void forbidsImplicitFormatsStatusAndUnqualifiedBinaries() {
         var jar = new File("adapter.jar");
         var root = new File(".");

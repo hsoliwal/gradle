@@ -36,6 +36,8 @@ jobs:
         run: sh m3/quality-bridge/scripts/verify-portable-backends.sh
       - name: Verify original Maven JDK21 fingerprint argv contract without Gradle dependencies
         run: sh m3/quality-bridge/scripts/verify-machine-fingerprint-args.sh
+      - name: Verify Maven ECJ and javac original diagnostic adapter argv
+        run: sh m3/quality-bridge/scripts/verify-compiler-diagnostics-args.sh
       - name: Verify canonical Maven IDE-delta v1 bytes using Java 17
         run: sh m3/quality-bridge/scripts/verify-ide-delta.sh
       - name: Verify Maven #149 local-cache Java 17 argv contract
@@ -52,11 +54,13 @@ jobs:
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge tasks --all --configuration-cache
 
-      - name: Check out exact Maven converter source version for cross-build proof
+      # Maven #160 introduced ECJ/javac normalization. #178 fixes false
+      # COMPLETE for unreadable/non-English javac output; do not pin #160 alone.
+      - name: Check out corrected Maven #178 converter source for cross-build proof
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: 89de67b38249ea914ef252b765e59d2002780e1b
+          ref: 26efa14266288f8cb11c6232bbdc8ea94ae26134
           path: m3-maven-adapter
           persist-credentials: false
       - name: Build original Maven converter with its real shaded JSON parser
@@ -68,6 +72,12 @@ jobs:
           export M3_ADAPTER_JAR="$GITHUB_WORKSPACE/m3-maven-adapter/tools/m3-analyzer-report-adapter/target/m3-analyzer-report-adapter-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3NormalizeAnalyzerXmlTaskTest' --rerun-tasks
+      - name: Exercise actual Maven ECJ and javac diagnostics through Gradle TestKit
+        run: |
+          export M3_ADAPTER_JAR="$GITHUB_WORKSPACE/m3-maven-adapter/tools/m3-analyzer-report-adapter/target/m3-analyzer-report-adapter-0.1.0-SNAPSHOT.jar"
+          export M3_ADAPTER_COMPILER_FIXTURES="$GITHUB_WORKSPACE/m3-maven-adapter/tools/m3-analyzer-report-adapter/src/test/resources/compiler"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3CompilerDiagnosticsRealEngineTest' --rerun-tasks
 
       # Source custody: Maven #143/#147/#148 plus #155 QDox/lint build repair
       # and #149 polyglot cache; pin the merged source rather than moving master.
@@ -95,6 +105,25 @@ jobs:
           export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-polyglot/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3PolyglotCacheRealEngineTest' --rerun-tasks
+
+      # Maven #184 unifies M3IndexDB storage and admits embedded/legacy and
+      # native/m3db aliases. Use a newer pinned engine separately from #149.
+      - name: Check out merged Maven M3IndexDB reconciliation source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: f92096f8d3eb135d28cf698335a4423ef9179e9d
+          path: m3-maven-state-aliases
+          persist-credentials: false
+      - name: Verify Maven original #184 backend contract and module DB
+        run: |
+          mvn -B -ntp -f m3-maven-state-aliases/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-state-aliases/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Verify Maven embedded/native aliases by real Gradle TestKit executions
+        run: |
+          export M3_POLYGLOT_STATE_ALIAS_JAR="$GITHUB_WORKSPACE/m3-maven-state-aliases/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3PolyglotStateAliasesRealEngineTest' --rerun-tasks
 
       # Exact same Maven review commit also contains merged #148. Only JDK21
       # can execute its original compiler/JavacTask-based AST producer.
