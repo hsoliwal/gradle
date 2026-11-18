@@ -37,6 +37,23 @@ Commands did **not** require Maven or Gradle to be installed.
 | Explicit Maven #149 cache argv | `M3QualityCommands.java` `be54216c2e51d269b4dae24f828e8bb06ebc1df9`, `M3PolyglotCommands.java` `78026fb0afa1acbece9d6a137b44a6d287b014ea`, `M3PolyglotCacheArgsContractMain.java` `ad36ab7dd78d3758343d8de65bdb726d555289fe` | PASS, backward-compatible overloads and run-only cache arguments |
 | Repaired CI workflow | `m3-gradle-quality-bridge.yml` `d468d2d75a3009f2bda01821a2ed421271851d97`, `verify-quality-workflow.sh` `9931e32db0926f055a25c9928bbec7bf09b85b45` | PASS, shell script syntax and execution, canonical YAML parsing, 18 workflow steps and all 13 source-pin/lane assertions |
 
+## Negative guard challenge (executed)
+
+The exact workflow source was copied to an isolated review directory,
+then the `M3PolyglotCacheRealEngineTest` invocation was deliberately
+replaced with an unrelated test selector. Running
+`sh m3/quality-bridge/scripts/verify-quality-workflow.sh` rejected it
+with the exact expected diagnostic:
+
+~~~text
+Expected one workflow contract entry (test --tests '*M3PolyglotCacheRealEngineTest' --rerun-tasks), found 0
+~~~
+
+After restoring the original Git-blob-matched YAML, the same guard
+returned `PASS: source-pinned M3 Gradle/Maven CI lanes retained`.
+This qualifies the guard's positive and missing-lane refusal behavior,
+not the underlying TestKit runtime.
+
 ## Unrun mandatory gates
 
 - Gradle 9.9.1 distribution, `m3/quality-bridge test` and Gradle
