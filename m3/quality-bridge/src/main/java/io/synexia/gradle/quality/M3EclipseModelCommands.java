@@ -18,10 +18,38 @@ public final class M3EclipseModelCommands {
     private M3EclipseModelCommands() {}
 
     public static List<String> inspect(String javaExecutable, File engineJar, File eclipseProject) {
+        return inspect(javaExecutable, engineJar, eclipseProject, List.of());
+    }
+
+    public static List<String> inspect(String javaExecutable, File engineJar,
+            File eclipseProject, List<File> providers) {
+        return command(javaExecutable, engineJar, eclipseProject, providers, false);
+    }
+
+    public static List<String> owners(String javaExecutable, File engineJar, File eclipseProject) {
+        return owners(javaExecutable, engineJar, eclipseProject, List.of());
+    }
+
+    public static List<String> owners(String javaExecutable, File engineJar,
+            File eclipseProject, List<File> providers) {
+        return command(javaExecutable, engineJar, eclipseProject, providers, true);
+    }
+
+    private static List<String> command(String javaExecutable, File engineJar,
+            File eclipseProject, List<File> providers, boolean owners) {
         String java = M3QualityCommands.executable(javaExecutable);
         Objects.requireNonNull(engineJar, "engineJar");
         Objects.requireNonNull(eclipseProject, "eclipseProject");
-        return List.of(java, "-Dfile.encoding=UTF-8", "-cp", engineJar.getAbsolutePath(), MAIN_CLASS,
-                eclipseProject.getAbsolutePath());
+        Objects.requireNonNull(providers, "providers");
+        StringBuilder classpath = new StringBuilder(engineJar.getAbsolutePath());
+        for (File provider : providers) {
+            classpath.append(File.pathSeparator).append(
+                    Objects.requireNonNull(provider, "provider").getAbsolutePath());
+        }
+        return owners ? List.of(java, "-Dfile.encoding=UTF-8", "-cp", classpath.toString(),
+                MAIN_CLASS, "owners", eclipseProject.getAbsolutePath())
+                : List.of(java, "-Dfile.encoding=UTF-8", "-cp", classpath.toString(),
+                        MAIN_CLASS, eclipseProject.getAbsolutePath());
     }
+
 }
