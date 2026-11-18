@@ -52,6 +52,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             .getBytes(StandardCharsets.UTF_8);
     private static final byte[] HANDOFF_PREFIX = "{\"schema\":\"m3-eclipse-build-handoff-v1\""
             .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] RECONCILE_PREFIX = "{\"schema\":\"m3-eclipse-reconciliation-v1\""
+            .getBytes(StandardCharsets.UTF_8);
 
     @Input
     public abstract Property<String> getJavaExecutable();
@@ -122,17 +124,20 @@ public abstract class M3EclipseModelTask extends DefaultTask {
 
             String mode = getReportMode().get();
             if (!"model".equals(mode) && !"owners".equals(mode)
-                    && !"context".equals(mode) && !"handoff".equals(mode)) {
+                    && !"context".equals(mode) && !"handoff".equals(mode)
+                    && !"reconcile".equals(mode)) {
                 throw new IOException("unsupported Eclipse report mode: " + mode);
             }
             Path packet = null;
-            if ("context".equals(mode) || "handoff".equals(mode)) {
-                var declared = "handoff".equals(mode) ? getHandoffPacket() : getContextPacket();
+            if ("context".equals(mode) || "handoff".equals(mode) || "reconcile".equals(mode)) {
+                var declared = ("handoff".equals(mode) || "reconcile".equals(mode))
+                        ? getHandoffPacket() : getContextPacket();
                 if (!declared.isPresent()) {
                     throw new IOException("Eclipse source-owner packet was not supplied");
                 }
                 packet = declared.get().getAsFile().toPath().toAbsolutePath().normalize();
-                long maxBytes = "handoff".equals(mode) ? 12L * 1024 * 1024 : 1024L * 1024;
+                long maxBytes = ("handoff".equals(mode) || "reconcile".equals(mode))
+                        ? 12L * 1024 * 1024 : 1024L * 1024;
                 if (!packet.startsWith(root) || !Files.isRegularFile(packet, LinkOption.NOFOLLOW_LINKS)
                         || Files.size(packet) > maxBytes) {
                     throw new IOException("Eclipse source-owner packet must be project-local and bounded");
@@ -146,6 +151,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                         getJavaExecutable().get(), engine.toFile(), packet.toFile(), installedProviders);
                 case "handoff" -> M3EclipseModelCommands.handoff(
                         getJavaExecutable().get(), engine.toFile(), packet.toFile(), installedProviders);
+                case "reconcile" -> M3EclipseModelCommands.reconcile(
+                        getJavaExecutable().get(), engine.toFile(), root.toFile(), packet.toFile(), installedProviders);
                 default -> M3EclipseModelCommands.inspect(
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
             };
@@ -170,6 +177,7 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 case "owners" -> OWNERS_PREFIX;
                 case "context" -> CONTEXT_PREFIX;
                 case "handoff" -> HANDOFF_PREFIX;
+                case "reconcile" -> RECONCILE_PREFIX;
                 default -> MODEL_PREFIX;
             };
             if (json.length < expectedPrefix.length + 2
