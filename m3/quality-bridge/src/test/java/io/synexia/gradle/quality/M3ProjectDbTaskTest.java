@@ -71,6 +71,13 @@ final class M3ProjectDbTaskTest {
         String outside = run("m3ProjectDbIngest", true);
         assertTrue(outside.contains("project-local store"), outside);
         assertFalse(Files.exists(root.resolve("m3-projectdb-argv.txt")));
+
+        Files.createDirectories(root.resolve("src"));
+        Files.writeString(root.resolve("build.gradle"), original
+                + "tasks.named('m3ProjectDbIngest') { storageDirectory.set(layout.projectDirectory.dir('src')) }\n");
+        String sourceStore = run("m3ProjectDbIngest", true);
+        assertTrue(sourceStore.contains("project-local store"), sourceStore);
+        assertFalse(Files.exists(root.resolve("m3-projectdb-argv.txt")));
     }
 
     private void fixture() throws Exception {
