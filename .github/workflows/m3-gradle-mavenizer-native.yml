@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 Contributors to the Synexia Project
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle original Mavenizer Rebar3 and Composer evidence
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - 'm3/MAVEN_GRADLE_CONVERGENCE.md'
+      - '.github/workflows/m3-gradle-mavenizer-native.yml'
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - 'm3/MAVEN_GRADLE_CONVERGENCE.md'
+      - '.github/workflows/m3-gradle-mavenizer-native.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-owned-native-manifest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Guard merged Maven source and real-engine TestKit selection
+        run: sh m3/quality-bridge/scripts/verify-mavenizer-native-workflow.sh
+      - name: Checkout merged Maven #212 native Mavenizer source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 95bc17f8212350af1632e16990e985f8a2ee72cb
+          path: m3-maven-native-mavenizer
+          persist-credentials: false
+      - name: Verify original Mavenizer and build original polyglot JAR
+        run: |
+          mvn -B -ntp -f m3-maven-native-mavenizer/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-native-mavenizer/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Plan original Rebar3 and Composer phases through Gradle TestKit
+        run: |
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-native-mavenizer/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3MavenizerNativePhasesRealEngineTest' --rerun-tasks

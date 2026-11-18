@@ -76,6 +76,13 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
     @Input
     public abstract Property<String> getStateBackend();
 
+    /**
+     * Explicit current/legacy M3JDK database package access. The original
+     * Maven engine still selects the backend and rejects missing native owners.
+     */
+    @Input
+    public abstract Property<String> getM3DbModuleAccess();
+
     @Input
     public abstract Property<Boolean> getApproveRewriteApply();
 
@@ -123,7 +130,7 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
                 getJavaExecutable().get(), engine.toFile(), root.toFile(), manifest.toFile(),
                 getTarget().get(), getMode().get(), getTimeoutSeconds().get(),
                 getIncremental().get(), getApproveRewriteApply().get(), providerJars,
-                getStateBackend().get(), localCache);
+                getStateBackend().get(), localCache, getM3DbModuleAccess().get());
         getExecOperations().exec(spec -> {
             spec.setExecutable(command.get(0));
             spec.setArgs(command.subList(1, command.size()));

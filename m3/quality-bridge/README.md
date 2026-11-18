@@ -93,6 +93,46 @@ ABI, output-content or transitive-dependency equivalence; do not use it as an
 unqualified build-cache correctness claim. Rewrite application requires explicit
 separate approval and the source-owned recipe/compile/test gates.
 
+### Original Maven #212 Rebar3/Erlang and Composer/PHP phases
+
+Merged [Maven #212](https://github.com/hsoliwal/maven/pull/212) teaches the
+**original Mavenizer** to emit native tasks for Erlide/Rebar3 and Eclipse
+PDT/Composer workspaces. Gradle does not duplicate Mavenizer's detection,
+rewrite its generated `m3-build.tsv`, or create its own command grammar. The
+existing `m3PolyglotPlan` accepts that same strict manifest when its original
+polyglot engine JAR and exact SHA-256 are configured as shown above.
+
+| Original Mavenizer source file | Explicit phase and native command |
+| --- | --- |
+| `rebar.config` | `compile`: `rebar3 compile` |
+| `rebar.config` and a `test/` directory | `test`: `rebar3 eunit` |
+| `composer.json` | `validate`: `composer validate --no-check-publish` |
+| `composer.json` with `phpunit.xml` or `.dist` | `test`: `composer exec phpunit` |
+
+The real cross-build TestKit case
+`M3MavenizerNativePhasesRealEngineTest` runs Maven's **public**
+`Mavenizer.mavenize` API from the original JAR against a temporary fixture.
+It proves the no-write planning mode, then lets original Mavenizer produce
+its `pom.xml` and manifest; Gradle invokes only its existing
+`m3PolyglotPlan` against that output for `compile`, `validate` and `test`.
+There is no Composer installation, Rebar3 invocation, PHP interpreter,
+network operation, or implicit task execution in the fixture. Maven's POM
+profile and manifest generation remain Maven-owned, and manifest planning
+is *not* an assertion of usable external toolchains.
+
+The dedicated CI lane `.github/workflows/m3-gradle-mavenizer-native.yml`
+builds **exactly** merged Maven #212 at
+`95bc17f8212350af1632e16990e985f8a2ee72cb`, runs its original
+`verify` contracts, and then selects this real-engine TestKit class on
+Java 17 and 21. Without the explicitly supplied `M3_POLYGLOT_JAR`, local
+TestKit skips only this cross-repository case; a skip is **not** a pass.
+The source-pin guard lives at
+`m3/quality-bridge/scripts/verify-mavenizer-native-workflow.sh`.
+The opt-in, recipe-first consumer is
+`m3/quality-bridge/recipes/enable-m3-native-manifest-bridge.yml`.
+The hosted workflow outcome and independent recipe replay are still required
+for acceptance; neither native tool is part of a qualified Gradle cache key.
+
 ### Original Maven #198 LLVM compiler provider, available from Gradle
 
 Merged [Maven #198](https://github.com/hsoliwal/maven/pull/198) introduces the
@@ -142,10 +182,63 @@ inputs do not yet form a complete M3DB cache key. CI smoke does **not**
 qualify the user's own LLVM fork binary, Flang, `llc`, Objective-C,
 cross-compilation, linking, LLVM/MLIR passes or Windows/macOS. Follow-up
 [Maven #199](https://github.com/hsoliwal/maven/pull/199) subsequently
-merged shared LLVM-home and binary-pin selection; do not infer that this
-newer behavior exists in the older source-pinned #198 CI engine. The opt-in
+**merged** shared LLVM-home and binary-pin selection, and
+[Maven #219](https://github.com/hsoliwal/maven/pull/219) later merged
+compiler/CMake/Clang-AST alias convergence. Neither feature is implicitly
+included in the **older** original Maven #198 binary pinned in this
+TestKit lane; qualify newer source revisions independently. The opt-in
 [OpenRewrite consumer recipe](recipes/enable-m3-llvm-provider-bridge.yml)
 installs the plugin only and requires SDK replay before promotion.
+
+### Maven #203: separately installed LLVM/MLIR/LLD pipeline provider
+
+Merged [Maven #203](https://github.com/hsoliwal/maven/pull/203) adds native
+`assembler`, `linker` and `optimizer` capability slugs to the *same* original
+provider SPI, plus an optional artifact
+`io.synexia:m3-llvm-tools-provider:0.1.0-SNAPSHOT`. Its original
+`ServiceLoader` implementation forwards arguments to `opt`, `mlir-opt`,
+`llvm-as`, `llvm-link`, `mlir-translate`, LLD drivers, `llvm-lit` and
+`FileCheck`. Gradle owns none of those tools or their cache identity.
+
+Build the **two original Maven JARs** from source pinned to merged commit
+`3441dc1e91a2835b7b6bca608ffb9676565d9eff`, and configure the existing
+tasks with *independent* content digests. For example, after placing the
+verified original artifacts in `vendor`:
+
+```groovy
+plugins { id 'io.synexia.m3.quality' }
+
+['m3PolyglotProviders', 'm3PolyglotPlan', 'm3PolyglotRun'].each { id ->
+    tasks.named(id) {
+        engineJar.set(layout.projectDirectory.file('vendor/maven-polyglot.jar'))
+        engineSha256.set(providers.gradleProperty('m3.llvm.engine.sha256'))
+        providerJars.from(layout.projectDirectory.file('vendor/llvm-tools.jar'))
+        providerJarSha256.put('llvm-tools.jar',
+            providers.gradleProperty('m3.llvm.tools.sha256'))
+    }
+}
+tasks.named('m3PolyglotPlan') { target.set('link') }
+tasks.named('m3PolyglotRun')  { target.set('link') }
+```
+
+Supply the exact original Maven #203
+[`example/llvm-ir/m3-build.tsv`](https://github.com/hsoliwal/maven/blob/3441dc1e91a2835b7b6bca608ffb9676565d9eff/tools/m3-llvm-tools-provider/example/llvm-ir/m3-build.tsv)
+and `hello.ll`. `./gradlew m3PolyglotProviders` inventories the external
+provider; `./gradlew m3PolyglotPlan` shows its `opt -> llvm-as -> llvm-link`
+pipeline without running it. Only an explicit `m3PolyglotRun` requests
+native execution. Maven's optional `--m3-llvm-bin=`, `--m3-llvm-home=` and
+`--m3-llvm-sha256=` selectors remain Maven-owned; a selected missing binary
+fails planning without silently falling back to PATH. Native toolchain,
+ABI, pass plugins, sysroot, output state and Gradle build-cache hits are
+**not** inferred from the provider inventory or a successful plan.
+
+The Gradle side has a standalone Java 17 schema contract at
+`scripts/verify-llvm-tools-inventory.sh` and an independent JDK17/21
+source-pinned TestKit lane. This is compatibility with Maven's merged SPI,
+not a claim that the reviewed LLVM fork was built or that LLVM execution is
+qualified on every platform. The existing
+[OpenRewrite opt-in recipe](recipes/enable-m3-llvm-provider-bridge.yml)
+applies to both LLVM adapters, and no build task is wired automatically.
 
 ### Maven PRs #143 and #147: opt-in portable module-local state
 
@@ -264,6 +357,53 @@ configuration-cache or task output-cache equivalence. The opt-in
 [OpenRewrite consumer recipe](recipes/enable-m3-polyglot-state-bridge.yml)
 adds only plugin availability; it is a reviewed-replay gate, not an automatic
 state migration or a compiler execution recipe.
+
+#### Maven #220: explicit access to M3JDK-owned M3DB
+
+Merged [Maven #220](https://github.com/hsoliwal/maven/pull/220) at
+`c19789716fab23db8b46180f9fd8982bdff298d0` prefers the current
+`jdk.m3.db.M3DB` platform engine, accepts the older
+`jdk.m3.indexdb.M3IndexDB` and refuses `m3db` / `native` when neither
+platform nor a separately reviewed donor database runtime is installed.
+This is **Maven's** runtime binding and storage implementation, not a
+replacement of Gradle's native task state or build cache.
+
+When a reviewed M3JDK distribution is actually installed, the Gradle
+run task can export the appropriate M3JDK package to the digest-pinned,
+original Maven polyglot CLI:
+
+```groovy
+tasks.named('m3PolyglotRun') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    javaExecutable.set('/reviewed/M3jdk21/bin/java') // explicitly installed JDK
+    incremental.set(true)
+    stateBackend.set('m3db') // 'native' is the original Maven alias
+    m3DbModuleAccess.set('current-java-base')
+}
+```
+
+The literal `current-java-base` adds only
+`--add-exports=java.base/jdk.m3.db=ALL-UNNAMED`. Use `current-named` for
+`--add-modules=jdk.m3.db` plus the matching package export, or the
+`legacy-java-base` / `legacy-named` choices for `jdk.m3.indexdb`.
+`none` (the default) adds **no JVM arguments**, maintaining the exact
+old Maven CLI argv. This is a closed set, not an arbitrary JVM option
+escape hatch. Module access is allowed only on an explicitly incremental
+`m3PolyglotRun` using the `m3db` or `native` backend. Planning and
+all other backends refuse it. Merely selecting a JVM flag cannot create
+the M3JDK database module or overcome Java access validation.
+
+The offline command contract is
+`sh m3/quality-bridge/scripts/verify-m3jdk-db-module-access.sh`.
+Dedicated `.github/workflows/m3-gradle-m3jdk-db-module-access.yml`
+pins the merged #220 producer, runs its real Maven `verify` and on
+stock Java 17/21 checks **native-backend refusal** and **injection
+refusal** through real Gradle TestKit. This test does not assert positive
+patched-JDK deployment, output-cache hits, or reusable Gradle up-to-date
+facts. The [opt-in OpenRewrite recipe](recipes/enable-m3jdk-db-module-access.yml)
+only installs plugin availability; the reviewed M3JDK and Maven source
+pin, module selection, and actual recipe replay remain operator gates.
 
 ### Maven PR #148: opt-in original JDK 21 AST/atom fingerprints
 
@@ -550,6 +690,52 @@ project-local packet check, safe output destination, bounded UTF-8
 capture and atomic report publication. JDT, CDT, RustDT/Corrosion,
 PDE, PyDev, Xtext and other Eclipse plugins still own their live
 language and build state.
+
+### Native Eclipse/Polyglot descriptor acceptance
+
+The optional `M3EclipseNativeDescriptorsRealEngineTest` uses the same pinned
+Maven engine artifact as `m3EclipseModel`; it does not embed an Eclipse
+parser, compiler or resource watcher in Gradle. It checks Maven's
+`m3-eclipse-project-v1` output for original PDE/OSGi manifests and
+`*.target` files, CDT/CMake, Rust/Cargo, Swift, Python and Node metadata,
+including exact SHA-256 byte custody. It checks that generated output trees
+are excluded, changing a PDE target changes its digest, and no source is
+rewritten. Existing m2e, Gradle and Maven lifecycle contracts are untouched.
+
+To run the real cross-repository acceptance after building/reviewing Maven's
+`m3-polyglot-maven-plugin` JAR, set `M3_POLYGLOT_JAR` to its absolute path
+and execute:
+
+```sh
+./gradlew -p m3/quality-bridge test
+```
+
+The ordinary offline TestKit suite skips this external-JAR integration if
+`M3_POLYGLOT_JAR` is absent; it is **not** a passing acceptance test in
+that case. The Maven JAR must incorporate the source-owned language
+descriptor changes in Maven PR #211. No task is automatically bound to
+`build`, `check` or `compileJava`, and source hashes alone never
+authorize cache restoration.
+
+The independent GitHub Actions lane
+`.github/workflows/m3-gradle-eclipse-descriptors.yml` checks out **exactly**
+merged Maven #211 (`2b4ea06f34d785b78a7811ca59cf6d24efb02287`),
+builds and verifies its original polyglot JAR, and invokes these TestKit
+checks with `M3_POLYGLOT_JAR` set on **both Java 17 and 21**. Alongside the
+positive native-descriptor SHA-256/change test, the cross-fork acceptance
+checks Maven's original bounded `*.target`/`*.product` admission (129
+descriptors refused) and rejection of a symlinked `plugin.xml` without
+reading its external contents. The shell guard
+`m3/quality-bridge/scripts/verify-eclipse-descriptor-workflow.sh` refuses
+the accidental removal of the exact producer revision or real-engine
+TestKit selector. This is a CI specification, **not** evidence of a
+passing hosted run before the workflow has executed.
+
+For recipe-first adoption, the additive, opt-in OpenRewrite recipe
+`m3/quality-bridge/recipes/enable-m3-eclipse-descriptor-bridge.yml`
+only installs the quality plugin. A consumer still configures the original
+Maven engine JAR and digest and explicitly calls `m3EclipseModel`; the
+recipe does not attempt to parse descriptors or register a source mutation.
 
 ## Maven-to-Gradle static-analysis report compatibility
 

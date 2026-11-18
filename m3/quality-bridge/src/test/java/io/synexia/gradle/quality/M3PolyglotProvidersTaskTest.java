@@ -71,6 +71,30 @@ class M3PolyglotProvidersTaskTest {
     }
 
     @Test
+    void acceptsMaven203NativeLlvmCapabilityInventory() throws Exception {
+        fixture();
+        String inventory = "M3-POLYGLOT-PROVIDERS-V1\n"
+                + "provider\tllvm-tools\tassembler,interpreter,linker,optimizer,transpiler\t"
+                + "coff,elf,filecheck,lit,llvm-ir,macho,mlir,wasm\n";
+        configuration(engine(inventory));
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotProviders", "--stacktrace").build();
+        assertEquals(inventory,
+                Files.readString(workspace.resolve("build/reports/m3/polyglot-providers.tsv")));
+    }
+
+    @Test
+    void refusesUnknownNativeCapabilityEvenFromPinnedCli() throws Exception {
+        fixture();
+        configuration(engine("M3-POLYGLOT-PROVIDERS-V1\n"
+                + "provider\tllvm-tools\tassembler,rewriter\tllvm-ir\n"));
+        String output = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotProviders", "--stacktrace").buildAndFail().getOutput();
+        assertTrue(output.contains("M3 Maven provider inventory refused"), output);
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/polyglot-providers.tsv")));
+    }
+
+    @Test
     void loadsExplicitlyPinnedExternalProviderJarOnMavenRuntimeClasspath() throws Exception {
         fixture();
         String digest = engine("M3-POLYGLOT-PROVIDERS-V1\nprovider\tjdk\tcompiler\tjava\n");

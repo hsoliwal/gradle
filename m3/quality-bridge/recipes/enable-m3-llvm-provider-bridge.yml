@@ -1,15 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # Recipe-first, opt-in consumer plugin installation. A separately SHA-256
-# pinned Maven #198+ engine and native LLVM binaries are operator-supplied.
+# pinned Maven #198+ engine, optional Maven #203 SPI JAR and native LLVM
+# binaries are operator-supplied. No SHA or toolchain is auto-installed.
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: io.synexia.gradle.recipe.EnableM3LlvmProviderBridge
-displayName: Enable the optional LLVM compiler bridge in Gradle
+displayName: Enable the optional LLVM compiler and pipeline bridges in Gradle
 description: >-
   Make the installed M3 Gradle quality plugin available in a chosen build.
-  LLVM compiler tasks must separately select a source-pinned original Maven
-  polyglot engine, a declared manifest and an installed original LLVM toolchain.
-  This recipe runs no native compilers and attaches no tasks to build or check.
+  Compiler and LLVM/MLIR/LLD pipeline tasks must separately select the
+  source-pinned original Maven polyglot engine, the optional Maven #203
+  m3-llvm-tools-provider JAR with its own SHA-256, a declared manifest and
+  the installed native LLVM toolchain. This recipe runs no native tools
+  and attaches no tasks to build or check.
 recipeList:
   - org.openrewrite.gradle.plugins.AddPlugin:
       pluginId: io.synexia.m3.quality
