@@ -36,6 +36,21 @@ final class M3EclipseModelCommandsTest {
     }
 
     @Test
+    void jdtCompilerFactsRequireBothOriginalOwnerPathsAndPinnedEngine() {
+        File engine = workspace.resolve("engine.jar").toFile();
+        File jdt = workspace.resolve("jdt compiler.ide").toFile();
+        File eclipse = workspace.resolve("eclipse invocation.ide").toFile();
+        File adapter = workspace.resolve("jdt-adapter.jar").toFile();
+        String classpath = engine.getAbsolutePath() + File.pathSeparator + adapter.getAbsolutePath();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", classpath,
+                "io.synexia.maven.polyglot.EclipseModelCli", "jdt-facts",
+                jdt.getAbsolutePath(), eclipse.getAbsolutePath()),
+                M3EclipseModelCommands.jdt("java", engine, jdt, eclipse, List.of(adapter)));
+        assertThrows(NullPointerException.class,
+                () -> M3EclipseModelCommands.jdt("java", engine, null, eclipse, List.of()));
+    }
+
+    @Test
     void modelReconciliationPreservesBothOriginalPathArguments() {
         File engine = workspace.resolve("engine.jar").toFile();
         File project = workspace.resolve("Eclipse project").toFile();
