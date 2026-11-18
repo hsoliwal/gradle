@@ -35,6 +35,23 @@ public final class M3EclipseModelCommands {
         return command(javaExecutable, engineJar, eclipseProject, providers, true);
     }
 
+    /** Original CDT scanner and per-configuration source-owner claims. */
+    public static List<String> cdt(String javaExecutable, File engineJar, File cdtFacts,
+            File eclipseHandoff, List<File> providers) {
+        String java = M3QualityCommands.executable(javaExecutable);
+        Objects.requireNonNull(engineJar, "engineJar");
+        Objects.requireNonNull(cdtFacts, "cdtFacts");
+        Objects.requireNonNull(eclipseHandoff, "eclipseHandoff");
+        Objects.requireNonNull(providers, "providers");
+        StringBuilder classpath = new StringBuilder(engineJar.getAbsolutePath());
+        for (File provider : providers) {
+            classpath.append(File.pathSeparator).append(
+                    Objects.requireNonNull(provider, "provider").getAbsolutePath());
+        }
+        return List.of(java, "-Dfile.encoding=UTF-8", "-cp", classpath.toString(),
+                MAIN_CLASS, "cdt-facts", cdtFacts.getAbsolutePath(), eclipseHandoff.getAbsolutePath());
+    }
+
     /** Original JDT compiler claims, matched to an exact Eclipse invocation. */
     public static List<String> jdt(String javaExecutable, File engineJar, File jdtFacts,
             File eclipseHandoff, List<File> providers) {

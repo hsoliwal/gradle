@@ -205,6 +205,60 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void reviewsCdtFactsOnlyThroughOriginalPinnedMavenCodec() throws Exception {
+        fixture();
+        Path original = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Files.writeString(original.resolve("cdt-compiler-facts.ide"),
+                "M3-CDT-COMPILER-FACTS-V1\nsource-owner-fixture\n");
+        Files.writeString(original.resolve("build-handoff.ide"),
+                "M3-ECLIPSE-BUILD-HANDOFF-V1\nsource-owner-fixture\n");
+        String report = "{\"schema\":\"m3-cdt-compiler-facts-v1\","
+                + "\"project\":\"fixture\",\"cdtConfigId\":\"native.Debug\","
+                + "\"authorizesBuildSkipping\":false}\r\n";
+        String digest = engine(report);
+        configuration(digest, "m3EclipseCdtFacts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseCdtFacts') {\n"
+                + "  cdtPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/cdt-compiler-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        Path output = workspace.resolve("build/reports/m3/eclipse-cdt-facts.json");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("tasks", "--all").build();
+        assertFalse(Files.exists(output), "CDT evidence task cannot execute during configuration");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseCdtFacts", "--stacktrace").build();
+        assertEquals(report.replace("\r\n", "\n"), Files.readString(output));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-jdt-facts.json")),
+                "CDT task must not accidentally execute JDT or its report writer");
+    }
+
+    @Test
+    void refusesCdtFactSchemaSubstitutionBeforePublishingAnyReport() throws Exception {
+        fixture();
+        Path original = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Files.writeString(original.resolve("cdt-compiler-facts.ide"),
+                "M3-CDT-COMPILER-FACTS-V1\noriginal-fixture\n");
+        Files.writeString(original.resolve("build-handoff.ide"),
+                "M3-ECLIPSE-BUILD-HANDOFF-V1\noriginal-fixture\n");
+        String digest = engine("{\"schema\":\"m3-jdt-compiler-facts-v1\"}\n");
+        configuration(digest, "m3EclipseCdtFacts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseCdtFacts') {\n"
+                + "  cdtPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/cdt-compiler-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        var result = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseCdtFacts", "--stacktrace").buildAndFail();
+        assertTrue(result.getOutput().contains("M3 Eclipse model inspection refused"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-cdt-facts.json")));
+    }
+
+    @Test
     void reviewsJdtFactsOnlyWhenExplicitlyRequested() throws Exception {
         fixture();
         Path root = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
