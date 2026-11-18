@@ -901,6 +901,53 @@ binary, target-specific flags, generated outputs or ABI. It never
 authorizes Gradle task skipping, Maven goal skipping, or M3DB cache
 restoration.
 
+### Original Tycho FINAL p2 target-platform evidence
+
+\`m3EclipseTychoFinalP2Facts\` is a lazy, explicitly invoked,
+untracked Gradle task. It does **not** download a target platform,
+read p2 repositories or reinterpret \`*.target\` files. The
+original Tycho \`M3FinalP2BuildEvidence\` owner must first export
+a \`M3-TYCHO-FINAL-P2-FACTS-V1\` packet from an **already final**
+\`P2TargetPlatform\`, together with an original m2e Eclipse
+build-handoff packet for the same project/configuration/invocation.
+
+\`\`\`groovy
+tasks.named('m3EclipseTychoFinalP2Facts') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+    tychoPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/tycho-final-p2-facts.ide'))
+    handoffPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/build-handoff.ide'))
+}
+\`\`\`
+
+The Gradle task checks that both files are project-local, bounded,
+non-symlink source-owned inputs. It invokes the SHA-256-pinned
+Maven \`EclipseModelCli tycho-final-p2\` Java 17 codec, which
+validates original Tycho coordinates, the separate Eclipse project
+name, selected \`IBuildConfiguration\`, build UUID, explicit
+target os/ws/arch, IU count/hash and \`stage=final\`.
+Only after the original codec returns valid source-owned evidence
+does Gradle atomically publish the separate versioned JSON report
+\`build/reports/m3/eclipse-tycho-final-p2-facts.json\`.
+
+\`M3EclipseTychoFinalP2RealEngineTest\` optionally runs the
+**actual source-built Maven JAR** through Gradle TestKit, confirms
+that it accepts a final-p2 packet and refuses a preliminary one
+without replacing a prior validated report. Without
+\`M3_POLYGLOT_JAR\` the optional test is skipped and is **not**
+runtime qualification. CI must require one executed non-skipped
+testcase.
+
+The facts are advisory: IU IDs/versions alone cannot authenticate
+p2 artifact byte content, resolved OSGi wiring, environment profiles,
+fragments, filtered requirements or generated build outputs.
+No task skipping or M3DB cache restoration is authorized by them.
+Original Maven/Tycho, PDE, Eclipse and Gradle compilation/build
+contracts remain untouched.
+
 ### Generic Eclipse language source-owner facts (additive SPI)
 
 \`m3EclipseLanguageFacts\` is the **one future-language extension task**

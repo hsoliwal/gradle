@@ -205,6 +205,62 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void reviewsFinalTychoP2OnlyOnExplicitPinnedMavenInvocation() throws Exception {
+        fixture();
+        Path original = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Files.writeString(original.resolve("tycho-final-p2-facts.ide"),
+                "M3-TYCHO-FINAL-P2-FACTS-V1\nsource-owner-fixture\n");
+        Files.writeString(original.resolve("build-handoff.ide"),
+                "M3-ECLIPSE-BUILD-HANDOFF-V1\nsource-owner-fixture\n");
+        String report = "{\"schema\":\"m3-tycho-final-p2-facts-v1\","
+                + "\"eclipseProject\":\"fixture\",\"stage\":\"final\","
+                + "\"authorizesBuildSkipping\":false}\r\n";
+        String digest = engine(report);
+        configuration(digest, "m3EclipseTychoFinalP2Facts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseTychoFinalP2Facts') {\n"
+                + "  tychoPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/tycho-final-p2-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        Path reportFile = workspace.resolve("build/reports/m3/eclipse-tycho-final-p2-facts.json");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("tasks", "--all").build();
+        assertFalse(Files.exists(reportFile), "Gradle task registration must not resolve p2");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseTychoFinalP2Facts", "--stacktrace").build();
+        assertEquals(report.replace("\r\n", "\n"), Files.readString(reportFile));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-cargo-facts.json")),
+                "Tycho review must not invoke Cargo or create Cargo reports");
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-jdt-facts.json")),
+                "Tycho review must not invoke the JDT task");
+    }
+
+    @Test
+    void refusesPreliminaryOrForeignSchemaBeforePublishingTychoReport() throws Exception {
+        fixture();
+        Path original = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Files.writeString(original.resolve("tycho-final-p2-facts.ide"),
+                "M3-TYCHO-FINAL-P2-FACTS-V1\nsource-owner-fixture\n");
+        Files.writeString(original.resolve("build-handoff.ide"),
+                "M3-ECLIPSE-BUILD-HANDOFF-V1\nsource-owner-fixture\n");
+        String digest = engine("{\"schema\":\"m3-cdt-compiler-facts-v1\"}\n");
+        configuration(digest, "m3EclipseTychoFinalP2Facts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseTychoFinalP2Facts') {\n"
+                + "  tychoPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/tycho-final-p2-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        var failed = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseTychoFinalP2Facts", "--stacktrace").buildAndFail();
+        assertTrue(failed.getOutput().contains("M3 Eclipse model inspection refused"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-tycho-final-p2-facts.json")));
+    }
+
+    @Test
     void genericLanguageEvidenceMustBeExplicitAndNeverRunsNativeCompiler() throws Exception {
         fixture();
         Path original = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));

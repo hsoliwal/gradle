@@ -256,6 +256,20 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-cargo-facts.json"));
         });
 
+        // Final Tycho/p2 platform evidence is not an Eclipse .target parser
+        // and cannot be sourced from a preliminary dependency-only platform.
+        project.getTasks().register("m3EclipseTychoFinalP2Facts", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("tycho");
+            task.setDescription("Review original resolved Tycho FINAL p2 platform IU facts");
+            task.getHandoffPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/build-handoff.ide"));
+            task.getTychoPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/tycho-final-p2-facts.ide"));
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-tycho-final-p2-facts.json"));
+        });
+
         // Future Eclipse language owners (PyDev, DLTK, Xtext, Scala, Groovy,
         // Swift, Go, vendor LSP) can install a separately SHA-pinned Java17
         // evidence provider; Gradle never needs another compiler/parser.

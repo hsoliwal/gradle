@@ -61,6 +61,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             .getBytes(StandardCharsets.UTF_8);
     private static final byte[] CARGO_PREFIX = "{\"schema\":\"m3-cargo-build-facts-v1\""
             .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] TYCHO_PREFIX = "{\"schema\":\"m3-tycho-final-p2-facts-v1\""
+            .getBytes(StandardCharsets.UTF_8);
     private static final byte[] LANGUAGE_PREFIX = "{\"schema\":\"m3-eclipse-language-facts-v1\""
             .getBytes(StandardCharsets.UTF_8);
 
@@ -118,6 +120,12 @@ public abstract class M3EclipseModelTask extends DefaultTask {
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getCargoPacket();
 
+    /** Final p2 platform IU evidence from the actual Tycho owner, not .target metadata. */
+    @Optional
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract RegularFileProperty getTychoPacket();
+
     /** Arbitrary original Eclipse language plugin compact source-owner facts. */
     @Optional
     @InputFile
@@ -171,17 +179,18 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                     && !"context".equals(mode) && !"handoff".equals(mode)
                     && !"reconcile".equals(mode) && !"jdt".equals(mode)
                     && !"cdt".equals(mode) && !"cargo".equals(mode)
-                    && !"language".equals(mode)) {
+                    && !"tycho".equals(mode) && !"language".equals(mode)) {
                 throw new IOException("unsupported Eclipse report mode: " + mode);
             }
             Path packet = null;
             if ("context".equals(mode) || "handoff".equals(mode)
                     || "reconcile".equals(mode) || "jdt".equals(mode)
                     || "cdt".equals(mode) || "cargo".equals(mode)
-                    || "language".equals(mode)) {
+                    || "tycho".equals(mode) || "language".equals(mode)) {
                 var declared = ("handoff".equals(mode) || "reconcile".equals(mode)
                         || "jdt".equals(mode) || "cdt".equals(mode)
-                        || "cargo".equals(mode) || "language".equals(mode))
+                        || "cargo".equals(mode) || "tycho".equals(mode)
+                        || "language".equals(mode))
                         ? getHandoffPacket() : getContextPacket();
                 if (!declared.isPresent()) {
                     throw new IOException("Eclipse source-owner packet was not supplied");
@@ -189,7 +198,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 packet = declared.get().getAsFile().toPath().toAbsolutePath().normalize();
                 long maxBytes = ("handoff".equals(mode) || "reconcile".equals(mode)
                         || "jdt".equals(mode) || "cdt".equals(mode)
-                        || "cargo".equals(mode) || "language".equals(mode))
+                        || "cargo".equals(mode) || "tycho".equals(mode)
+                        || "language".equals(mode))
                         ? 12L * 1024 * 1024 : 1024L * 1024;
                 if (!packet.startsWith(root) || !Files.isRegularFile(packet, LinkOption.NOFOLLOW_LINKS)
                         || Files.size(packet) > maxBytes) {
@@ -236,6 +246,19 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 }
                 rejectLinkedPath(checkout, cargoPacket);
             }
+            Path tychoPacket = null;
+            if ("tycho".equals(mode)) {
+                if (!getTychoPacket().isPresent()) {
+                    throw new IOException("Tycho FINAL p2 source-owner packet was not supplied");
+                }
+                tychoPacket = getTychoPacket().get().getAsFile().toPath().toAbsolutePath().normalize();
+                if (!tychoPacket.startsWith(root)
+                        || !Files.isRegularFile(tychoPacket, LinkOption.NOFOLLOW_LINKS)
+                        || Files.size(tychoPacket) > 16 * 1024) {
+                    throw new IOException("Tycho FINAL p2 source-owner facts must be a project-local file under 16 KiB");
+                }
+                rejectLinkedPath(checkout, tychoPacket);
+            }
             Path languagePacket = null;
             String languageProviderId = null;
             if ("language".equals(mode)) {
@@ -272,6 +295,9 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 case "cargo" -> M3EclipseModelCommands.cargo(
                         getJavaExecutable().get(), engine.toFile(), cargoPacket.toFile(), packet.toFile(),
                         installedProviders);
+                case "tycho" -> M3EclipseModelCommands.tychoFinalP2(
+                        getJavaExecutable().get(), engine.toFile(), tychoPacket.toFile(), packet.toFile(),
+                        installedProviders);
                 case "language" -> M3EclipseModelCommands.languageFacts(
                         getJavaExecutable().get(), engine.toFile(), languageProviderId,
                         languagePacket.toFile(), packet.toFile(), installedProviders);
@@ -303,6 +329,7 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 case "jdt" -> JDT_PREFIX;
                 case "cdt" -> CDT_PREFIX;
                 case "cargo" -> CARGO_PREFIX;
+                case "tycho" -> TYCHO_PREFIX;
                 case "language" -> LANGUAGE_PREFIX;
                 default -> MODEL_PREFIX;
             };
