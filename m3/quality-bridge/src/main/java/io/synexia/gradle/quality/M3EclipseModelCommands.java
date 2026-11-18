@@ -24,4 +24,13 @@ public final class M3EclipseModelCommands {
         return List.of(java, "-Dfile.encoding=UTF-8", "-cp", engineJar.getAbsolutePath(), MAIN_CLASS,
                 eclipseProject.getAbsolutePath());
     }
+
+    /** Read-only owner inventory from the same Maven CLI; no compiler is selected or executed. */
+    public static List<String> owners(String javaExecutable, File engineJar, File eclipseProject) {
+        String java = M3QualityCommands.executable(javaExecutable);
+        Objects.requireNonNull(engineJar, "engineJar");
+        Objects.requireNonNull(eclipseProject, "eclipseProject");
+        return List.of(java, "-Dfile.encoding=UTF-8", "-cp", engineJar.getAbsolutePath(), MAIN_CLASS,
+                "owners", eclipseProject.getAbsolutePath());
+    }
 }
