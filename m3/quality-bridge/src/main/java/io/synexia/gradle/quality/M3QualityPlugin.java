@@ -241,6 +241,21 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-cdt-facts.json"));
         });
 
+        // Corrosion uses the configured original Cargo CLI. Only the native
+        // owner can explicitly produce locked/offline resolved Cargo metadata;
+        // this optional task reads the Maven-validated packet, never runs Rust.
+        project.getTasks().register("m3EclipseCargoFacts", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("cargo");
+            task.setDescription("Review original Corrosion/Cargo offline metadata evidence");
+            task.getHandoffPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/build-handoff.ide"));
+            task.getCargoPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/cargo-build-facts.ide"));
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-cargo-facts.json"));
+        });
+
         // The Maven #184 project DB owns the data and deterministic retrieval.
         // These optional tasks neither reimplement indexes nor affect build/check.
         project.getTasks().register("m3ProjectDbIngest", M3ProjectDbTask.class, task -> {
