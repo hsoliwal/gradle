@@ -73,7 +73,6 @@ public abstract class M3ProjectDbTask extends DefaultTask {
         Path log = getBuildLog().isPresent() ? absolute(getBuildLog().get().getAsFile()) : null;
         try {
             requirePaths(root, build, store, report, log);
-            if ("query".equals(getMode().get())) requireExistingStore(store);
             if (plugin.equals(engine)) throw new IOException("M3 project DB and storage JARs must be distinct");
             M3PolyglotCommands.verifyEngine(plugin, getProjectDbSha256().get());
             M3PolyglotCommands.verifyEngine(engine, getPolyglotSha256().get());
@@ -83,6 +82,7 @@ public abstract class M3ProjectDbTask extends DefaultTask {
                     plugin.toFile(), engine.toFile(), jars, root.toFile(), store.toFile(),
                     getMode().get(), getQuestion().get(), getTopK().get(),
                     log == null ? null : log.toFile());
+            if ("query".equals(getMode().get())) requireExistingStore(store);
             M3BoundedOutput output = new M3BoundedOutput(MAX_REPORT_BYTES, "M3 project DB result");
             getExecOperations().exec(spec -> {
                 spec.setExecutable(command.get(0));
