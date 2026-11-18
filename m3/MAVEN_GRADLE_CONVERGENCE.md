@@ -27,6 +27,7 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | Code clustering and LSP front ends | Maven #113, #117, #124, #142, #156, #168 | Gradle #36 merged for Eclipse builder registry | Future shared M3AST/LSP artifacts; do not start language servers automatically or duplicate Eclipse models |
 | Generic Eclipse language-builder SPI | **Maven #189, #192, #197 merged** | **Gradle #36, #40, #42 merged** | Original Eclipse source owner, ServiceLoader, selected configuration and same-invocation handoff wire remain authoritative; no builder execution or cache skip from advisory facts |
 | LLVM original compiler toolchain SPI | **Maven #198 merged**, #199 open draft | Original `m3PolyglotProviders`/`m3PolyglotPlan`/`m3PolyglotRun` source-pinned TestKit proof | Original Maven provider chooses clang/clang++/flang/llc; Gradle supplies explicit execution boundary only, no binary provisioning or assumed native cache key |
+| Optional native LLVM/MLIR/LLD pipeline provider | **Maven #203 merged** (`3441dc1e91a2835b7b6bca608ffb9676565d9eff`) | Gradle's v1 inventory validator now admits Maven's appended `assembler`, `linker`, `optimizer` slugs; independent Java17 contract, source-pinned original provider JAR, TestKit and JDK17/21 CI | The original Maven SPI/ServiceLoader owns `opt`, `mlir-opt`, `llvm-as`, `llvm-link`, `mlir-translate`, LLD, lit and FileCheck; SHA-256 pin both JARs; Gradle never forks tool dispatch, state or LLVM parsers |
 | Browser AI review integration | Maven #138–#139 remove prior Chrome agent wiring | None here | Respect removed code; do not restore abandoned hooks |
 
 Maven-specific behavior (Resolver, enforcer, Mavenizer POM generation,
@@ -140,3 +141,38 @@ source mutation/cancellation/crash tests, and a verified recipe replay.
 
 No test listed here is claimed to have passed solely because it was authored.
 Source replay, build logs, commit hashes and CI artifacts establish acceptance.
+
+## Maven #203: additive LLVM/MLIR/LLD pipeline SPI vocabulary
+
+Maven #203 adds `LINKER`, `OPTIMIZER` and `ASSEMBLER` to its original v1
+`M3ToolCapability` enum and packages `m3-llvm-tools-provider` as a **separate**
+optional JAR. Earlier Gradle inventory admission rejected those three
+perfectly valid lowercase capability slugs, even when Maven's engine and
+provider JARs were both explicitly SHA-256 pinned. The Gradle bridge now
+accepts the complete eight-value original Maven vocabulary while retaining
+the original v1 header, four-field rows, ascending unique provider IDs,
+sorted unique capability/language tokens, canonical LF UTF-8 and size caps.
+Unknown future capabilities still fail closed pending a protocol review.
+
+No second LLVM driver, ServiceLoader, grammar, parser or scheduler exists in
+Gradle. `m3PolyglotProviders`, `m3PolyglotPlan` and `m3PolyglotRun` use the
+already established **separately** pinned `providerJars` and
+`providerJarSha256` configuration. No `opt`/`llvm-as`/`llvm-link` invocation
+occurs on plugin application, `providers` or `plan`; `run` remains explicit
+and `@UntrackedTask`. Original Maven's native-tool tasks are excluded from
+generic incremental/restore shortcuts until full toolchain/ABI/dependency
+evidence is qualified.
+
+The Java 17 standalone protocol contract is executable without Gradle, and
+TestKit fixtures run against original Maven source pinned to the **merged**
+#203 commit `3441dc1e91a2835b7b6bca608ffb9676565d9eff` (independent of
+the earlier #198 compiler-only lane). Tests require both original artifacts:
+`m3-polyglot-maven-plugin` and the separately built `m3-llvm-tools-provider`.
+They verify actual ServiceLoader inventory, the three-stage LLVM IR plan
+without native execution, absence/refusal when the provider is missing, and
+rejection of a corrupt JAR digest. Maven's own Java 17 contract covers binary
+selector failures and argv forwarding. Hosted CI and actual toolchain builds
+must establish release readiness; LLVM source revision
+`591f3d1edf0a9ee718d17a0ee70dd013b3c01908` was reviewed but is not
+silently installed or built by Gradle. Source-owned OpenRewrite opt-in
+recipe: `m3/quality-bridge/recipes/enable-m3-llvm-provider-bridge.yml`.

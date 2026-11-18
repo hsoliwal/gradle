@@ -44,6 +44,8 @@ jobs:
         run: sh m3/quality-bridge/scripts/verify-polyglot-cache-args.sh
       - name: Qualify Maven #184 project DB CLI command contract
         run: sh m3/quality-bridge/scripts/verify-project-db-args.sh
+      - name: Qualify Maven #203 LLVM/MLIR/LLD inventory schema without Gradle dependencies
+        run: sh m3/quality-bridge/scripts/verify-llvm-tools-inventory.sh
       - name: Test standalone bridge, canonical reports and Gradle TestKit
         run: |
           chmod +x gradlew
@@ -218,3 +220,43 @@ jobs:
           export M3_LLVM_CLANG_SHA256="$(sha256sum "$M3_LLVM_CLANG" | cut -d ' ' -f1)"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3LlvmProviderRealEngineTest' --rerun-tasks
+
+  m3-llvm-pipeline-crossfork:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      # Maven #203 first added LINKER, OPTIMIZER, ASSEMBLER to the v1 SPI and
+      # packaged their original LLVM dispatch in a separately installed JAR.
+      # Keep this lane independent of Maven #198 and the Gradle #44 Clang lane.
+      - name: Check out the exact merged Maven #203 LLVM tools provider source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 3441dc1e91a2835b7b6bca608ffb9676565d9eff
+          path: m3-maven-llvm-tools
+          persist-credentials: false
+      - name: Qualify and install the original Maven polyglot ServiceLoader SPI
+        run: |
+          mvn -B -ntp -f m3-maven-llvm-tools/tools/m3-polyglot-maven-plugin/pom.xml install
+          test -s m3-maven-llvm-tools/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Qualify Maven's separate original LLVM/MLIR/LLD provider artifact
+        run: |
+          mvn -B -ntp -f m3-maven-llvm-tools/tools/m3-llvm-tools-provider/pom.xml verify
+          test -s m3-maven-llvm-tools/tools/m3-llvm-tools-provider/target/m3-llvm-tools-provider-0.1.0-SNAPSHOT.jar
+          sh m3-maven-llvm-tools/tools/m3-llvm-tools-provider/scripts/verify.sh
+      - name: Verify real SPI inventory, no-tool pipeline planning, and SHA refusal from Gradle
+        run: |
+          export M3_MAVEN_LLVM_PIPELINE_ENGINE_JAR="$GITHUB_WORKSPACE/m3-maven-llvm-tools/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_MAVEN_LLVM_PIPELINE_PROVIDER_JAR="$GITHUB_WORKSPACE/m3-maven-llvm-tools/tools/m3-llvm-tools-provider/target/m3-llvm-tools-provider-0.1.0-SNAPSHOT.jar"
+          export M3_MAVEN_LLVM_PIPELINE_FIXTURES="$GITHUB_WORKSPACE/m3-maven-llvm-tools/tools/m3-llvm-tools-provider/example/llvm-ir"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3LlvmToolsProviderRealEngineTest' --rerun-tasks

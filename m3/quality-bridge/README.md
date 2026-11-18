@@ -147,6 +147,56 @@ infer that its unmerged behavior exists in Maven #198. The opt-in
 [OpenRewrite consumer recipe](recipes/enable-m3-llvm-provider-bridge.yml)
 installs the plugin only and requires SDK replay before promotion.
 
+### Maven #203: separately installed LLVM/MLIR/LLD pipeline provider
+
+Merged [Maven #203](https://github.com/hsoliwal/maven/pull/203) adds native
+`assembler`, `linker` and `optimizer` capability slugs to the *same* original
+provider SPI, plus an optional artifact
+`io.synexia:m3-llvm-tools-provider:0.1.0-SNAPSHOT`. Its original
+`ServiceLoader` implementation forwards arguments to `opt`, `mlir-opt`,
+`llvm-as`, `llvm-link`, `mlir-translate`, LLD drivers, `llvm-lit` and
+`FileCheck`. Gradle owns none of those tools or their cache identity.
+
+Build the **two original Maven JARs** from source pinned to merged commit
+`3441dc1e91a2835b7b6bca608ffb9676565d9eff`, and configure the existing
+tasks with *independent* content digests. For example, after placing the
+verified original artifacts in `vendor`:
+
+```groovy
+plugins { id 'io.synexia.m3.quality' }
+
+['m3PolyglotProviders', 'm3PolyglotPlan', 'm3PolyglotRun'].each { id ->
+    tasks.named(id) {
+        engineJar.set(layout.projectDirectory.file('vendor/maven-polyglot.jar'))
+        engineSha256.set(providers.gradleProperty('m3.llvm.engine.sha256'))
+        providerJars.from(layout.projectDirectory.file('vendor/llvm-tools.jar'))
+        providerJarSha256.put('llvm-tools.jar',
+            providers.gradleProperty('m3.llvm.tools.sha256'))
+    }
+}
+tasks.named('m3PolyglotPlan') { target.set('link') }
+tasks.named('m3PolyglotRun')  { target.set('link') }
+```
+
+Supply the exact original Maven #203
+[`example/llvm-ir/m3-build.tsv`](https://github.com/hsoliwal/maven/blob/3441dc1e91a2835b7b6bca608ffb9676565d9eff/tools/m3-llvm-tools-provider/example/llvm-ir/m3-build.tsv)
+and `hello.ll`. `./gradlew m3PolyglotProviders` inventories the external
+provider; `./gradlew m3PolyglotPlan` shows its `opt -> llvm-as -> llvm-link`
+pipeline without running it. Only an explicit `m3PolyglotRun` requests
+native execution. Maven's optional `--m3-llvm-bin=`, `--m3-llvm-home=` and
+`--m3-llvm-sha256=` selectors remain Maven-owned; a selected missing binary
+fails planning without silently falling back to PATH. Native toolchain,
+ABI, pass plugins, sysroot, output state and Gradle build-cache hits are
+**not** inferred from the provider inventory or a successful plan.
+
+The Gradle side has a standalone Java 17 schema contract at
+`scripts/verify-llvm-tools-inventory.sh` and an independent JDK17/21
+source-pinned TestKit lane. This is compatibility with Maven's merged SPI,
+not a claim that the reviewed LLVM fork was built or that LLVM execution is
+qualified on every platform. The existing
+[OpenRewrite opt-in recipe](recipes/enable-m3-llvm-provider-bridge.yml)
+applies to both LLVM adapters, and no build task is wired automatically.
+
 ### Maven PRs #143 and #147: opt-in portable module-local state
 
 Maven [PR #143](https://github.com/hsoliwal/maven/pull/143) has merged the

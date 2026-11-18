@@ -46,4 +46,11 @@ require_once "ref: f92096f8d3eb135d28cf698335a4423ef9179e9d"
 require_once "ref: 83284eb8de8758fa9ffa84ca6c2d764e67c183c8"
 require_once "test --tests '*M3LlvmProviderRealEngineTest' --rerun-tasks"
 
+# Maven #203 is a separate optional LLVM/MLIR/LLD provider artifact; its
+# ServiceLoader and protocol are not covered by the older compiler-only #198.
+require_once "ref: 3441dc1e91a2835b7b6bca608ffb9676565d9eff"
+require_once "run: sh m3/quality-bridge/scripts/verify-llvm-tools-inventory.sh"
+require_once "test --tests '*M3LlvmToolsProviderRealEngineTest' --rerun-tasks"
+require_once "mvn -B -ntp -f m3-maven-llvm-tools/tools/m3-llvm-tools-provider/pom.xml verify"
+
 printf '%s\n' "PASS: source-pinned M3 Gradle/Maven CI lanes retained"

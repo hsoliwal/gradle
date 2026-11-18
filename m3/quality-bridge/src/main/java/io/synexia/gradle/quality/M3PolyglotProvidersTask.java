@@ -89,7 +89,7 @@ public abstract class M3PolyglotProvidersTask extends DefaultTask {
             });
             byte[] bytes = output.bytes();
             String canonical = strictUtf8(bytes).replace("\r\n", "\n");
-            validate(canonical);
+            M3ProviderInventoryV1.validate(canonical);
             Files.createDirectories(report.getParent());
             rejectSymlinks(checkout, report);
             Path temporary = Files.createTempFile(report.getParent(), ".m3-providers-", ".tmp");
@@ -113,38 +113,6 @@ public abstract class M3PolyglotProvidersTask extends DefaultTask {
                     .decode(ByteBuffer.wrap(bytes)).toString();
         } catch (CharacterCodingException invalid) {
             throw new IOException("M3 provider inventory must be valid UTF-8", invalid);
-        }
-    }
-
-    private static void validate(String report) throws IOException {
-        if (report.indexOf('\r') >= 0 || report.indexOf('\0') >= 0 || !report.endsWith("\n")) {
-            throw new IOException("M3 provider inventory requires canonical LF UTF-8");
-        }
-        String[] lines = report.split("\n", -1);
-        if (lines.length < 3 || lines.length > 514 || !lines[0].equals("M3-POLYGLOT-PROVIDERS-V1")) {
-            throw new IOException("unknown or oversized M3 provider inventory schema");
-        }
-        String previous = "";
-        for (int row = 1; row < lines.length - 1; row++) {
-            String[] fields = lines[row].split("\t", -1);
-            if (fields.length != 4 || !"provider".equals(fields[0])
-                    || !fields[1].matches("[a-z][a-z0-9.-]{0,63}")
-                    || fields[1].compareTo(previous) <= 0) {
-                throw new IOException("invalid or unsorted M3 provider inventory row");
-            }
-            tokens(fields[2], "(compiler|interpreter|transpiler|atomizer|patternizer)");
-            tokens(fields[3], "[a-z][a-z0-9+._-]{0,63}");
-            previous = fields[1];
-        }
-    }
-
-    private static void tokens(String value, String pattern) throws IOException {
-        String previous = "";
-        for (String token : value.split(",", -1)) {
-            if (!token.matches(pattern) || token.compareTo(previous) <= 0) {
-                throw new IOException("invalid or unsorted M3 provider capability/language token");
-            }
-            previous = token;
         }
     }
 
