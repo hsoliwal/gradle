@@ -430,6 +430,38 @@ substitution, or M3DB artifact restoration. Actual input/output and
 toolchain eligibility must be qualified in the appropriate original
 Eclipse and language-specific build owners.
 
+### Reconcile current Eclipse declarations against the original invocation
+
+\`m3EclipseReconcile\` is another **explicit**, untracked Gradle task that
+delegates to the original Maven Java 17 \`EclipseModelCli reconcile\`
+subcommand. It compares the current \`.project\` declaration with one
+Eclipse-owned, invocation-bound handoff packet. Gradle does not parse or
+reinterpret the builder IDs, natures or resource deltas itself.
+
+\`\`\`groovy
+tasks.named('m3EclipseReconcile') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+    handoffPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/build-handoff.ide'))
+}
+\`\`\`
+
+The output \`build/reports/m3/eclipse-reconciliation.json\` has the
+distinct schema \`m3-eclipse-reconciliation-v1\`. \`RECONCILE\` is required
+if the project ID, builder sequence, or nature sequence changed; a
+FULL/CLEAN invocation or an incomplete original delta also requires
+reconciliation. \`DECLARATIONS_MATCH\` only verifies that *these*
+declarations agree; it never authorizes Gradle up-to-date decisions,
+task skipping, local/remote cache replay, or a second compiler.
+
+It reuses the existing SHA-256-pinned engine/provider JAR classpath,
+project-local packet check, safe output destination, bounded UTF-8
+capture and atomic report publication. JDT, CDT, RustDT/Corrosion,
+PDE, PyDev, Xtext and other Eclipse plugins still own their live
+language and build state.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer

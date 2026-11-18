@@ -186,6 +186,20 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-build-handoff.json"));
         });
 
+        // Compare source-owner builder/nature declarations with the current
+        // Eclipse project model, using Maven's original parser. Any divergence
+        // or incomplete delta requires conservative reconciliation; a match
+        // is never a build-cache admission.
+        project.getTasks().register("m3EclipseReconcile", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("reconcile");
+            task.setDescription("Reconcile current Eclipse builders/natures with one source-owned handoff");
+            task.getHandoffPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/build-handoff.ide"));
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-reconciliation.json"));
+        });
+
         // The Maven #184 project DB owns the data and deterministic retrieval.
         // These optional tasks neither reimplement indexes nor affect build/check.
         project.getTasks().register("m3ProjectDbIngest", M3ProjectDbTask.class, task -> {
