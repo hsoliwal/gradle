@@ -517,6 +517,32 @@ capture and atomic report publication. JDT, CDT, RustDT/Corrosion,
 PDE, PyDev, Xtext and other Eclipse plugins still own their live
 language and build state.
 
+### Native Eclipse/Polyglot descriptor acceptance
+
+The optional `M3EclipseNativeDescriptorsRealEngineTest` uses the same pinned
+Maven engine artifact as `m3EclipseModel`; it does not embed an Eclipse
+parser, compiler or resource watcher in Gradle. It checks Maven's
+`m3-eclipse-project-v1` output for original PDE/OSGi manifests and
+`*.target` files, CDT/CMake, Rust/Cargo, Swift, Python and Node metadata,
+including exact SHA-256 byte custody. It checks that generated output trees
+are excluded, changing a PDE target changes its digest, and no source is
+rewritten. Existing m2e, Gradle and Maven lifecycle contracts are untouched.
+
+To run the real cross-repository acceptance after building/reviewing Maven's
+`m3-polyglot-maven-plugin` JAR, set `M3_POLYGLOT_JAR` to its absolute path
+and execute:
+
+```sh
+./gradlew -p m3/quality-bridge test
+```
+
+The ordinary offline TestKit suite skips this external-JAR integration if
+`M3_POLYGLOT_JAR` is absent; it is **not** a passing acceptance test in
+that case. The Maven JAR must incorporate the source-owned language
+descriptor changes in Maven PR #211. No task is automatically bound to
+`build`, `check` or `compileJava`, and source hashes alone never
+authorize cache restoration.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
