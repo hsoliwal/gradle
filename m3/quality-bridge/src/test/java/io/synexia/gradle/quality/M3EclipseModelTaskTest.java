@@ -125,6 +125,35 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void reconcilesCurrentModelOnlyOnAnExplicitRequest() throws Exception {
+        fixture();
+        Path packet = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"))
+                .resolve("build-handoff.ide");
+        Files.writeString(packet, "M3-ECLIPSE-BUILD-HANDOFF-V1\nowner-fixture\n");
+        String report = "{\"schema\":\"m3-eclipse-reconciliation-v1\","
+                + "\"disposition\":\"RECONCILE\",\"reasons\":[\"NATURES_CHANGED\"]}\r\n";
+        String digest = engine(report);
+        configuration(digest, "m3EclipseReconcile");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseReconcile') {\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+
+        Path output = workspace.resolve("build/reports/m3/eclipse-reconciliation.json");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("tasks", "--all").build();
+        assertFalse(Files.exists(output), "reconciliation must not run at Gradle configuration time");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseReconcile", "--stacktrace").build();
+        assertEquals(report.replace("\r\n", "\n"), Files.readString(output));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-build-handoff.json")),
+                "reconciliation must not execute the other advisory task");
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-model.json")),
+                "reconciliation must not create a second project-model report");
+    }
+
+    @Test
     void rejectsHandoffSchemaSubstitutionBeforePublishingReport() throws Exception {
         fixture();
         Path packet = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"))
