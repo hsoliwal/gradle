@@ -49,6 +49,40 @@ final class M3PolyglotCommandsTest {
     }
 
     @Test
+    void llvmCompilationDatabaseDelegatesExactMavenCliWithoutASecondParser() {
+        File engine = temp.resolve("Maven polyglot.jar").toFile();
+        File module = temp.resolve("project with spaces").toFile();
+        File manifest = new File(module, "m3-build.tsv");
+        List<String> argv = M3PolyglotCommands.compilationDatabase(
+                "java", engine, module, manifest, "all", List.of());
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp",
+                engine.getAbsolutePath(), M3PolyglotCommands.MAIN_CLASS,
+                "llvm-compile-db", module.getAbsolutePath(),
+                manifest.getAbsolutePath(), "all"), argv);
+        assertFalse(argv.contains("--incremental"));
+        assertFalse(argv.contains("--provider-reuse"));
+        assertFalse(argv.contains("sh"));
+        assertFalse(argv.contains("bash"));
+        assertThrows(UnsupportedOperationException.class, () -> argv.add("--unsafe"));
+
+        File provider = temp.resolve("original LLVM provider.jar").toFile();
+        List<String> withProvider = M3PolyglotCommands.compilationDatabase(
+                "java", engine, module, manifest, "compile", List.of(provider));
+        assertEquals(engine.getAbsolutePath() + File.pathSeparator + provider.getAbsolutePath(),
+                withProvider.get(3));
+        assertEquals("compile", withProvider.get(withProvider.size() - 1));
+        for (String invalid : List.of("", "../escape", "all/other",
+                "--target=all", "target with spaces")) {
+            assertThrows(IllegalArgumentException.class, () ->
+                    M3PolyglotCommands.compilationDatabase("java", engine, module,
+                            manifest, invalid, List.of()));
+        }
+        assertThrows(IllegalArgumentException.class, () ->
+                M3PolyglotCommands.compilationDatabase("java", engine, module,
+                        manifest, null, List.of()));
+    }
+
+    @Test
     void onlyExplicitRunUsesIncrementalAndMutationApproval() {
         var jar = temp.resolve("engine.jar").toFile();
         var root = temp.toFile();
