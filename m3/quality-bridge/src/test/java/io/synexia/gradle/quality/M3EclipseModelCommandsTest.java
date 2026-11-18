@@ -36,6 +36,17 @@ final class M3EclipseModelCommandsTest {
     }
 
     @Test
+    void invocationHandoffUsesOnePinnedMavenCliWithOriginalPacketPath() {
+        File engine = workspace.resolve("engine.jar").toFile();
+        File packet = workspace.resolve("eclipse invocation.ide").toFile();
+        File provider = workspace.resolve("language-extension.jar").toFile();
+        String classpath = engine.getAbsolutePath() + File.pathSeparator + provider.getAbsolutePath();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", classpath,
+                "io.synexia.maven.polyglot.EclipseModelCli", "handoff", packet.getAbsolutePath()),
+                M3EclipseModelCommands.handoff("java", engine, packet, List.of(provider)));
+    }
+
+    @Test
     void sourceOwnerContextIsASeparateAndExplicitMavenCliCommand() {
         File engine = workspace.resolve("engine.jar").toFile();
         File packet = workspace.resolve("build context.ide").toFile();
