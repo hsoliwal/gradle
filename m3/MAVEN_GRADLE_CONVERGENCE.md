@@ -33,6 +33,9 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | Optional native LLVM/MLIR/LLD pipeline provider | **Maven #203 merged** (`3441dc1e91a2835b7b6bca608ffb9676565d9eff`) | Gradle's v1 inventory validator now admits Maven's appended `assembler`, `linker`, `optimizer` slugs; independent Java17 contract, source-pinned original provider JAR, TestKit and JDK17/21 CI | The original Maven SPI/ServiceLoader owns `opt`, `mlir-opt`, `llvm-as`, `llvm-link`, `mlir-translate`, LLD, lit and FileCheck; SHA-256 pin both JARs; Gradle never forks tool dispatch, state or LLVM parsers |
 | RocksDB, MapDB and LMDB optional module stores | **Maven #206 and follow-up #209 merged** | Existing Gradle `ext-*` selector plus #206 exact-source negative-runtime TestKit lane | Maven's sealed module state, leases, ServiceLoader and missing-driver refusals remain authoritative; newer #209 builder-return behavior and actual native-driver cache/recovery need distinct qualification |
 | Browser AI review integration | Maven #138–#139 remove prior Chrome agent wiring | None here | Respect removed code; do not restore abandoned hooks |
+| Reproducible original LLVM executable evidence | **Maven #210 merged** (`78848ef9a52fbc1ae34032bd46b3d057b5f1d7fd`) after Maven #203 | New opt-in `m3LlvmToolchainScan` / `m3LlvmToolchainVerify` read the original separately SHA-256-pinned Maven provider JAR and run its standalone CLI; exact-source JDK17/21 CI lane | Maven owns `M3-LLVM-TOOLCHAIN-V1`, symlink resolution, executable SHA-256, atomic publication and refusal; Gradle does not rehash/reinterpret manifests or cache native outputs |
+| Optional transaction-backed external stores | **Maven #206 and #209 merged** | Existing external `ext-*` provider-JAR bridge is still opt-in; real RocksDB/MapDB/LMDB Gradle runtime qualification pending | Import only source-qualified provider artifacts; #209's returned builder paths must be included, not copied as Gradle storage code |
+| PDE / polyglot descriptor facts | **Maven #211 merged** | Earlier Gradle Eclipse model and builder handoff tasks remain independent; separate descriptor import qualification pending | Maven/Eclipse source models retain descriptor ownership; do not invent a duplicate Gradle parser |
 
 Maven-specific behavior (Resolver, enforcer, Mavenizer POM generation,
 Maven core lifecycle participation and Maven API services) remains in Maven.
@@ -224,6 +227,38 @@ source mutation/cancellation/crash tests, and a verified recipe replay.
 
 No test listed here is claimed to have passed solely because it was authored.
 Source replay, build logs, commit hashes and CI artifacts establish acceptance.
+
+## Maven #210: immutable LLVM toolchain evidence without native execution
+
+Maven #210, merged at `78848ef9a52fbc1ae34032bd46b3d057b5f1d7fd`,
+extends the **separately installed** `m3-llvm-tools-provider` JAR with the
+original `io.synexia.maven.llvm.LlvmToolchainEvidence` CLI. Its `scan` and
+`verify` commands own a sorted, root-relative, byte-digested
+`M3-LLVM-TOOLCHAIN-V1` manifest; they do not execute LLVM binaries or claim
+build provenance from the reviewed LLVM source revision alone.
+
+The Gradle fork now exposes separate, lazy `@UntrackedTask` boundaries:
+`m3LlvmToolchainScan` publishes an operator-selected report under its project
+build directory using the Maven CLI's atomic implementation;
+`m3LlvmToolchainVerify` rechecks the original manifest against current
+source-owned installed executable bytes. Both require an explicit `llvmHome`
+and **SHA-256-pinned original Maven provider JAR**. No embedded LLVM scanner,
+hash format, symlink resolver, parser, cache, or duplicate ServiceLoader was
+introduced; malformed paths and missing/changed JARs fail closed before the
+original CLI is called.
+
+`scripts/verify-llvm-evidence-args.sh` exercises a strict Java 17 no-shell
+argv/refusal contract without Gradle. The independent
+`.github/workflows/m3-gradle-llvm-evidence.yml` JDK17/21 matrix checks out
+the exact Maven #210 merged revision, verifies its original JDK17 contracts,
+and invokes Gradle TestKit against the actual provider JAR. A synthetic
+executable file is used **only as binary-byte evidence**, never run as LLVM:
+positive scan and verify, changed-file refusal, and incorrect provider-JAR
+SHA refusal are covered. It does not establish ABI/native correctness,
+Gradle build-cache eligibility, a user-built LLVM fork, or multi-OS parity.
+
+Source-owned, optional OpenRewrite consumer recipe:
+`m3/quality-bridge/recipes/enable-m3-llvm-evidence-bridge.yml`.
 
 ## Maven #203: additive LLVM/MLIR/LLD pipeline SPI vocabulary
 
