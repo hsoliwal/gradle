@@ -47,6 +47,7 @@ public final class M3ProjectDbCommandsContractMain {
         refuse(() -> invoke(db, polyglot, root, store, "query", "", 5, null));
         refuse(() -> invoke(db, polyglot, root, store, "query", "bad\nline", 5, null));
         refuse(() -> invoke(db, polyglot, root, store, "query", "bad ", 5, null));
+        refuse(() -> invoke(db, polyglot, root, store, "query", "--store", 5, null));
         refuse(() -> invoke(db, polyglot, root, store, "query", "word".repeat(513), 5, null));
         refuse(() -> invoke(db, polyglot, root, store, "query", "what", 0, null));
         refuse(() -> invoke(db, polyglot, root, store, "query", "what", 51, null));
