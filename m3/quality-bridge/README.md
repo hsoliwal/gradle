@@ -901,6 +901,64 @@ binary, target-specific flags, generated outputs or ABI. It never
 authorizes Gradle task skipping, Maven goal skipping, or M3DB cache
 restoration.
 
+### Generic Eclipse language source-owner facts (additive SPI)
+
+\`m3EclipseLanguageFacts\` is the **one future-language extension task**
+for Eclipse builders and natures that are not covered by the native
+JDT/CDT/Cargo/Tycho readers. A language plugin must already have
+produced a compact, versioned source-owner packet from its own
+compiler or project environment. Maven/Gradle do not infer compiler
+semantics from source file extensions or a registered nature.
+
+\`\`\`groovy
+tasks.named('m3EclipseLanguageFacts') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+
+    languageProviderId.set('approved.vendor-language')
+    providerJars.from(layout.projectDirectory.file('vendor/vendor-evidence.jar'))
+    providerJarSha256.put('vendor-evidence.jar',
+        providers.gradleProperty('m3.language.adapter.sha256'))
+
+    languagePacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/language-facts.ide'))
+    handoffPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/build-handoff.ide'))
+}
+\`\`\`
+
+An installed adapter must implement Maven's Java17
+\`M3EclipseLanguageEvidenceProvider\` ServiceLoader SPI and declare
+**exact** Eclipse builder/nature extension IDs, with a major-versioned
+owner-specific packet decoder. Nature-only extensions are supported.
+The native Eclipse owner must supply original project name, selected
+build configuration, and same-invocation UUID. No provider is
+downloaded or installed automatically by the Gradle plugin.
+
+The task is untracked and opt-in. Before invoking a CLI, it verifies:
+SHA-256-pinned Maven engine and **every** adapter JAR; project-local,
+bounded, non-symlink original language packet and Eclipse handoff; valid
+explicit provider ID. Maven—not Gradle—validates the owner packet,
+ServiceLoader uniqueness, matching original builder/nature declarations
+and source-owner identity. Only a successful report with exact
+\`m3-eclipse-language-facts-v1\` schema is atomically written to
+\`build/reports/m3/eclipse-language-facts.json\`.
+
+The optional \`M3EclipseLanguageRealEngineTest\` runs the actual
+source-built Maven JAR plus a **separately SHA-pinned synthetic**
+nature-only provider JAR. It validates accepted and foreign selected
+configurations and ensures a failed review cannot overwrite an accepted
+report. CI must supply \`M3_POLYGLOT_JAR\` and
+\`M3_LANGUAGE_PROVIDER_JAR\`, require one executed non-skipped case,
+and must never claim the synthetic provider represents complete PyDev
+support.
+
+These reports are advisory: they never authorize compiling,
+task/goal skipping, ABI changes, remote cache restoration or M3DB
+output reuse. Native Eclipse project and language owners still supply
+their real execution and complete dependency/output evidence.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
