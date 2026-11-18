@@ -141,6 +141,20 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/polyglot-providers.tsv"));
         });
 
+        // The module-owned Clang compilation database is emitted only by the
+        // pinned Maven PolyglotCli, not by a Gradle JSON adapter or Clang runner.
+        // Keep it opt-in and outside build/check task wiring and Gradle cache.
+        project.getTasks().register("m3LlvmCompileDb", M3LlvmCompileDatabaseTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Export the original Maven LLVM compilation database for clangd/CDT");
+            task.getJavaExecutable().convention(
+                    project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+            task.getProviderJarSha256().convention(java.util.Map.of());
+            task.getWorkspace().convention(project.getLayout().getProjectDirectory());
+            task.getManifestFile().convention(project.getLayout().getProjectDirectory().file("m3-build.tsv"));
+            task.getTarget().convention("all");
+        });
+
         // Maven #210 owns the original LLVM executable-byte evidence schema.
         // Gradle adds opt-in, untracked scan/verify task boundaries only; neither
         // task is wired to compilation or cached from incomplete native inputs.
