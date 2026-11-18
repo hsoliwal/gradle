@@ -89,7 +89,7 @@ final class M3PolyglotCommandsTest {
         assertEquals(List.of("--incremental", "--state-backend", "m3db", "--approve-rewrite-apply"),
                 nativeDb.subList(nativeDb.size() - 4, nativeDb.size()));
 
-        for (String backend : List.of("sqlite", "h2", "ext-operator-store", "ext-a")) {
+        for (String backend : List.of("embedded", "native", "sqlite", "h2", "ext-operator-store", "ext-a")) {
             List<String> portable = M3PolyglotCommands.command(
                     "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend);
             assertEquals(List.of("--incremental", "--state-backend", backend),
@@ -100,6 +100,8 @@ final class M3PolyglotCommandsTest {
                 "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), "file"));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "m3db"));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "embedded"));
         for (String backend : List.of("derby", "ext-", "ext-Bad", "ext-path/escape",
                 "ext-" + "x".repeat(49), "jdbc:sqlite:remote")) {
             assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
@@ -109,7 +111,7 @@ final class M3PolyglotCommandsTest {
                 "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), "ext-a"));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "h2"));
-        for (String backend : List.of("sqlite", "h2", "ext-local", "ext-1", "ext-a-b")) {
+        for (String backend : List.of("embedded", "native", "sqlite", "h2", "ext-local", "ext-1", "ext-a-b")) {
             List<String> portable = M3PolyglotCommands.command(
                     "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend);
             assertEquals(List.of("--incremental", "--state-backend", backend),

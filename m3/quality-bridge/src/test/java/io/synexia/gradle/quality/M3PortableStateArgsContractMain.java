@@ -19,7 +19,8 @@ public final class M3PortableStateArgsContractMain {
                 "java", jar, root, manifest, "all", "run", 900, true, false);
         check(!original.contains("--state-backend"), "legacy overload changed");
 
-        for (String backend : List.of("file", "m3db", "sqlite", "h2", "ext-operator-store")) {
+        for (String backend : List.of("embedded", "file", "m3db", "native", "sqlite", "h2",
+                "ext-operator-store")) {
             List<String> command = invoke(jar, root, manifest, "run", true, backend);
             check(command.subList(command.size() - 3, command.size())
                     .equals(List.of("--incremental", "--state-backend", backend)),
@@ -32,7 +33,9 @@ public final class M3PortableStateArgsContractMain {
         }
         refuse(() -> invoke(jar, root, manifest, "run", true, null));
         refuse(() -> invoke(jar, root, manifest, "plan", false, "sqlite"));
+        refuse(() -> invoke(jar, root, manifest, "plan", false, "embedded"));
         refuse(() -> invoke(jar, root, manifest, "run", false, "ext-operator-store"));
+        refuse(() -> invoke(jar, root, manifest, "run", false, "native"));
         System.out.println("PASS: Maven portable backend argv parity and refusals");
     }
 

@@ -139,14 +139,42 @@ Maven's standalone engine verifies declared output contents for reuse and
 conservatively rehashes where ctime/file-key evidence is unavailable.
 Maven #147 now introduces module-wide execution locking and transactional
 storage choices; those guarantees belong to the Maven engine and require
-cross-process, native and filesystem-specific qualification. Competing
-[#144](https://github.com/hsoliwal/maven/pull/144)–
-[#146](https://github.com/hsoliwal/maven/pull/146) proposals must not be
-blindly combined. Maven [#148](https://github.com/hsoliwal/maven/pull/148)
+cross-process, native and filesystem-specific qualification. The subsequent
+merged #144–#146 designs were reconciled by Maven #184 into one owning DB;
+this Gradle task never copies their layouts. Maven [#148](https://github.com/hsoliwal/maven/pull/148)
 merged native MIndexDB-backed syntax fingerprint persistence for its own
 smart-builder goal; this Gradle task does not imply that the separate goal
 or its native runtime is installed. Unsupported future backend names fail
 closed, and no Gradle task/output-cache hit is asserted by the M3 state.
+
+#### Maven #184: explicit M3IndexDB state-backend aliases
+
+The separately merged [Maven #184](https://github.com/hsoliwal/maven/pull/184)
+unifies canonical per-module state. The same Maven-owned Java polyglot CLI accepts
+two additional literal selectors: `embedded` (the original `.m3/module.m3db`
+archive; `legacy` aliases it), and `native` (the original
+`.m3/maven-build-db` directory store; `m3db` aliases it). Gradle now forwards
+either exact spelling **only for an explicitly incremental `m3PolyglotRun`**:
+
+```groovy
+tasks.named('m3PolyglotRun') {
+    incremental.set(true)
+    stateBackend.set('embedded') // alias 'legacy'; Maven-owned archive
+    // stateBackend.set('native') // alias 'm3db'; Maven-owned directory
+}
+```
+
+The default remains `legacy` for existing Gradle consumers, with unchanged
+argv. These two additional selectors require a **newer source-pinned Maven
+engine**, not the older pinned #149 binary. CI builds the original Maven
+polyglot JAR from `f92096f8d3eb135d28cf698335a4423ef9179e9d`, verifies
+the donor's own tests, then checks both alias pairs through real Gradle
+TestKit invocations: persistent generation reuse, separate archive/directory
+shapes and output-tamper invalidation. These imports never claim Gradle
+configuration-cache or task output-cache equivalence. The opt-in
+[OpenRewrite consumer recipe](recipes/enable-m3-polyglot-state-bridge.yml)
+adds only plugin availability; it is a reviewed-replay gate, not an automatic
+state migration or a compiler execution recipe.
 
 ### Maven PR #148: opt-in original JDK 21 AST/atom fingerprints
 
