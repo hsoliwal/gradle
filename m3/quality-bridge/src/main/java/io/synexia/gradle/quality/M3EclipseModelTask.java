@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
@@ -20,10 +21,13 @@ import javax.inject.Inject;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
@@ -53,6 +57,14 @@ public abstract class M3EclipseModelTask extends DefaultTask {
 
     @Input
     public abstract Property<String> getEngineSha256();
+
+    /** Explicitly installed Eclipse provider JARs; no downloads or OSGi activation. */
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract ConfigurableFileCollection getProviderJars();
+
+    @Input
+    public abstract MapProperty<String, String> getProviderJarSha256();
 
     @Internal
     public abstract DirectoryProperty getEclipseProject();
@@ -88,14 +100,18 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             rejectLinkedPath(checkout, root.resolve(".project"));
             rejectLinkedPath(checkout, report);
             M3PolyglotCommands.verifyEngine(engine, getEngineSha256().get());
+            List<File> installedProviders = M3ProviderClasspath.verify(
+                    getProviderJars().getFiles(), getProviderJarSha256().get());
 
             String mode = getReportMode().get();
             if (!"model".equals(mode) && !"owners".equals(mode)) {
                 throw new IOException("unsupported Eclipse report mode: " + mode);
             }
             List<String> command = "owners".equals(mode)
-                    ? M3EclipseModelCommands.owners(getJavaExecutable().get(), engine.toFile(), root.toFile())
-                    : M3EclipseModelCommands.inspect(getJavaExecutable().get(), engine.toFile(), root.toFile());
+                    ? M3EclipseModelCommands.owners(
+                            getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders)
+                    : M3EclipseModelCommands.inspect(
+                            getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
             M3BoundedOutput output = new M3BoundedOutput(MAX_REPORT_BYTES, "Eclipse model");
             getExecOperations().exec(spec -> {
                 spec.setExecutable(command.get(0));
