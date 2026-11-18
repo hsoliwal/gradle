@@ -775,6 +775,16 @@ prove classpath artifact contents, toolchains, source generations,
 annotation-processor effects and compiler outputs before an
 incremental optimization can be considered.
 
+The optional `M3EclipseJdtRealEngineTest` provides an additional
+cross-fork acceptance gate when `M3_POLYGLOT_JAR` names a reviewed,
+source-built Maven engine JAR containing the JDT receiver. It executes
+the **real Maven codec** through Gradle TestKit, accepts an exact
+JDT/Eclipse invocation pair and rejects a different selected
+configuration without replacing a previously validated report.
+Without the environment variable this optional test is **skipped**,
+not qualified; CI must verify the XML result includes an executed
+non-skipped case before claiming cross-fork acceptance.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
