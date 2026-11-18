@@ -127,7 +127,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: 4ecaaf57ed86283e867ca7f8f8b78d0f38fdafaa
+          ref: 2e15f2a4f0c92f6593167f573b0222e214a74b0f
           path: m3-maven-project-db
           persist-credentials: false
       - name: Qualify and install original Maven M3IndexDB storage owner
@@ -144,3 +144,9 @@ jobs:
           export M3_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-project-db/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3ProjectDbRealEngineTest' --rerun-tasks
+      - name: Verify native Gradle-only JUnit evidence reaches Maven M3IndexDB
+        run: |
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-project-db/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-project-db/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3ProjectDbGradleNativeRealEngineTest' --rerun-tasks
