@@ -737,6 +737,44 @@ only installs the quality plugin. A consumer still configures the original
 Maven engine JAR and digest and explicitly calls `m3EclipseModel`; the
 recipe does not attempt to parse descriptors or register a source mutation.
 
+### Exact JDT compiler configuration handoff
+
+`m3EclipseJdtFacts` is a lazy, **explicit** Gradle task that
+reviews JDT's original compiler-option and classpath fingerprints.
+The original `org.eclipse.m2e.jdt.M3JdtCompilerFacts` source
+owner produces `M3-JDT-COMPILER-FACTS-V1` from the actual
+`IJavaProject`. It must be paired with the
+`M3-ECLIPSE-BUILD-HANDOFF-V1` record from the same Eclipse
+project, selected build configuration and invocation UUID.
+
+```groovy
+tasks.named('m3EclipseJdtFacts') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+    jdtPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/jdt-compiler-facts.ide'))
+    handoffPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/build-handoff.ide'))
+}
+```
+
+Invoke `./gradlew m3EclipseJdtFacts` only after the Eclipse JDT
+owner explicitly exports both packets. The task checks local paths,
+symlink refusal, input size bounds, and its independently pinned
+Maven engine/provider JARs. The original Maven Java 17 decoder then
+checks strict canonical UTF-8, SHA-256 and exact Eclipse invocation
+identity. Only after successful validation is a
+`m3-jdt-compiler-facts-v1` JSON report atomically published at
+`build/reports/m3/eclipse-jdt-facts.json`.
+
+It is deliberately `@UntrackedTask`, is not attached to `check`
+or `compileJava`, does not execute ECJ/JDT, and never authorizes
+Maven/Gradle cache reuse. The original JDT/Eclipse owners must still
+prove classpath artifact contents, toolchains, source generations,
+annotation-processor effects and compiler outputs before an
+incremental optimization can be considered.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
