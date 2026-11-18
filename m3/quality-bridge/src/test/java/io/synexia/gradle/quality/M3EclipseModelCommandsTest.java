@@ -36,6 +36,21 @@ final class M3EclipseModelCommandsTest {
     }
 
     @Test
+    void cdtScannerFactsKeepExactOriginalOwnerPathsAndActiveCdtSeparate() {
+        File engine = workspace.resolve("engine.jar").toFile();
+        File cdt = workspace.resolve("cdt scanner.ide").toFile();
+        File handoff = workspace.resolve("eclipse invocation.ide").toFile();
+        File adapter = workspace.resolve("cdt-adapter.jar").toFile();
+        String classpath = engine.getAbsolutePath() + File.pathSeparator + adapter.getAbsolutePath();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", classpath,
+                "io.synexia.maven.polyglot.EclipseModelCli", "cdt-facts",
+                cdt.getAbsolutePath(), handoff.getAbsolutePath()),
+                M3EclipseModelCommands.cdt("java", engine, cdt, handoff, List.of(adapter)));
+        assertThrows(NullPointerException.class,
+                () -> M3EclipseModelCommands.cdt("java", engine, cdt, null, List.of()));
+    }
+
+    @Test
     void jdtCompilerFactsRequireBothOriginalOwnerPathsAndPinnedEngine() {
         File engine = workspace.resolve("engine.jar").toFile();
         File jdt = workspace.resolve("jdt compiler.ide").toFile();
