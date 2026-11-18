@@ -90,10 +90,11 @@ public final class M3PolyglotCommands {
         return List.copyOf(argv);
     }
 
-    /** Match the merged Maven portable CLI contract; storage stays Maven-owned. */
+    /** Match Maven #184+ backend spellings; aliases preserve Maven-owned storage. */
     private static boolean validStateBackend(String backend) {
-        return "legacy".equals(backend) || "file".equals(backend)
-                || "m3db".equals(backend) || "sqlite".equals(backend)
+        return "legacy".equals(backend) || "embedded".equals(backend)
+                || "file".equals(backend) || "m3db".equals(backend)
+                || "native".equals(backend) || "sqlite".equals(backend)
                 || "h2".equals(backend)
                 || (backend != null && backend.matches("ext-[a-z0-9][a-z0-9-]{0,47}"));
     }

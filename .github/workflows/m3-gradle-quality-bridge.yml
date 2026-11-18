@@ -94,6 +94,25 @@ jobs:
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test --tests '*M3PolyglotCacheRealEngineTest' --rerun-tasks
 
+      # Maven #184 unifies M3IndexDB storage and admits embedded/legacy and
+      # native/m3db aliases. Use a newer pinned engine separately from #149.
+      - name: Check out merged Maven M3IndexDB reconciliation source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: f92096f8d3eb135d28cf698335a4423ef9179e9d
+          path: m3-maven-state-aliases
+          persist-credentials: false
+      - name: Verify Maven original #184 backend contract and module DB
+        run: |
+          mvn -B -ntp -f m3-maven-state-aliases/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-state-aliases/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Verify Maven embedded/native aliases by real Gradle TestKit executions
+        run: |
+          export M3_POLYGLOT_STATE_ALIAS_JAR="$GITHUB_WORKSPACE/m3-maven-state-aliases/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3PolyglotStateAliasesRealEngineTest' --rerun-tasks
+
       # Exact same Maven review commit also contains merged #148. Only JDK21
       # can execute its original compiler/JavacTask-based AST producer.
       - name: Verify Maven #148 original JDK21 smart-builder producer
