@@ -6,6 +6,7 @@ package io.synexia.gradle.quality;
 
 import java.io.IOException;
 import java.io.File;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** TestKit proves actual process handoff; Maven's own tests prove the original parser/executor. */
@@ -47,6 +49,41 @@ final class M3PolyglotManifestTaskTest {
     }
 
     @Test
+    void providerReuseDoesNotAddAnAbstractRequirementToExistingConcreteSubclasses() throws Exception {
+        assertFalse(Modifier.isAbstract(M3PolyglotManifestTask.class
+                .getMethod("getProviderReuse").getModifiers()));
+        assertTrue(Modifier.isPublic(M3PolyglotManifestTask.class
+                .getDeclaredConstructor().getModifiers()));
+    }
+
+    @Test
+    void directTaskRegistrationKeepsItsPreviousConfigurationWithoutTheNewProperty() throws Exception {
+        String digest = createFakePortableEngine(root);
+        fixture(digest);
+        Files.writeString(root.resolve("build.gradle"),
+                "plugins { id 'io.synexia.m3.quality' apply false }\n"
+                + "tasks.register('directPolyglot', io.synexia.gradle.quality.M3PolyglotManifestTask) {\n"
+                + "  javaExecutable.set('java')\n"
+                + "  engineJar.set(layout.projectDirectory.file('engine.jar'))\n"
+                + "  engineSha256.set('" + digest + "')\n"
+                + "  providerJarSha256.set([:])\n"
+                + "  manifestFile.set(layout.projectDirectory.file('m3-build.tsv'))\n"
+                + "  workspace.set(layout.projectDirectory)\n"
+                + "  target.set('all')\n"
+                + "  mode.set('run')\n"
+                + "  timeoutSeconds.set(37)\n"
+                + "  incremental.set(true)\n"
+                + "  stateBackend.set('legacy')\n"
+                + "  approveRewriteApply.set(false)\n"
+                + "}\n");
+        GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                .withArguments("directPolyglot", "--stacktrace").build();
+        assertEquals(List.of("run", root.toString(), root.resolve("m3-build.tsv").toString(),
+                        "all", "--timeout-seconds", "37", "--incremental"),
+                Files.readAllLines(root.resolve("cli-argv.txt"), StandardCharsets.UTF_8));
+    }
+
+    @Test
     void nativeModuleStateOptionsAreForwardedOnlyToExplicitRun() throws Exception {
         String digest = createFakePortableEngine(root);
         fixture(digest);
@@ -65,6 +102,54 @@ final class M3PolyglotManifestTaskTest {
                             "all", "--timeout-seconds", "37", "--incremental",
                             "--state-backend", backend),
                     Files.readAllLines(root.resolve("cli-argv.txt"), StandardCharsets.UTF_8));
+        }
+    }
+
+    @Test
+    void explicitlySelectedProviderReuseIsForwardedWithIncrementalState() throws Exception {
+        fixture(createFakePortableEngine(root));
+        Files.writeString(root.resolve("build.gradle"), Files.readString(root.resolve("build.gradle"))
+                + "tasks.named('m3PolyglotRun') { providerReuse.set(true) }\n");
+        GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                .withArguments("m3PolyglotRun", "--stacktrace").build();
+        List<String> command = Files.readAllLines(root.resolve("cli-argv.txt"), StandardCharsets.UTF_8);
+        assertEquals(List.of("--incremental", "--provider-reuse"),
+                command.subList(command.size() - 2, command.size()));
+    }
+
+    @Test
+    void providerReuseAcceptsAnExplicitArtifactCacheWithoutIncrementalState() throws Exception {
+        fixture(createFakePortableEngine(root));
+        Path cache = Files.createDirectory(root.resolveSibling(root.getFileName() + "-provider-cache"));
+        try {
+            Files.writeString(root.resolve("build.gradle"), Files.readString(root.resolve("build.gradle"))
+                    + "tasks.named('m3PolyglotRun') {\n"
+                    + "  incremental.set(false)\n"
+                    + "  providerReuse.set(true)\n"
+                    + "  localArtifactCacheDirectory.fileValue(file('"
+                    + cache.toString().replace('\\', '/') + "'))\n"
+                    + "}\n");
+            GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments("m3PolyglotRun", "--stacktrace").build();
+            List<String> command = Files.readAllLines(root.resolve("cli-argv.txt"), StandardCharsets.UTF_8);
+            assertEquals(List.of("--build-cache", cache.toString(), "--provider-reuse"),
+                    command.subList(command.size() - 3, command.size()));
+        } finally {
+            Files.deleteIfExists(cache);
+        }
+    }
+
+    @Test
+    void providerReuseRejectsPlanningAndStatelessExecutionBeforeStartingEngine() throws Exception {
+        fixture(createFakePortableEngine(root));
+        Files.writeString(root.resolve("build.gradle"), Files.readString(root.resolve("build.gradle"))
+                + "tasks.named('m3PolyglotPlan') { providerReuse.set(true) }\n"
+                + "tasks.named('m3PolyglotRun') { incremental.set(false); providerReuse.set(true) }\n");
+        for (String task : List.of("m3PolyglotPlan", "m3PolyglotRun")) {
+            String output = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                    .withArguments(task, "--stacktrace").buildAndFail().getOutput();
+            assertTrue(output.contains("invalid M3 polyglot CLI mode, target or option"), output);
+            assertTrue(Files.notExists(root.resolve("cli-argv.txt")));
         }
     }
 

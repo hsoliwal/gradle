@@ -36,6 +36,15 @@ import org.gradle.process.ExecOperations;
  */
 @UntrackedTask(because = "Arbitrary language toolchains and generated outputs have unproven complete inputs")
 public abstract class M3PolyglotManifestTask extends DefaultTask {
+    private final Property<Boolean> providerReuse;
+    private final Property<String> m3DbModuleAccess;
+
+    /** Preserves the original behavior for direct task registrations as well as plugin-created tasks. */
+    public M3PolyglotManifestTask() {
+        providerReuse = getProject().getObjects().property(Boolean.class).convention(false);
+        m3DbModuleAccess = getProject().getObjects().property(String.class).convention("none");
+    }
+
     @Input
     public abstract Property<String> getJavaExecutable();
 
@@ -81,7 +90,19 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
      * Maven engine still selects the backend and rejects missing native owners.
      */
     @Input
-    public abstract Property<String> getM3DbModuleAccess();
+    public Property<String> getM3DbModuleAccess() {
+        return m3DbModuleAccess;
+    }
+
+    /**
+     * Requests Maven-owned provider qualification for incremental reuse or artifact restoration.
+     * Defaults to false; unqualified providers continue to execute normally.
+     * This property never admits a native Gradle task-cache hit or JavaCompile skip.
+     */
+    @Input
+    public Property<Boolean> getProviderReuse() {
+        return providerReuse;
+    }
 
     @Input
     public abstract Property<Boolean> getApproveRewriteApply();
@@ -130,7 +151,7 @@ public abstract class M3PolyglotManifestTask extends DefaultTask {
                 getJavaExecutable().get(), engine.toFile(), root.toFile(), manifest.toFile(),
                 getTarget().get(), getMode().get(), getTimeoutSeconds().get(),
                 getIncremental().get(), getApproveRewriteApply().get(), providerJars,
-                getStateBackend().get(), localCache, getM3DbModuleAccess().get());
+                getStateBackend().get(), localCache, getM3DbModuleAccess().get(), getProviderReuse().get());
         getExecOperations().exec(spec -> {
             spec.setExecutable(command.get(0));
             spec.setArgs(command.subList(1, command.size()));

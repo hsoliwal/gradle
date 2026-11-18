@@ -63,6 +63,16 @@ public final class M3PolyglotCommands {
                 stateBackend, buildCache, "none");
     }
 
+    /** Requests Maven-owned provider qualification; existing callers omit this opt-in. */
+    public static List<String> command(String javaExecutable, File engineJar, File workspace,
+            File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
+            boolean approveRewriteApply, List<File> providerJars, String stateBackend, File buildCache,
+            boolean providerReuse) {
+        return command(javaExecutable, engineJar, workspace, manifest, target, mode,
+                timeoutSeconds, incremental, approveRewriteApply, providerJars,
+                stateBackend, buildCache, "none", providerReuse);
+    }
+
     /**
      * A narrowly selected M3JDK module export for original Maven #220.
      * No free-form JVM options or Gradle-side M3DB implementation are accepted.
@@ -72,6 +82,16 @@ public final class M3PolyglotCommands {
             File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
             boolean approveRewriteApply, List<File> providerJars, String stateBackend,
             File buildCache, String m3DbModuleAccess) {
+        return command(javaExecutable, engineJar, workspace, manifest, target, mode,
+                timeoutSeconds, incremental, approveRewriteApply, providerJars,
+                stateBackend, buildCache, m3DbModuleAccess, false);
+    }
+
+    /** Combines independently selected provider reuse and source-owned M3JDK module access. */
+    public static List<String> command(String javaExecutable, File engineJar, File workspace,
+            File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
+            boolean approveRewriteApply, List<File> providerJars, String stateBackend,
+            File buildCache, String m3DbModuleAccess, boolean providerReuse) {
         String java = M3QualityCommands.executable(javaExecutable);
         Objects.requireNonNull(engineJar, "engineJar");
         Objects.requireNonNull(workspace, "workspace");
@@ -82,6 +102,7 @@ public final class M3PolyglotCommands {
                 || timeoutSeconds < 1 || timeoutSeconds > 43_200
                 || !validStateBackend(stateBackend)
                 || (!"legacy".equals(stateBackend) && !incremental)
+                || (providerReuse && (!"run".equals(mode) || (!incremental && buildCache == null)))
                 || (!"run".equals(mode) && (incremental || approveRewriteApply || buildCache != null))
                 || (!moduleAccessArgs.isEmpty() && (!"run".equals(mode) || !incremental
                         || !("m3db".equals(stateBackend) || "native".equals(stateBackend))))) {
@@ -107,6 +128,7 @@ public final class M3PolyglotCommands {
             argv.add("--build-cache");
             argv.add(location);
         }
+        if (providerReuse) argv.add("--provider-reuse");
         return List.copyOf(argv);
     }
 

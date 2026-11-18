@@ -270,6 +270,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
         task.getTarget().convention("all");
         task.getTimeoutSeconds().convention(900);
         task.getIncremental().convention(false);
+        task.getProviderReuse().convention(false);
         task.getStateBackend().convention("legacy");
         task.getM3DbModuleAccess().convention("none");
         task.getApproveRewriteApply().convention(false);
