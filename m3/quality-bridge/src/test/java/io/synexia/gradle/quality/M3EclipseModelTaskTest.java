@@ -173,6 +173,63 @@ class M3EclipseModelTaskTest {
     }
 
     @Test
+    void reviewsJdtFactsOnlyWhenExplicitlyRequested() throws Exception {
+        fixture();
+        Path root = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Path facts = Files.writeString(root.resolve("jdt-compiler-facts.ide"),
+                "M3-JDT-COMPILER-FACTS-V1\nsource-owner\n");
+        Path handoff = Files.writeString(root.resolve("build-handoff.ide"),
+                "M3-ECLIPSE-BUILD-HANDOFF-V1\nsource-owner\n");
+        String report = "{\"schema\":\"m3-jdt-compiler-facts-v1\","
+                + "\"provider\":\"eclipse.jdt\",\"project\":\"fixture\","
+                + "\"authorizesBuildSkipping\":false}\r\n";
+        String digest = engine(report);
+        configuration(digest, "m3EclipseJdtFacts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseJdtFacts') {\n"
+                + "  jdtPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/jdt-compiler-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+
+        Path output = workspace.resolve("build/reports/m3/eclipse-jdt-facts.json");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("tasks", "--all").build();
+        assertFalse(Files.exists(output), "Gradle plugin registration cannot invoke JDT");
+        GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseJdtFacts", "--stacktrace").build();
+        assertEquals(report.replace("\r\n", "\n"), Files.readString(output));
+        assertTrue(Files.readString(facts).startsWith("M3-JDT-COMPILER-FACTS-V1"));
+        assertTrue(Files.readString(handoff).startsWith("M3-ECLIPSE-BUILD-HANDOFF-V1"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-model.json")));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-build-handoff.json")));
+    }
+
+    @Test
+    void rejectsJdtFactsSchemaSubstitutionWithoutPublishingReport() throws Exception {
+        fixture();
+        Path root = Files.createDirectories(workspace.resolve("eclipse-project/target/ide"));
+        Files.writeString(root.resolve("jdt-compiler-facts.ide"),
+                "M3-JDT-COMPILER-FACTS-V1\nsource-owner\n");
+        Files.writeString(root.resolve("build-handoff.ide"),
+                "M3-ECLIPSE-BUILD-HANDOFF-V1\nsource-owner\n");
+        String digest = engine("{\"schema\":\"m3-eclipse-build-context-v1\"}\n");
+        configuration(digest, "m3EclipseJdtFacts");
+        Files.writeString(workspace.resolve("build.gradle"),
+                "\ntasks.named('m3EclipseJdtFacts') {\n"
+                + "  jdtPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/jdt-compiler-facts.ide'))\n"
+                + "  handoffPacket.set(layout.projectDirectory.file("
+                + "'eclipse-project/target/ide/build-handoff.ide'))\n}\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        var failed = GradleRunner.create().withProjectDir(workspace.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseJdtFacts", "--stacktrace").buildAndFail();
+        assertTrue(failed.getOutput().contains("M3 Eclipse model inspection refused"));
+        assertFalse(Files.exists(workspace.resolve("build/reports/m3/eclipse-jdt-facts.json")));
+    }
+
+    @Test
     void refusesUnpinnedEclipseBuilderEngineWithoutCreatingAnOwnerReport() throws Exception {
         fixture();
         engine("{\"schema\":\"m3-eclipse-builder-owners-v1\",\"builders\":[]}\\n");
