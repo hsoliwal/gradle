@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Additive consumer recipe; JAR, LLVM home, SHA and task invocation are manual.
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.synexia.gradle.recipe.EnableM3LlvmToolchainEvidenceBridge
+displayName: Enable source-owned LLVM toolchain evidence tasks in Gradle
+description: >-
+  Install the M3 Gradle quality plugin for an opt-in LLVM toolchain scan or
+  verify task. The original Maven #210 m3-llvm-tools-provider JAR must be
+  separately installed and SHA-256 pinned, and the LLVM home selected by
+  the operator. This recipe neither runs the scanner nor provisions tools;
+  no task is attached to build, check or Gradle's build cache.
+recipeList:
+  - org.openrewrite.gradle.plugins.AddPlugin:
+      pluginId: io.synexia.m3.quality
+      version: '0.1.0-SNAPSHOT'

@@ -1204,3 +1204,53 @@ authorization, source rewrite, LLM-generated answer or database fork is
 introduced. The two Maven JARs and optional external providers must be
 installed and pinned explicitly. See [Project DB bridge contract](docs/M3-PROJECT-DB.md)
 and [qualification receipt](docs/M3-PROJECT-DB-QUALIFICATION-20261118.md).
+
+## Original Maven #210 LLVM toolchain byte evidence in Gradle
+
+Merged [Maven #210](https://github.com/hsoliwal/maven/pull/210) adds the
+standalone `io.synexia.maven.llvm.LlvmToolchainEvidence` CLI to its optional
+`m3-llvm-tools-provider` JAR. The Gradle fork now exposes two opt-in,
+untracked tasks using **that exact CLI**: `m3LlvmToolchainScan` and
+`m3LlvmToolchainVerify`. There is no second Gradle LLVM executable scanner,
+binary hasher, manifest schema, native tool runner, or build-cache key.
+
+Install the original Maven artifact built from merged commit
+`78848ef9a52fbc1ae34032bd46b3d057b5f1d7fd`; after placing a verified
+copy in `vendor`, configure the existing plugin in a consumer:
+
+```groovy
+plugins { id 'io.synexia.m3.quality' }
+
+['m3LlvmToolchainScan', 'm3LlvmToolchainVerify'].each { name ->
+    tasks.named(name) {
+        originalProviderJar.set(layout.projectDirectory.file('vendor/llvm-tools.jar'))
+        originalProviderSha256.set(providers.gradleProperty('m3.llvm.tools.sha256'))
+        llvmHome.set(layout.projectDirectory.dir('toolchains/llvm-pinned'))
+        selectedTools.set('clang,clang++,opt')
+    }
+}
+```
+
+With the original native binaries installed in `toolchains/llvm-pinned/bin`,
+run `./gradlew m3LlvmToolchainScan`, then
+`./gradlew m3LlvmToolchainVerify`. The first invokes Maven's
+`scan <llvm-home> <manifest.tsv> <comma-separated-tools>` and atomically
+writes `build/reports/m3/llvm-toolchain.tsv`. The second invokes Maven's
+`verify <llvm-home> <manifest.tsv>` and rejects binary mutations or
+missing/changed toolchain paths. Gradle separately verifies the *JAR's*
+SHA-256 before either command. Both execute as direct Java argv without a
+shell and neither task is attached to `build` or `check`.
+
+The original `M3-LLVM-TOOLCHAIN-V1` format records tool name, selected
+root-relative path, resolved symlink target, byte size and SHA-256. This is
+**executable-byte identity evidence**, not proof of LLVM source-build
+attestation, ABI, native library resolution, complete compiler dependencies,
+pass plugins or native incremental cache safety. The JDK17/21 source-pinned
+Gradle TestKit lane verifies the real Maven CLI against a synthetic
+**unexecuted** binary fixture, tamper refusal and wrong provider SHA.
+Production LLVM installation, Windows/macOS, source-authenticated native
+toolchains and OpenRewrite SDK replay are separate release gates.
+
+The [opt-in OpenRewrite consumer recipe](recipes/enable-m3-llvm-evidence-bridge.yml)
+installs the plugin only; users explicitly supply the JAR, SHA, installed
+LLVM home and desired scan/verify invocation.
