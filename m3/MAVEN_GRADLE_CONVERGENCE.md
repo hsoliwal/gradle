@@ -18,6 +18,7 @@ abstractions into Gradle's providers, variants, task graph or workers.
 | ECJ XML and javac diagnostic reports | **Maven #160 and #178 merged** | Opt-in `m3NormalizeCompilerDiagnostics` and original pinned Maven `NormalizeCli` | Retain Maven's original parsers; refuse non-English or truncated javac claims of COMPLETE; neither compiler runs on import |
 | IDE delta exchange and environment inputs | Maven #78, #82, #92, #106 | Gradle #25 and **#33 merged** | Gradle InputChanges owns native deltas; v1 digest-pinned export/review only, no build skip |
 | Universal native language task graph / SPI | Maven #115, #120, #132 | Gradle #24, #25 | Reuse Maven's pinned CLI and provider JARs for manifest tasks; leave Gradle's original task model untouched |
+| Rebar3/Erlang and Composer/PHP native phases | **Maven #212 merged** (`95bc17f8212350af1632e16990e985f8a2ee72cb`) | Original Mavenizer → `m3-build.tsv` → existing opt-in Gradle `m3PolyglotPlan`; independent source-pinned JDK17/21 real TestKit lane in this change | Mavenizer owns command detection, POM/profile and manifest generation; Gradle plans the same manifest without running native tools, inventing Composer install, or duplicating phase rules |
 | Per-module content-verified incremental state | **Maven #143, #144–#146, #157 merged** | Gradle #28, #30, #31 merged | Forward only the qualified Maven CLI selections; do not copy lifecycle goals or assume Gradle cache hits |
 | Portable module-state backends and whole-run locks | **Maven #147 merged**, later **#184** one-owner consolidation | Gradle #30–#31 merged | Preserve Maven-owned module leases, transaction generations and storage; Gradle does not supply JDBC/native drivers automatically |
 | M3IndexDB unified per-project state, native Gradle JUnit evidence and RAG | **Maven #184, #186–#188, #190–#196 merged** | Gradle #37 and #41 merged | Maven reads native Gradle JUnit XML from projects without POMs; original IndexStore retains one storage owner; dry-run #194 fix source-pinned, no Gradle task/cache/ABI ingestion or duplicated parser |
@@ -37,6 +38,32 @@ execution, artifact transforms, variant selection, Worker API and Problems API)
 remains in Gradle. M3JDK21 is the eventual shared owner for reusable facts,
 state fingerprints, language structures and transformations where a compatible
 versioned contract is available.
+
+## Maven #212 native Rebar3 and Composer manifest boundary
+
+The **merged** Maven #212 source
+`95bc17f8212350af1632e16990e985f8a2ee72cb` adds original Mavenizer
+Erlang and PHP detection. The Maven fork decides which `rebar.config`,
+`test/`, `composer.json` and PHPUnit descriptors justify native phase
+entries in `m3-build.tsv`. It generates `rebar3 compile`/`eunit` and
+`composer validate --no-check-publish`/`exec phpunit` only when their
+original conditions apply. It neither infers Composer installation nor
+performs native execution while planning or generating files.
+
+The Gradle fork retains its already merged, original-
+`PolyglotCli`-delegating `m3PolyglotPlan` and `m3PolyglotRun`. A new
+real-engine TestKit case loads Mavenizer from the separately pinned JAR,
+checks its no-write plan and emitted native manifest, then passes that
+unchanged manifest to the existing Gradle *plan-only* task. Independent
+CI builds the exact Maven #212 producer and runs this cross-repository
+acceptance on Java 17 and 21. No new Gradle parser or native tool driver
+is created. This is a build-plan contract, **not** a compiler/toolchain,
+deployment, Maven reactor or Gradle build-cache equivalence proof.
+
+The recipe at `m3/quality-bridge/recipes/enable-m3-native-manifest-bridge.yml`
+only enables the plugin in an explicitly selected consumer; Mavenizer
+generation and native execution remain separate opt-ins. Hosted CI and
+independent recipe replay must qualify the proof before promotion.
 
 ## Imported contract from merged Maven #143, #147 and later M3DB reconciliation
 

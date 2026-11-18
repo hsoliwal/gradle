@@ -93,6 +93,46 @@ ABI, output-content or transitive-dependency equivalence; do not use it as an
 unqualified build-cache correctness claim. Rewrite application requires explicit
 separate approval and the source-owned recipe/compile/test gates.
 
+### Original Maven #212 Rebar3/Erlang and Composer/PHP phases
+
+Merged [Maven #212](https://github.com/hsoliwal/maven/pull/212) teaches the
+**original Mavenizer** to emit native tasks for Erlide/Rebar3 and Eclipse
+PDT/Composer workspaces. Gradle does not duplicate Mavenizer's detection,
+rewrite its generated `m3-build.tsv`, or create its own command grammar. The
+existing `m3PolyglotPlan` accepts that same strict manifest when its original
+polyglot engine JAR and exact SHA-256 are configured as shown above.
+
+| Original Mavenizer source file | Explicit phase and native command |
+| --- | --- |
+| `rebar.config` | `compile`: `rebar3 compile` |
+| `rebar.config` and a `test/` directory | `test`: `rebar3 eunit` |
+| `composer.json` | `validate`: `composer validate --no-check-publish` |
+| `composer.json` with `phpunit.xml` or `.dist` | `test`: `composer exec phpunit` |
+
+The real cross-build TestKit case
+`M3MavenizerNativePhasesRealEngineTest` runs Maven's **public**
+`Mavenizer.mavenize` API from the original JAR against a temporary fixture.
+It proves the no-write planning mode, then lets original Mavenizer produce
+its `pom.xml` and manifest; Gradle invokes only its existing
+`m3PolyglotPlan` against that output for `compile`, `validate` and `test`.
+There is no Composer installation, Rebar3 invocation, PHP interpreter,
+network operation, or implicit task execution in the fixture. Maven's POM
+profile and manifest generation remain Maven-owned, and manifest planning
+is *not* an assertion of usable external toolchains.
+
+The dedicated CI lane `.github/workflows/m3-gradle-mavenizer-native.yml`
+builds **exactly** merged Maven #212 at
+`95bc17f8212350af1632e16990e985f8a2ee72cb`, runs its original
+`verify` contracts, and then selects this real-engine TestKit class on
+Java 17 and 21. Without the explicitly supplied `M3_POLYGLOT_JAR`, local
+TestKit skips only this cross-repository case; a skip is **not** a pass.
+The source-pin guard lives at
+`m3/quality-bridge/scripts/verify-mavenizer-native-workflow.sh`.
+The opt-in, recipe-first consumer is
+`m3/quality-bridge/recipes/enable-m3-native-manifest-bridge.yml`.
+The hosted workflow outcome and independent recipe replay are still required
+for acceptance; neither native tool is part of a qualified Gradle cache key.
+
 ### Original Maven #198 LLVM compiler provider, available from Gradle
 
 Merged [Maven #198](https://github.com/hsoliwal/maven/pull/198) introduces the

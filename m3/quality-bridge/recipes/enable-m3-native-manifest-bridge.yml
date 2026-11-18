@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Recipe-first opt-in original Mavenizer #212 manifest consumer. The original
+# Mavenizer, not this recipe, owns native tool selections and phases.
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.synexia.gradle.recipe.EnableM3NativeManifestBridge
+displayName: Enable original Mavenizer native manifest planning in Gradle
+description: >-
+  Make the installed M3 Gradle quality plugin available for the explicitly
+  invoked m3PolyglotPlan task. The source-pinned original Mavenizer emits
+  Rebar3 and Composer commands in a Maven-owned m3-build.tsv. This recipe
+  does not generate a manifest, install native tools, run builds, or attach
+  any task to build or check.
+recipeList:
+  - org.openrewrite.gradle.plugins.AddPlugin:
+      pluginId: io.synexia.m3.quality
+      version: '0.1.0-SNAPSHOT'
