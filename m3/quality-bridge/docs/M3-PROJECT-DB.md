@@ -89,7 +89,7 @@ not claim storage integration. The cross-fork CI job checks out exactly
 Maven #184, builds its original Java 17 plugin/storage owner, runs Maven's
 project-DB tests, then invokes the actual JAR from Gradle on JDK 17 and 21.
 
-The newer Maven #186 array-backed batched receipts and pending #187
+The newer merged Maven #186 array-backed batched receipts and #187
 engine-transcript safety fix are **not** silently claimed qualified by this
 bridge. Pin changes require their own source review and runtime tests.
 Until real CI results are available this is an additive, opt-in review
