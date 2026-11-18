@@ -54,19 +54,17 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.getFailOnIntroducedErrors().convention(false);
         });
 
-        // Explicit, originally executed XML reports only; no analyzer invocation.
+        // Explicit, originally executed reports only; no analyzer invocation.
         project.getTasks().register("m3NormalizeAnalyzerXml", M3NormalizeAnalyzerXmlTask.class, task -> {
-            task.setGroup("verification");
+            analyzerDefaults(project, task, "CHECKSTYLE", "analysis");
             task.setDescription("Normalize existing Checkstyle/PMD XML using an explicitly pinned Java adapter");
-            task.getJavaExecutable().convention(
-                    project.getProviders().gradleProperty("m3.analysis.java").orElse("java"));
-            task.getFormat().convention("CHECKSTYLE");
-            task.getOriginalStatus().convention("PARTIAL");
-            task.getProjectRoot().convention(project.getLayout().getProjectDirectory());
-            task.getNormalizedReport().convention(
-                    project.getLayout().getBuildDirectory().file("reports/m3/import/analysis.tsv"));
-            task.getNormalizedSha256().convention(
-                    project.getLayout().getBuildDirectory().file("reports/m3/import/analysis.sha256"));
+        });
+
+        // Maven #160 + #178 own the ECJ and javac parsers, error handling and
+        // incomplete-log refusals. This additional Gradle task is opt-in.
+        project.getTasks().register("m3NormalizeCompilerDiagnostics", M3NormalizeAnalyzerXmlTask.class, task -> {
+            analyzerDefaults(project, task, "JAVAC", "compiler-analysis");
+            task.setDescription("Normalize an existing ECJ XML or English UTF-8 javac log through Maven");
         });
 
         // Native Gradle InputChanges is the source owner; Maven's v1 wire is
@@ -194,5 +192,19 @@ public final class M3QualityPlugin implements Plugin<Project> {
         task.getIncremental().convention(false);
         task.getStateBackend().convention("legacy");
         task.getApproveRewriteApply().convention(false);
+    }
+
+    private static void analyzerDefaults(Project project, M3NormalizeAnalyzerXmlTask task,
+            String format, String reportName) {
+        task.setGroup("verification");
+        task.getJavaExecutable().convention(
+                project.getProviders().gradleProperty("m3.analysis.java").orElse("java"));
+        task.getFormat().convention(format);
+        task.getOriginalStatus().convention("PARTIAL");
+        task.getProjectRoot().convention(project.getLayout().getProjectDirectory());
+        task.getNormalizedReport().convention(
+                project.getLayout().getBuildDirectory().file("reports/m3/import/" + reportName + ".tsv"));
+        task.getNormalizedSha256().convention(
+                project.getLayout().getBuildDirectory().file("reports/m3/import/" + reportName + ".sha256"));
     }
 }
