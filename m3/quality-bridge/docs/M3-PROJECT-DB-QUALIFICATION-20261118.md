@@ -2,7 +2,8 @@
 # M3 project DB Gradle bridge — qualification receipt (2026-11-18)
 
 Upstream contract: hsoliwal/maven#184 and #190,
-source pin: merged #190 2e15f2a4f0c92f6593167f573b0222e214a74b0f.
+original #190 merge: 2e15f2a4f0c92f6593167f573b0222e214a74b0f;
+reviewed CI source pin: merged #194 64e5ce257c46207eac32407f00979cfc4a79767e.
 Receiving branch: hsoliwal/gradle
 feat/m3-gradle-project-db-cli-20261118.
 
@@ -92,6 +93,53 @@ plugin descriptor, full ProjectDb storage, Gradle TestKit or cross-OS
 qualification result. Maven's native database and full incremental
 catalog/derived-query cases remain separate integration gates.
 
+## Real CI failure and source-pinned owner repair
+
+The Maven #190 native Gradle-evidence matrix **executed** on both JDK 17
+and JDK 21. In each job, the standalone original Gradle-only JUnit
+source/parser test passed; the Maven polyglot module-state contract then
+failed while planning, before the project-DB integration tests could run:
+
+~~~text
+NullPointerException: ModuleStateDb.commitStaged() because "store" is null
+TaskRunner.runTasks(TaskRunner.java:293)
+ModuleStateContractTestMain.doesNotWriteDuringPlanning(...)
+~~~
+
+The cause was a dry-run path with incremental=true: read-only planning
+never opens ModuleStateDb but the end-of-graph code tried to commit it.
+Maven PR #194 corrected the commit gate to require an actual executable
+incremental run; its regression now exercises embedded/file/SQLite/H2/
+native/ext-* planning with an absent cache directory.
+
+Gradle's original cross-fork CI source pin still referenced Maven #190,
+which contained this known build failure. This follow-up changes only the
+pinned checkout to **merged Maven #194** and updates the workflow guard.
+The existing source-identical JDK-only Maven #190 parser proof remains
+valid, but a merged source pin, passed parser, or historical CI failure
+does **not** establish a passing full Maven polyglot/project-DB build.
+
+## Re-executed against merged Maven #194
+
+The JDK-only native Gradle evidence test was re-run after the #194
+Maven source revision was pinned. Exact GitHub blob hashes for
+Modules, Sources, Source, Chunk, Text, SurefireParser and
+GradleSourceDiscoveryContractMain were rechecked. All seven remain
+identical to the source-identical hashes recorded earlier in this
+receipt. On OpenJDK 21:
+
+~~~sh
+javac --release 17 -encoding UTF-8 -Xlint:all -Werror -d classes \
+  Modules.java Sources.java Source.java Chunk.java Text.java \
+  SurefireParser.java GradleSourceDiscoveryContractMain.java
+java -cp classes org.apache.maven.plugins.projectdb.GradleSourceDiscoveryContractMain
+~~~
+
+**PASS**: native Gradle module and JUnit case evidence via the original
+Maven parsers. The existing TaskRunner #194 transactional fix has not
+been exercised by this JDK-only compilation; that requires the full
+Maven polyglot module-state contract and its CI.
+
 ## Blocked gates
 
 - Full Gradle TestKit, configuration-cache reuse and Gradle API
@@ -107,5 +155,4 @@ catalog/derived-query cases remain separate integration gates.
   compatibility gates and full Gradle distribution tests: PENDING.
 
 No Maven/Gradle task cache-hit or goal-skip authority is granted by
-the new bridge. Keep PR draft until CI shows actual source-owned
-engine and task integration results.
+the new bridge. Keep new CI source-pin changes unqualified until actual source-owned engine and Gradle task integration checks pass.

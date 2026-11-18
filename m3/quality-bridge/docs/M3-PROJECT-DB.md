@@ -3,7 +3,8 @@
 
 Source owner: Maven [PR #184](https://github.com/hsoliwal/maven/pull/184),
 extended by merged [PR #190](https://github.com/hsoliwal/maven/pull/190),
-source pin 2e15f2a4f0c92f6593167f573b0222e214a74b0f.
+CI source pin 64e5ce257c46207eac32407f00979cfc4a79767e,
+which also includes Maven #194's read-only planning fix.
 The original ProjectDbCli and M3IndexDB/IndexStore code remain Maven/JDK
 owned. This Gradle component never copies storage, retrieval, parser or MCP
 implementations. This is not Gradle's local/remote build cache and cannot
@@ -100,9 +101,9 @@ The standalone Java 17 test checks the original argument vector, classpath
 construction, query/ingest isolation, bounded questions, no-shell invocation
 and refusals. Gradle TestKit checks task registration, SHA-256 pinning,
 source/store boundaries and JSON reports, including a fake CLI that does
-not claim storage integration. The cross-fork CI job checks out exactly
-merged Maven #190 (which includes #184), builds its Java 17
-project-DB/IndexStore owner, runs the Maven project-DB contracts,
+not claim storage integration. The cross-fork CI job checks out the exact merged Maven #194 commit
+(which includes #184, #190 and the read-only M3DB planning correction),
+builds its Java 17 project-DB/IndexStore owner, runs the Maven project-DB contracts,
 and invokes the original JAR from Gradle on JDK 17 and 21.
 A separate real-engine TestKit fixture contains **no POM** and
 requires native Gradle XML failures to retain source-line provenance,
