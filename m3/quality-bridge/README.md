@@ -181,9 +181,12 @@ is intentional: native headers, sysroots, ABI, response files and generated
 inputs do not yet form a complete M3DB cache key. CI smoke does **not**
 qualify the user's own LLVM fork binary, Flang, `llc`, Objective-C,
 cross-compilation, linking, LLVM/MLIR passes or Windows/macOS. Follow-up
-[Maven #199](https://github.com/hsoliwal/maven/pull/199) is still an
-independent draft for shared LLVM-home and binary-pin selection; do not
-infer that its unmerged behavior exists in Maven #198. The opt-in
+[Maven #199](https://github.com/hsoliwal/maven/pull/199) subsequently
+**merged** shared LLVM-home and binary-pin selection, and
+[Maven #219](https://github.com/hsoliwal/maven/pull/219) later merged
+compiler/CMake/Clang-AST alias convergence. Neither feature is implicitly
+included in the **older** original Maven #198 binary pinned in this
+TestKit lane; qualify newer source revisions independently. The opt-in
 [OpenRewrite consumer recipe](recipes/enable-m3-llvm-provider-bridge.yml)
 installs the plugin only and requires SDK replay before promotion.
 
