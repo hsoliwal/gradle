@@ -36,6 +36,15 @@ final class M3EclipseModelCommandsTest {
     }
 
     @Test
+    void sourceOwnerContextIsASeparateAndExplicitMavenCliCommand() {
+        File engine = workspace.resolve("engine.jar").toFile();
+        File packet = workspace.resolve("build context.ide").toFile();
+        assertEquals(List.of("java", "-Dfile.encoding=UTF-8", "-cp", engine.getAbsolutePath(),
+                "io.synexia.maven.polyglot.EclipseModelCli", "context", packet.getAbsolutePath()),
+                M3EclipseModelCommands.context("java", engine, packet, List.of()));
+    }
+
+    @Test
     void usesOnlyPinnedMavenCliWithoutShellOrInferredCommands() {
         File engine = workspace.resolve("source owned engine.jar").toFile();
         File project = workspace.resolve("Eclipse work space").toFile();
