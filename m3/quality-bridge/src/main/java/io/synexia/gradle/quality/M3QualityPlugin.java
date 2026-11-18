@@ -227,6 +227,20 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-jdt-facts.json"));
         });
 
+        // Source-owned CDT scanner evidence is independent of JDT classpaths.
+        // Keep native CDT configuration IDs distinct from Eclipse and active CDT.
+        project.getTasks().register("m3EclipseCdtFacts", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("cdt");
+            task.setDescription("Review original CDT scanner, source and build configuration evidence");
+            task.getHandoffPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/build-handoff.ide"));
+            task.getCdtPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/cdt-compiler-facts.ide"));
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-cdt-facts.json"));
+        });
+
         // The Maven #184 project DB owns the data and deterministic retrieval.
         // These optional tasks neither reimplement indexes nor affect build/check.
         project.getTasks().register("m3ProjectDbIngest", M3ProjectDbTask.class, task -> {
