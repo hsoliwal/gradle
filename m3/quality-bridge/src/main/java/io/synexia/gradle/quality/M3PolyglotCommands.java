@@ -132,6 +132,25 @@ public final class M3PolyglotCommands {
         return List.copyOf(argv);
     }
 
+    /**
+     * Original Maven #255 compilation-database export for Gradle and Eclipse.
+     * This returns a Java argv and never executes a compiler or implements
+     * Clang's JSON format in Gradle. The executable and every provider JAR
+     * must first be separately verified by the owning Gradle task.
+     */
+    public static List<String> compilationDatabase(String javaExecutable, File engineJar,
+            File workspace, File manifest, String target, List<File> providerJars) {
+        String java = M3QualityCommands.executable(javaExecutable);
+        Objects.requireNonNull(workspace, "workspace");
+        Objects.requireNonNull(manifest, "manifest");
+        if (target == null || !target.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,79}")) {
+            throw new IllegalArgumentException("invalid M3 LLVM compilation database target");
+        }
+        return List.of(java, "-Dfile.encoding=UTF-8", "-cp",
+                classpath(engineJar, providerJars), MAIN_CLASS, "llvm-compile-db",
+                workspace.getAbsolutePath(), manifest.getAbsolutePath(), target);
+    }
+
     /** Only these source-owned M3JDK database module shapes can be exposed. */
     private static List<String> m3DbModuleAccessArgs(String selection) {
         if (selection == null) throw new IllegalArgumentException("missing M3DB module selection");
