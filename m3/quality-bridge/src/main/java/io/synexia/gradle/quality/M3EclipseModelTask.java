@@ -57,6 +57,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             .getBytes(StandardCharsets.UTF_8);
     private static final byte[] JDT_PREFIX = "{\"schema\":\"m3-jdt-compiler-facts-v1\""
             .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] CDT_PREFIX = "{\"schema\":\"m3-cdt-compiler-facts-v1\""
+            .getBytes(StandardCharsets.UTF_8);
 
     @Input
     public abstract Property<String> getJavaExecutable();
@@ -100,6 +102,12 @@ public abstract class M3EclipseModelTask extends DefaultTask {
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getJdtPacket();
 
+    /** Exact selected native CDT scanner-facts packet from the original CDT core. */
+    @Optional
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract RegularFileProperty getCdtPacket();
+
     /** "model" retains the original v1 schema; "owners" selects the generic builder-owner report. */
     @Input
     public abstract Property<String> getReportMode();
@@ -140,19 +148,21 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             String mode = getReportMode().get();
             if (!"model".equals(mode) && !"owners".equals(mode)
                     && !"context".equals(mode) && !"handoff".equals(mode)
-                    && !"reconcile".equals(mode) && !"jdt".equals(mode)) {
+                    && !"reconcile".equals(mode) && !"jdt".equals(mode) && !"cdt".equals(mode)) {
                 throw new IOException("unsupported Eclipse report mode: " + mode);
             }
             Path packet = null;
             if ("context".equals(mode) || "handoff".equals(mode)
-                    || "reconcile".equals(mode) || "jdt".equals(mode)) {
-                var declared = ("handoff".equals(mode) || "reconcile".equals(mode) || "jdt".equals(mode))
+                    || "reconcile".equals(mode) || "jdt".equals(mode) || "cdt".equals(mode)) {
+                var declared = ("handoff".equals(mode) || "reconcile".equals(mode)
+                        || "jdt".equals(mode) || "cdt".equals(mode))
                         ? getHandoffPacket() : getContextPacket();
                 if (!declared.isPresent()) {
                     throw new IOException("Eclipse source-owner packet was not supplied");
                 }
                 packet = declared.get().getAsFile().toPath().toAbsolutePath().normalize();
-                long maxBytes = ("handoff".equals(mode) || "reconcile".equals(mode) || "jdt".equals(mode))
+                long maxBytes = ("handoff".equals(mode) || "reconcile".equals(mode)
+                        || "jdt".equals(mode) || "cdt".equals(mode))
                         ? 12L * 1024 * 1024 : 1024L * 1024;
                 if (!packet.startsWith(root) || !Files.isRegularFile(packet, LinkOption.NOFOLLOW_LINKS)
                         || Files.size(packet) > maxBytes) {
@@ -173,6 +183,19 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 }
                 rejectLinkedPath(checkout, jdtPacket);
             }
+            Path cdtPacket = null;
+            if ("cdt".equals(mode)) {
+                if (!getCdtPacket().isPresent()) {
+                    throw new IOException("original CDT scanner facts packet was not supplied");
+                }
+                cdtPacket = getCdtPacket().get().getAsFile().toPath().toAbsolutePath().normalize();
+                if (!cdtPacket.startsWith(root)
+                        || !Files.isRegularFile(cdtPacket, LinkOption.NOFOLLOW_LINKS)
+                        || Files.size(cdtPacket) > 64 * 1024) {
+                    throw new IOException("CDT facts must be a project-local file under 64 KiB");
+                }
+                rejectLinkedPath(checkout, cdtPacket);
+            }
             List<String> command = switch (mode) {
                 case "owners" -> M3EclipseModelCommands.owners(
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
@@ -184,6 +207,9 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), packet.toFile(), installedProviders);
                 case "jdt" -> M3EclipseModelCommands.jdt(
                         getJavaExecutable().get(), engine.toFile(), jdtPacket.toFile(), packet.toFile(),
+                        installedProviders);
+                case "cdt" -> M3EclipseModelCommands.cdt(
+                        getJavaExecutable().get(), engine.toFile(), cdtPacket.toFile(), packet.toFile(),
                         installedProviders);
                 default -> M3EclipseModelCommands.inspect(
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
@@ -211,6 +237,7 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 case "handoff" -> HANDOFF_PREFIX;
                 case "reconcile" -> RECONCILE_PREFIX;
                 case "jdt" -> JDT_PREFIX;
+                case "cdt" -> CDT_PREFIX;
                 default -> MODEL_PREFIX;
             };
             if (json.length < expectedPrefix.length + 2
