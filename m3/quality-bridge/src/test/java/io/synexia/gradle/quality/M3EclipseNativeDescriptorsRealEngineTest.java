@@ -4,6 +4,7 @@
  */
 package io.synexia.gradle.quality;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -88,6 +89,58 @@ final class M3EclipseNativeDescriptorsRealEngineTest {
         assertFalse(second.equals(first), "changed PDE target is reflected in Maven's original model");
         assertEquals("<target name=\"Two\"/>", Files.readString(target),
                 "Gradle review does not rewrite source");
+    }
+
+    @Test
+    void originalMavenEngineRefusesMoreThan128DynamicPdeDescriptors() throws Exception {
+        Path eclipse = refusalProject();
+        for (int i = 0; i < 129; i++) {
+            Files.writeString(eclipse.resolve(String.format("target-%03d.target", i)), "<target/>");
+        }
+        String output = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseModel", "--stacktrace").buildAndFail().getOutput();
+        assertTrue(output.contains("Eclipse target/product descriptor count exceeded"), output);
+        assertFalse(Files.exists(root.resolve("build/reports/m3/eclipse-model.json")),
+                "invalid Maven model must not become a successful Gradle report");
+    }
+
+    @Test
+    void originalMavenEngineRejectsSymlinkedPdeDescriptorWithoutReadingItsTarget() throws Exception {
+        Path eclipse = refusalProject();
+        Path outside = Files.writeString(root.resolve("outside-manifest.xml"), "<plugin/>");
+        try {
+            Files.createSymbolicLink(eclipse.resolve("plugin.xml"), outside);
+        } catch (UnsupportedOperationException | IOException | SecurityException unsupported) {
+            assumeTrue(false, "host does not permit this symlink-refusal fixture");
+        }
+        String output = GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
+                .withArguments("m3EclipseModel", "--stacktrace").buildAndFail().getOutput();
+        assertTrue(output.contains("Eclipse language descriptor must be a regular file"), output);
+        assertEquals("<plugin/>", Files.readString(outside), "Maven must not mutate external source");
+        assertFalse(Files.exists(root.resolve("build/reports/m3/eclipse-model.json")));
+    }
+
+    private Path refusalProject() throws Exception {
+        String supplied = System.getenv("M3_POLYGLOT_JAR");
+        assumeTrue(supplied != null && !supplied.isBlank(),
+                "requires exact merged Maven #211 descriptor engine JAR");
+        Path original = Path.of(supplied).toAbsolutePath().normalize();
+        assertTrue(Files.isRegularFile(original));
+        Path engine = root.resolve("engine.jar");
+        Files.copy(original, engine);
+        Path eclipse = Files.createDirectories(root.resolve("eclipse-project"));
+        Files.writeString(eclipse.resolve(".project"),
+                "<projectDescription><name>Native</name><buildSpec/>"
+                + "<natures/></projectDescription>");
+        Files.writeString(root.resolve("settings.gradle"), "rootProject.name='m3-pde-refusal'\n");
+        Files.writeString(root.resolve("build.gradle"),
+                "plugins { id 'io.synexia.m3.quality' }\n"
+                + "tasks.named('m3EclipseModel') {\n"
+                + "  engineJar.set(layout.projectDirectory.file('engine.jar'))\n"
+                + "  engineSha256.set('" + sha256(Files.readAllBytes(engine)) + "')\n"
+                + "  eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))\n"
+                + "}\n");
+        return eclipse;
     }
 
     private String run() {
