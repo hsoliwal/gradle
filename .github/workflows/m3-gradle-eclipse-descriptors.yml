@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: 2026 Contributors to the Synexia Project
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle original Eclipse/PDE descriptor evidence
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - 'm3/MAVEN_GRADLE_CONVERGENCE.md'
+      - '.github/workflows/m3-gradle-eclipse-descriptors.yml'
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - 'm3/MAVEN_GRADLE_CONVERGENCE.md'
+      - '.github/workflows/m3-gradle-eclipse-descriptors.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-owned-eclipse-model:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Guard real Maven descriptor producer and Gradle consumer source pins
+        run: sh m3/quality-bridge/scripts/verify-eclipse-descriptor-workflow.sh
+      # Maven #211 owns the bounded PDE, CDT, Rust, Swift and polyglot
+      # authoring-descriptor bytes; this is an exact merged source, not master.
+      - name: Checkout merged Maven #211 descriptor source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 2b4ea06f34d785b78a7811ca59cf6d24efb02287
+          path: m3-maven-eclipse-descriptors
+          persist-credentials: false
+      - name: Qualify and package original Maven Eclipse model and polyglot engine
+        run: |
+          mvn -B -ntp -f m3-maven-eclipse-descriptors/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-eclipse-descriptors/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Execute the real Maven #211 descriptor model through Gradle TestKit
+        run: |
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-eclipse-descriptors/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3EclipseNativeDescriptorsRealEngineTest' --rerun-tasks

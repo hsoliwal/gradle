@@ -58,20 +58,40 @@ public final class M3PolyglotCommands {
     public static List<String> command(String javaExecutable, File engineJar, File workspace,
             File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
             boolean approveRewriteApply, List<File> providerJars, String stateBackend, File buildCache) {
+        return command(javaExecutable, engineJar, workspace, manifest, target, mode,
+                timeoutSeconds, incremental, approveRewriteApply, providerJars,
+                stateBackend, buildCache, "none");
+    }
+
+    /**
+     * A narrowly selected M3JDK module export for original Maven #220.
+     * No free-form JVM options or Gradle-side M3DB implementation are accepted.
+     * Existing overloads retain their exact argument order without selection.
+     */
+    public static List<String> command(String javaExecutable, File engineJar, File workspace,
+            File manifest, String target, String mode, int timeoutSeconds, boolean incremental,
+            boolean approveRewriteApply, List<File> providerJars, String stateBackend,
+            File buildCache, String m3DbModuleAccess) {
         String java = M3QualityCommands.executable(javaExecutable);
         Objects.requireNonNull(engineJar, "engineJar");
         Objects.requireNonNull(workspace, "workspace");
         Objects.requireNonNull(manifest, "manifest");
+        List<String> moduleAccessArgs = m3DbModuleAccessArgs(m3DbModuleAccess);
         if (!("plan".equals(mode) || "run".equals(mode))
                 || target == null || !target.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,79}")
                 || timeoutSeconds < 1 || timeoutSeconds > 43_200
                 || !validStateBackend(stateBackend)
                 || (!"legacy".equals(stateBackend) && !incremental)
-                || (!"run".equals(mode) && (incremental || approveRewriteApply || buildCache != null))) {
+                || (!"run".equals(mode) && (incremental || approveRewriteApply || buildCache != null))
+                || (!moduleAccessArgs.isEmpty() && (!"run".equals(mode) || !incremental
+                        || !("m3db".equals(stateBackend) || "native".equals(stateBackend))))) {
             throw new IllegalArgumentException("invalid M3 polyglot CLI mode, target or option");
         }
-        List<String> argv = new ArrayList<>(List.of(java, "-cp", classpath(engineJar, providerJars),
-                MAIN_CLASS, mode, workspace.getAbsolutePath(), manifest.getAbsolutePath(), target,
+        List<String> argv = new ArrayList<>();
+        argv.add(java);
+        argv.addAll(moduleAccessArgs);
+        argv.addAll(List.of("-cp", classpath(engineJar, providerJars), MAIN_CLASS, mode,
+                workspace.getAbsolutePath(), manifest.getAbsolutePath(), target,
                 "--timeout-seconds", Integer.toString(timeoutSeconds)));
         if (incremental) argv.add("--incremental");
         if (!"legacy".equals(stateBackend)) {
@@ -88,6 +108,21 @@ public final class M3PolyglotCommands {
             argv.add(location);
         }
         return List.copyOf(argv);
+    }
+
+    /** Only these source-owned M3JDK database module shapes can be exposed. */
+    private static List<String> m3DbModuleAccessArgs(String selection) {
+        if (selection == null) throw new IllegalArgumentException("missing M3DB module selection");
+        return switch (selection) {
+            case "none" -> List.of();
+            case "current-java-base" -> List.of("--add-exports=java.base/jdk.m3.db=ALL-UNNAMED");
+            case "current-named" -> List.of("--add-modules=jdk.m3.db",
+                    "--add-exports=jdk.m3.db/jdk.m3.db=ALL-UNNAMED");
+            case "legacy-java-base" -> List.of("--add-exports=java.base/jdk.m3.indexdb=ALL-UNNAMED");
+            case "legacy-named" -> List.of("--add-modules=jdk.m3.indexdb",
+                    "--add-exports=jdk.m3.indexdb/jdk.m3.indexdb=ALL-UNNAMED");
+            default -> throw new IllegalArgumentException("unsupported M3DB module selection: " + selection);
+        };
     }
 
     /** Match Maven #184+ backend spellings; aliases preserve Maven-owned storage. */

@@ -133,6 +133,63 @@ final class M3PolyglotCommandsTest {
     }
 
     @Test
+    void m3JdkDatabaseModuleExportsAreExplicitAndNeverAFreeFormJvmOption() {
+        File engine = temp.resolve("engine.jar").toFile();
+        File workspace = temp.toFile();
+        File manifest = temp.resolve("m3-build.tsv").toFile();
+        List<String> old = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "verify", "run", 900,
+                true, false, List.of(), "m3db", null);
+        List<String> unchanged = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "verify", "run", 900,
+                true, false, List.of(), "m3db", null, "none");
+        assertEquals(old, unchanged, "unspecified M3JDK access must preserve original CLI ABI");
+
+        Map<String, List<String>> expected = Map.of(
+                "current-java-base", List.of("--add-exports=java.base/jdk.m3.db=ALL-UNNAMED"),
+                "current-named", List.of("--add-modules=jdk.m3.db",
+                        "--add-exports=jdk.m3.db/jdk.m3.db=ALL-UNNAMED"),
+                "legacy-java-base", List.of("--add-exports=java.base/jdk.m3.indexdb=ALL-UNNAMED"),
+                "legacy-named", List.of("--add-modules=jdk.m3.indexdb",
+                        "--add-exports=jdk.m3.indexdb/jdk.m3.indexdb=ALL-UNNAMED"));
+        for (Map.Entry<String, List<String>> entry : expected.entrySet()) {
+            List<String> run = M3PolyglotCommands.command(
+                    "java", engine, workspace, manifest, "verify", "run", 900,
+                    true, false, List.of(), "m3db", null, entry.getKey());
+            assertEquals("java", run.get(0));
+            assertEquals(entry.getValue(), run.subList(1, 1 + entry.getValue().size()));
+            assertEquals(old.subList(1, old.size()), run.subList(1 + entry.getValue().size(), run.size()),
+                    "Maven's original CLI argv must not be modified after JVM module admission");
+        }
+
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "verify", "plan", 900,
+                false, false, List.of(), "legacy", null, "current-java-base"));
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "verify", "run", 900,
+                false, false, List.of(), "m3db", null, "current-java-base"));
+        for (String backend : List.of("legacy", "embedded", "file", "sqlite", "h2", "ext-local")) {
+            assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                    "java", engine, workspace, manifest, "verify", "run", 900,
+                    true, false, List.of(), backend, null, "current-java-base"));
+        }
+        for (String invalid : List.of("", "auto", "CURRENT-JAVA-BASE", "current java base",
+                "--javaagent=/tmp/untrusted.jar", "current-named --add-opens=java.base/java.lang")) {
+            assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                    "java", engine, workspace, manifest, "verify", "run", 900,
+                    true, false, List.of(), "native", null, invalid));
+        }
+        assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "verify", "run", 900,
+                true, false, List.of(), "native", null, null));
+        List<String> alias = M3PolyglotCommands.command(
+                "java", engine, workspace, manifest, "verify", "run", 900,
+                true, false, List.of(), "native", null, "current-java-base");
+        assertEquals("--add-exports=java.base/jdk.m3.db=ALL-UNNAMED", alias.get(1));
+        assertEquals(List.of("--state-backend", "native"), alias.subList(alias.size() - 2, alias.size()));
+    }
+
+    @Test
     void mavenLocalCacheIsExplicitRunOnlyAndDoesNotChangeOldArgv() {
         File engine = temp.resolve("engine.jar").toFile();
         File workspace = temp.resolve("workspace with spaces").toFile();
