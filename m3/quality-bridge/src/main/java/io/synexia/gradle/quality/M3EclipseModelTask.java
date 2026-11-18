@@ -55,6 +55,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             .getBytes(StandardCharsets.UTF_8);
     private static final byte[] RECONCILE_PREFIX = "{\"schema\":\"m3-eclipse-reconciliation-v1\""
             .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] JDT_PREFIX = "{\"schema\":\"m3-jdt-compiler-facts-v1\""
+            .getBytes(StandardCharsets.UTF_8);
 
     @Input
     public abstract Property<String> getJavaExecutable();
@@ -91,6 +93,12 @@ public abstract class M3EclipseModelTask extends DefaultTask {
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getHandoffPacket();
+
+    /** Exact compiler model receipt produced by the original m2e JDT project. */
+    @Optional
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract RegularFileProperty getJdtPacket();
 
     /** "model" retains the original v1 schema; "owners" selects the generic builder-owner report. */
     @Input
@@ -132,24 +140,38 @@ public abstract class M3EclipseModelTask extends DefaultTask {
             String mode = getReportMode().get();
             if (!"model".equals(mode) && !"owners".equals(mode)
                     && !"context".equals(mode) && !"handoff".equals(mode)
-                    && !"reconcile".equals(mode)) {
+                    && !"reconcile".equals(mode) && !"jdt".equals(mode)) {
                 throw new IOException("unsupported Eclipse report mode: " + mode);
             }
             Path packet = null;
-            if ("context".equals(mode) || "handoff".equals(mode) || "reconcile".equals(mode)) {
-                var declared = ("handoff".equals(mode) || "reconcile".equals(mode))
+            if ("context".equals(mode) || "handoff".equals(mode)
+                    || "reconcile".equals(mode) || "jdt".equals(mode)) {
+                var declared = ("handoff".equals(mode) || "reconcile".equals(mode) || "jdt".equals(mode))
                         ? getHandoffPacket() : getContextPacket();
                 if (!declared.isPresent()) {
                     throw new IOException("Eclipse source-owner packet was not supplied");
                 }
                 packet = declared.get().getAsFile().toPath().toAbsolutePath().normalize();
-                long maxBytes = ("handoff".equals(mode) || "reconcile".equals(mode))
+                long maxBytes = ("handoff".equals(mode) || "reconcile".equals(mode) || "jdt".equals(mode))
                         ? 12L * 1024 * 1024 : 1024L * 1024;
                 if (!packet.startsWith(root) || !Files.isRegularFile(packet, LinkOption.NOFOLLOW_LINKS)
                         || Files.size(packet) > maxBytes) {
                     throw new IOException("Eclipse source-owner packet must be project-local and bounded");
                 }
                 rejectLinkedPath(checkout, packet);
+            }
+            Path jdtPacket = null;
+            if ("jdt".equals(mode)) {
+                if (!getJdtPacket().isPresent()) {
+                    throw new IOException("original JDT compiler facts packet was not supplied");
+                }
+                jdtPacket = getJdtPacket().get().getAsFile().toPath().toAbsolutePath().normalize();
+                if (!jdtPacket.startsWith(root)
+                        || !Files.isRegularFile(jdtPacket, LinkOption.NOFOLLOW_LINKS)
+                        || Files.size(jdtPacket) > 16 * 1024) {
+                    throw new IOException("JDT compiler facts must be a project-local file under 16 KiB");
+                }
+                rejectLinkedPath(checkout, jdtPacket);
             }
             List<String> command = switch (mode) {
                 case "owners" -> M3EclipseModelCommands.owners(
@@ -160,6 +182,9 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                         getJavaExecutable().get(), engine.toFile(), packet.toFile(), installedProviders);
                 case "reconcile" -> M3EclipseModelCommands.reconcile(
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), packet.toFile(), installedProviders);
+                case "jdt" -> M3EclipseModelCommands.jdt(
+                        getJavaExecutable().get(), engine.toFile(), jdtPacket.toFile(), packet.toFile(),
+                        installedProviders);
                 default -> M3EclipseModelCommands.inspect(
                         getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
             };
@@ -185,6 +210,7 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 case "context" -> CONTEXT_PREFIX;
                 case "handoff" -> HANDOFF_PREFIX;
                 case "reconcile" -> RECONCILE_PREFIX;
+                case "jdt" -> JDT_PREFIX;
                 default -> MODEL_PREFIX;
             };
             if (json.length < expectedPrefix.length + 2

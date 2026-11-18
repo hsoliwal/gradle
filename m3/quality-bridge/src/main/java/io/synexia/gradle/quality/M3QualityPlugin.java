@@ -212,6 +212,21 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-reconciliation.json"));
         });
 
+        // Optional JDT-origin compiler fingerprints are separately versioned
+        // and must belong to the same Eclipse invocation and configuration.
+        // Maven validates the original packet; Gradle never replaces ECJ.
+        project.getTasks().register("m3EclipseJdtFacts", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("jdt");
+            task.setDescription("Review original JDT compiler options and classpath metadata");
+            task.getHandoffPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/build-handoff.ide"));
+            task.getJdtPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/jdt-compiler-facts.ide"));
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-jdt-facts.json"));
+        });
+
         // The Maven #184 project DB owns the data and deterministic retrieval.
         // These optional tasks neither reimplement indexes nor affect build/check.
         project.getTasks().register("m3ProjectDbIngest", M3ProjectDbTask.class, task -> {

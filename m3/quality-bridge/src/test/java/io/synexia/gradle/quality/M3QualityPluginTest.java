@@ -47,6 +47,7 @@ class M3QualityPluginTest {
         assertTrue(output.contains("m3EclipseBuildContext"));
         assertTrue(output.contains("m3EclipseBuildHandoff"));
         assertTrue(output.contains("m3EclipseReconcile"));
+        assertTrue(output.contains("m3EclipseJdtFacts"));
         assertTrue(output.contains("m3IdeDeltaExport"));
         assertTrue(output.contains("m3IdeDeltaReview"));
         assertTrue(output.contains("m3PreBuildAdvice"));
