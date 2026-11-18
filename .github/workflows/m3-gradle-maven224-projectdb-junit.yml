@@ -1,0 +1,77 @@
+# SPDX-FileCopyrightText: 2026 Contributors to the Synexia Project
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle original Maven 224 project DB six-case receipts
+on:
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven224-projectdb-junit.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven224-projectdb-junit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-project-db-six-cases:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Guard source owner, exact selectors and no-skip receipt
+        run: sh m3/quality-bridge/scripts/verify-maven224-projectdb-junit-workflow.sh
+      - name: Checkout exactly merged Maven 224 and 223 source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 77f3b7fbbf847c28d591973bb153b00b5237712e
+          path: m3-maven-224
+          persist-credentials: false
+      - name: Verify original six-case receipt script bytes before any execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C m3-maven-224 rev-parse HEAD)" = '77f3b7fbbf847c28d591973bb153b00b5237712e'
+          printf '%s  %s\n' '10bd8356e383e53544f232df0834ef084871d26760954cd3076ee85db90c4573' 'm3-maven-224/tools/project-db/scripts/verify-gradle-testkit-results.sh' | sha256sum -c -
+      - name: Build original Maven M3IndexDB state and project DB engines
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f m3-maven-224/tools/m3-polyglot-maven-plugin/pom.xml install
+          mvn -B -ntp -f m3-maven-224/tools/project-db/pom.xml verify
+          test -s m3-maven-224/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+          test -s m3-maven-224/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar
+      - name: Execute only the original six Gradle TestKit project DB cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          export M3_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-224/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-224/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
+          sha256sum "$M3_POLYGLOT_JAR" "$M3_PROJECT_DB_JAR"
+          ./gradlew --no-daemon --stacktrace --console=plain \
+            -p m3/quality-bridge test \
+            --tests 'io.synexia.gradle.quality.M3ProjectDbRealEngineTest' \
+            --tests 'io.synexia.gradle.quality.M3ProjectDbGradleNativeRealEngineTest' \
+            --tests 'io.synexia.gradle.quality.M3ProjectDbTaskTest' --rerun-tasks
+      - name: Enforce Maven-owned six actual JUnit case receipts with zero skips
+        run: sh m3-maven-224/tools/project-db/scripts/verify-gradle-testkit-results.sh m3/quality-bridge/build/test-results/test
+      - name: Retain executed TestKit evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-gradle-maven224-junit-jdk-${{ matrix.java }}
+          path: |
+            m3/quality-bridge/build/test-results/test/**
+            m3/quality-bridge/build/reports/tests/test/**
+          if-no-files-found: warn
+          retention-days: 14
