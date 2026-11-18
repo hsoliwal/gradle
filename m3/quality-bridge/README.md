@@ -356,6 +356,39 @@ Rust/Cargo execution, markers and cancellation still belong to Eclipse or
 their installed owners. Later qualified IDE plugins should exchange those
 real facts through the existing M3 IDE delta wire instead of fabricating them.
 
+### Per-configuration Eclipse build evidence
+
+A separate \`m3EclipseBuildContext\` task now reviews an explicit packet
+written by the original Eclipse/m2e owner. It invokes the **same pinned**
+Maven \`EclipseModelCli context <packet>\` reader and writes
+\`build/reports/m3/eclipse-build-context.json\` with schema
+\`m3-eclipse-build-context-v1\`. It is never attached to the regular
+Gradle \`build\`, \`compileJava\`, or \`check\` tasks.
+
+\`\`\`groovy
+tasks.named('m3EclipseBuildContext') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+    contextPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/build-context.ide'))
+}
+\`\`\`
+
+The parent \`target/ide\` directory and the packet must be supplied explicitly
+by the Eclipse owner (see \`hsoliwal/m2e-core\` PR #18). Gradle checks that the
+packet exists **inside** the selected Eclipse project, is a regular no-follow
+file, and is bounded to 1 MiB. It also checks the original Maven engine JAR
+and any separately provided adapter JARs against their required SHA-256 pins.
+Maven's original parser validates strict canonical UTF-8, records, identities
+and configuration consistency; Gradle does **not** fork the format parser.
+
+The packet distinguishes the **selected** \`IBuildConfiguration\` from the
+currently active one, retaining actual named and default-empty configurations
+and the original builder/nature order. It is read-only metadata. It does not
+enable Gradle task skipping, M3DB output reuse, live Eclipse JDT/CDT/Rust
+compilation, or replace the IDE's native progress/cancellation.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer

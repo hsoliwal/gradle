@@ -29,6 +29,7 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -46,6 +47,8 @@ public abstract class M3EclipseModelTask extends DefaultTask {
     private static final byte[] MODEL_PREFIX = "{\"schema\":\"m3-eclipse-project-v1\""
             .getBytes(StandardCharsets.UTF_8);
     private static final byte[] OWNERS_PREFIX = "{\"schema\":\"m3-eclipse-builder-owners-v1\""
+            .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] CONTEXT_PREFIX = "{\"schema\":\"m3-eclipse-build-context-v1\""
             .getBytes(StandardCharsets.UTF_8);
 
     @Input
@@ -71,6 +74,12 @@ public abstract class M3EclipseModelTask extends DefaultTask {
 
     @OutputFile
     public abstract RegularFileProperty getModelReport();
+
+    /** Optional, Eclipse-owned packet. Required only when reportMode is context. */
+    @Optional
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract RegularFileProperty getContextPacket();
 
     /** "model" retains the original v1 schema; "owners" selects the generic builder-owner report. */
     @Input
@@ -104,14 +113,29 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                     getProviderJars().getFiles(), getProviderJarSha256().get());
 
             String mode = getReportMode().get();
-            if (!"model".equals(mode) && !"owners".equals(mode)) {
+            if (!"model".equals(mode) && !"owners".equals(mode) && !"context".equals(mode)) {
                 throw new IOException("unsupported Eclipse report mode: " + mode);
             }
-            List<String> command = "owners".equals(mode)
-                    ? M3EclipseModelCommands.owners(
-                            getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders)
-                    : M3EclipseModelCommands.inspect(
-                            getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
+            Path packet = null;
+            if ("context".equals(mode)) {
+                if (!getContextPacket().isPresent()) {
+                    throw new IOException("Eclipse source-owner configuration packet was not supplied");
+                }
+                packet = getContextPacket().get().getAsFile().toPath().toAbsolutePath().normalize();
+                if (!packet.startsWith(root) || !Files.isRegularFile(packet, LinkOption.NOFOLLOW_LINKS)
+                        || Files.size(packet) > 1024 * 1024) {
+                    throw new IOException("Eclipse context packet must be an existing project-local file under 1 MiB");
+                }
+                rejectLinkedPath(checkout, packet);
+            }
+            List<String> command = switch (mode) {
+                case "owners" -> M3EclipseModelCommands.owners(
+                        getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
+                case "context" -> M3EclipseModelCommands.context(
+                        getJavaExecutable().get(), engine.toFile(), packet.toFile(), installedProviders);
+                default -> M3EclipseModelCommands.inspect(
+                        getJavaExecutable().get(), engine.toFile(), root.toFile(), installedProviders);
+            };
             M3BoundedOutput output = new M3BoundedOutput(MAX_REPORT_BYTES, "Eclipse model");
             getExecOperations().exec(spec -> {
                 spec.setExecutable(command.get(0));
@@ -128,7 +152,11 @@ public abstract class M3EclipseModelTask extends DefaultTask {
                 json = Arrays.copyOf(json, json.length - 1);
                 json[json.length - 1] = '\n';
             }
-            byte[] expectedPrefix = "owners".equals(mode) ? OWNERS_PREFIX : MODEL_PREFIX;
+            byte[] expectedPrefix = switch (mode) {
+                case "owners" -> OWNERS_PREFIX;
+                case "context" -> CONTEXT_PREFIX;
+                default -> MODEL_PREFIX;
+            };
             if (json.length < expectedPrefix.length + 2
                     || !Arrays.equals(Arrays.copyOf(json, expectedPrefix.length), expectedPrefix)
                     || json[json.length - 2] != '}' || json[json.length - 1] != '\n') {

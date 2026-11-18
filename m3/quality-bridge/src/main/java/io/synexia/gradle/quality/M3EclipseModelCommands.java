@@ -35,6 +35,22 @@ public final class M3EclipseModelCommands {
         return command(javaExecutable, engineJar, eclipseProject, providers, true);
     }
 
+    /** Review a caller-supplied Eclipse source-owner configuration packet. */
+    public static List<String> context(String javaExecutable, File engineJar, File packet,
+            List<File> providers) {
+        String java = M3QualityCommands.executable(javaExecutable);
+        Objects.requireNonNull(engineJar, "engineJar");
+        Objects.requireNonNull(packet, "packet");
+        Objects.requireNonNull(providers, "providers");
+        StringBuilder classpath = new StringBuilder(engineJar.getAbsolutePath());
+        for (File provider : providers) {
+            classpath.append(File.pathSeparator).append(
+                    Objects.requireNonNull(provider, "provider").getAbsolutePath());
+        }
+        return List.of(java, "-Dfile.encoding=UTF-8", "-cp", classpath.toString(),
+                MAIN_CLASS, "context", packet.getAbsolutePath());
+    }
+
     private static List<String> command(String javaExecutable, File engineJar,
             File eclipseProject, List<File> providers, boolean owners) {
         String java = M3QualityCommands.executable(javaExecutable);

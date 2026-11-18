@@ -161,6 +161,18 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("reports/m3/eclipse-builders.json"));
         });
 
+        // Eclipse itself exports the actual IBuildConfiguration of the owning
+        // builder. This separate packet must not be guessed from a .cproject.
+        project.getTasks().register("m3EclipseBuildContext", M3EclipseModelTask.class, task -> {
+            eclipseDefaults(project, task);
+            task.getReportMode().convention("context");
+            task.setDescription("Read an explicit Eclipse-owner build-configuration packet via pinned Maven CLI");
+            task.getContextPacket().convention(
+                    project.getLayout().getProjectDirectory().file("target/ide/build-context.ide"));
+            task.getModelReport().convention(
+                    project.getLayout().getBuildDirectory().file("reports/m3/eclipse-build-context.json"));
+        });
+
         // An original OpenRewrite plugin owns recipe discovery, dry-run, and apply.
         // The alias exists only if that plugin is explicitly applied in the project.
         project.getPluginManager().withPlugin("org.openrewrite.rewrite", applied -> {
