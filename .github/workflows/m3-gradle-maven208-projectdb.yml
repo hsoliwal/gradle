@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2026 Contributors to the Synexia Project
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle project DB pruned Gradle modules
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven208-projectdb.yml'
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven208-projectdb.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-maven208-project-db:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Guard exact source and TestKit contract
+        run: sh m3/quality-bridge/scripts/verify-maven208-projectdb-workflow.sh
+      # #205 pruned generated trees; #208 restored legacy symlinked descriptor
+      # discovery. Test the exact merged #208 commit, not floating Maven master.
+      - name: Check out merged Maven #208 project database source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: fc8e5eee6c17eb2b8553204795a32f020078c9db
+          path: m3-maven-project-db-pruned
+          persist-credentials: false
+      - name: Verify original Maven module-pruning oracle and native Gradle JUnit parser
+        run: sh m3-maven-project-db-pruned/tools/project-db/scripts/verify-gradle-sources.sh
+      - name: Build and qualify original Maven module DB owner
+        run: |
+          mvn -B -ntp -f m3-maven-project-db-pruned/tools/m3-polyglot-maven-plugin/pom.xml install
+          test -s m3-maven-project-db-pruned/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Build and qualify original Maven project DB JAR
+        run: |
+          mvn -B -ntp -f m3-maven-project-db-pruned/tools/project-db/pom.xml verify
+          test -s m3-maven-project-db-pruned/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar
+      - name: Test Gradle symlink module identity and early vendor pruning against original Maven
+        run: |
+          export M3_PRUNED_POLYGLOT_JAR="$GITHUB_WORKSPACE/m3-maven-project-db-pruned/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_PRUNED_PROJECT_DB_JAR="$GITHUB_WORKSPACE/m3-maven-project-db-pruned/tools/project-db/target/maven-project-db-plugin-0.1.0-SNAPSHOT.jar"
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test --tests '*M3ProjectDbPrunedSymlinkRealEngineTest' --rerun-tasks
