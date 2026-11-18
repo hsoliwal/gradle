@@ -8,7 +8,8 @@ displayName: Enable the opt-in M3 polyglot state bridge
 description: >-
   Apply the separately installed M3 quality plugin to a chosen Gradle build.
   The operator may then configure m3PolyglotRun with the source-pinned Maven
-  #184+ embedded or native state backend. No task runs simply by applying it,
+  #227+ embedded, native or explicitly supplied HSQLDB state backend. No task
+  runs simply by applying it,
   and existing Gradle caches and task dependencies are left intact.
 recipeList:
   - org.openrewrite.gradle.plugins.AddPlugin:

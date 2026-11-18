@@ -69,7 +69,7 @@ plugins { id 'io.synexia.m3.quality' }
 tasks.named('m3PolyglotRun') {
     incremental.set(false)
     // Only if incremental is true: "legacy" (default), "file", "m3db",
-    // "sqlite", "h2", or an explicitly installed "ext-*" backend.
+    // "sqlite", "h2", "hsqldb", or an explicitly installed "ext-*" backend.
     stateBackend.set('legacy')
     approveRewriteApply.set(false)
 }
@@ -260,12 +260,12 @@ tasks.named('m3PolyglotRun') {
     stateBackend.set('file') // atomically sealed .m3/module-state-v1.bin
     // or 'm3db' when the independently verified native MIndexDB runtime
     // is available on the pinned engine's classpath
-    // or 'sqlite', 'h2', or 'ext-operator-store' with the separately installed,
+    // or 'sqlite', 'h2', 'hsqldb', or 'ext-operator-store' with the separately installed,
     // reviewed driver/provider JARs in the digest-pinned classpath
 }
 ```
 
-Alternatively `-Pm3.polyglot.stateBackend=file`, `m3db`, `sqlite`, `h2` or
+Alternatively `-Pm3.polyglot.stateBackend=file`, `m3db`, `sqlite`, `h2`, `hsqldb` or
 `ext-operator-store` configures the
 `m3PolyglotRun` task only. `m3PolyglotPlan` always defaults to `legacy`
 even when the project property is set, so a plan remains read-only.
@@ -274,7 +274,7 @@ backend on a nonincremental run, an unknown backend, or a nonlegacy backend
 configured explicitly for planning is rejected *before* launching the engine.
 Every nonlegacy mode requires an independently reviewed Maven engine JAR
 with the corresponding CLI capability; the existing SHA-256 engine pin is
-mandatory. For SQLite and H2, supply the appropriate JDBC driver as a
+mandatory. For SQLite, H2 and original Maven #227 HSQLDB, supply the appropriate JDBC driver as a
 separately pinned `providerJars` entry (with its exact filename-to-SHA-256
 entry in `providerJarSha256`). The same mechanism admits a trusted external
 `M3ModuleDbBackendProvider` service JAR for `ext-*`. Missing drivers,
@@ -282,6 +282,26 @@ providers, duplicate JAR names or mismatched pins fail rather than falling
 back to another backend. The bridge does not accept arbitrary JDBC URLs or
 `derby`, which is not advertised by Maven's merged portable CLI. No database
 driver, MIndexDB native runtime, or backend is **bundled or downloaded**.
+
+#### Maven #227: optional HSQLDB 2.7.4 module-state bridge
+
+Merged [Maven #227](https://github.com/hsoliwal/maven/pull/227) extends the
+same Maven-owned, sealed module-state backend with local `hsqldb` JDBC. Gradle
+now admits `stateBackend.set('hsqldb')` **only** on an explicitly incremental
+`m3PolyglotRun`; the pinned Maven JAR remains responsible for local JDBC
+transactions, recovery, sidecar exclusions, generation revocation and the
+original content-verified `UP-TO-DATE` decision. Supply an independently
+SHA-256-pinned `org.hsqldb:hsqldb:2.7.4` driver through `providerJars` and
+`providerJarSha256`, with no automatic driver download or selection.
+
+The [source-qualified real-engine acceptance](docs/MAVEN227_HSQLDB_PARITY.md)
+pins the merged Maven revision and exercises no-driver and bad-driver refusals,
+fresh-run/reopen, content-verified reuse, and input/output invalidation on JDK
+17 and 21. This does **not** authorize Gradle build-cache or configuration-cache
+reuse and does not prove every native JDBC crash-recovery or operating-system
+combination. The existing
+[opt-in OpenRewrite recipe](recipes/enable-m3-polyglot-state-bridge.yml) remains
+the only Gradle consumer registration path.
 
 #### Maven #206: real optional RocksDB/MapDB/LMDB storage providers
 

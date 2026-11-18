@@ -89,7 +89,7 @@ final class M3PolyglotCommandsTest {
         assertEquals(List.of("--incremental", "--state-backend", "m3db", "--approve-rewrite-apply"),
                 nativeDb.subList(nativeDb.size() - 4, nativeDb.size()));
 
-        for (String backend : List.of("embedded", "native", "sqlite", "h2", "ext-operator-store", "ext-a")) {
+        for (String backend : List.of("embedded", "native", "sqlite", "h2", "hsqldb", "ext-operator-store", "ext-a")) {
             List<String> portable = M3PolyglotCommands.command(
                     "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend);
             assertEquals(List.of("--incremental", "--state-backend", backend),
@@ -103,7 +103,7 @@ final class M3PolyglotCommandsTest {
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "embedded"));
         for (String backend : List.of("derby", "ext-", "ext-Bad", "ext-path/escape",
-                "ext-" + "x".repeat(49), "jdbc:sqlite:remote")) {
+                "ext-" + "x".repeat(49), "jdbc:sqlite:remote", "jdbc:hsqldb:mem:escape")) {
             assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                     "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend));
         }
@@ -111,7 +111,7 @@ final class M3PolyglotCommandsTest {
                 "java", jar, root, manifest, "all", "plan", 900, false, false, List.of(), "ext-a"));
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), "h2"));
-        for (String backend : List.of("embedded", "native", "sqlite", "h2", "ext-local", "ext-1", "ext-a-b")) {
+        for (String backend : List.of("embedded", "native", "sqlite", "h2", "hsqldb", "ext-local", "ext-1", "ext-a-b")) {
             List<String> portable = M3PolyglotCommands.command(
                     "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), backend);
             assertEquals(List.of("--incremental", "--state-backend", backend),
@@ -122,7 +122,7 @@ final class M3PolyglotCommandsTest {
                     "java", jar, root, manifest, "all", "run", 900, false, false, List.of(), backend));
         }
         for (String invalid : List.of("ext-", "ext-Upper", "ext-a_b", "ext-../../local",
-                "ext-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "http://server", "SQLite")) {
+                "ext-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "http://server", "SQLite", "HSQLDB")) {
             assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                     "java", jar, root, manifest, "all", "run", 900, true, false, List.of(), invalid));
         }
@@ -168,7 +168,7 @@ final class M3PolyglotCommandsTest {
         assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                 "java", engine, workspace, manifest, "verify", "run", 900,
                 false, false, List.of(), "m3db", null, "current-java-base"));
-        for (String backend : List.of("legacy", "embedded", "file", "sqlite", "h2", "ext-local")) {
+        for (String backend : List.of("legacy", "embedded", "file", "sqlite", "h2", "hsqldb", "ext-local")) {
             assertThrows(IllegalArgumentException.class, () -> M3PolyglotCommands.command(
                     "java", engine, workspace, manifest, "verify", "run", 900,
                     true, false, List.of(), backend, null, "current-java-base"));
