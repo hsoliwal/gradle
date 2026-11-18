@@ -42,7 +42,10 @@ No network access, downloads or AI calls are introduced by Gradle.
 Default storage: build/m3/project-db within the Gradle project. The
 original Maven ProjectDbCli receives --store pointing to this directory;
 it owns its M3IndexDB artifacts, catalog, incremental ingest and .gitignore
-publication. A custom storageDirectory must remain within the project.
+publication. A custom storageDirectory must be under the project
+build directory, target/project-db, .mvn/project-db or .m3/project-db.
+An arbitrary source-directory store is refused to prevent accidental
+.gitignore or database writes alongside source files.
 Each invocation is an untracked Gradle task because the real source corpus
 and Maven-managed state cannot be proven complete by Gradle's task inputs.
 
