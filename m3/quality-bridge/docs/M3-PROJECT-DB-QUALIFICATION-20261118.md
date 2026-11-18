@@ -176,16 +176,60 @@ The newer Maven #205/#208 early-pruned Gradle module traversal and
 symlink compatibility are independent follow-ups: exact-source Java17
 oracle tests passed, but they are not covered by run 44233563771.
 
+## Real Gradle TestKit — executed JDK 17 and JDK 21
+
+GitHub Actions run [44237386509](https://github.com/hsoliwal/maven/actions/runs/44237386509)
+ran the original Gradle TestKit project-DB consumer using the
+immutable reviewed Gradle bridge source
+`e8dbf558fcc8a83c580914fbcc4cb10fe4281eb6` and Maven JARs
+built from source. Both Gradle consumer jobs **succeeded**:
+
+| Runtime | Job ID | Downloaded original JUnit artifact | Tests | Skipped | Failures | Errors |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| JDK 17 | 134576688489 | 14401249003 | 6 | 0 | 0 | 0 |
+| JDK 21 | 134576688607 | 14402078332 | 6 | 0 | 0 | 0 |
+
+The actual JUnit XML ZIP artifacts were downloaded and parsed.
+Each Java runtime generated **three real test suites**:
+
+- `M3ProjectDbRealEngineTest`: 1 executed real Maven engine test.
+- `M3ProjectDbGradleNativeRealEngineTest`: 1 executed
+  Gradle-only JUnit evidence ingestion/provenance test (no POM).
+- `M3ProjectDbTaskTest`: 4 executed admission/refusal tests.
+
+This is a **12/12 executed real Gradle TestKit assertion-level
+acceptance** across two Java versions, not an inference from
+`BUILD SUCCESSFUL` or generated source. Both Maven-owner jobs in
+that same *historical* run failed at the old two-matrix CI guard
+(`Expected 1 occurrence(s) ... observed 2`), which Maven #207
+subsequently repaired. Therefore **do not label the entire historical
+workflow green**. A separate source-owner Maven run
+`44233563771` passed the actual Maven JDK 17/21 project-DB and
+M3IndexDB suites, as recorded above.
+
+Maven [#224](https://github.com/hsoliwal/maven/pull/224), merged
+as `77f3b7fbbf847c28d591973bb153b00b5237712e`, now gates
+the real TestKit job on those **six exact testcase names**, three
+suite reports, zero skipped/failed/errored counts and exact
+SHA-256-sealed verifier transfer. The verifier passed on both
+downloaded historical JUnit archives; five independent mutated
+fixtures were refused. The new source-gated combined Actions job
+must still execute; this evidence does **not** claim that newer
+merged Maven and Gradle revisions have fully passed together.
+
 ## Blocked gates
 
-- Full Gradle TestKit, configuration-cache reuse and Gradle API
-  compilation: NOT RUN locally; no Gradle distribution is installed.
+- Real Gradle project-DB TestKit: JDK17 and JDK21 **PASS** for the
+  source-pinned historical Gradle consumer as documented above.
+  Configuration-cache reuse, complete Gradle distribution and
+  unrelated bridge tests remain unqualified.
 - Original Maven project-DB and M3IndexDB/IndexStore CI:
   JDK 17/21 PASS as recorded above. NOT RUN in this local container;
   Maven is unavailable here.
-- Gradle TestKit with the source-built Maven JARs, Gradle's original
-  plugin/task interface, Windows/macOS, and independent build/cache
-  semantic qualification: CI PENDING.
+- New fully dependent Maven-owner → Gradle-TestKit JDK17/21 CI,
+  including Maven #224's no-skipped-test gate: PENDING.
+  Windows/macOS and independent full build-cache/ABI/toolchain
+  semantic equivalence: NOT RUN.
 - M3JDK21 platform module provider, native Gradle non-JUnit build-data ingestion
   and Maven #186/#187 storage optimizations: NOT CLAIMED.
 - OpenRewrite source-sealed recipe replay, DIFF/LINT/COMPILE/TEST
