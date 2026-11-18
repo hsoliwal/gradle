@@ -814,6 +814,50 @@ Without the environment variable this optional test is **skipped**,
 not qualified; CI must verify the XML result includes an executed
 non-skipped case before claiming cross-fork acceptance.
 
+### Native CDT scanner and build-configuration evidence
+
+`m3EclipseCdtFacts` is an explicit, untracked Gradle task that
+reviews native CDT original-owner `M3-CDT-COMPILER-FACTS-V1` metadata.
+CDT itself selects the exact `ICConfigurationDescription`, independently
+of CDT's active configuration and Eclipse `IBuildConfiguration`. The
+source owner records domain-separated scanner, source and build-setting
+SHA-256 digests, original project/invocation and selected configuration
+identities. No compiler or scanner is cloned into Gradle.
+
+```groovy
+tasks.named('m3EclipseCdtFacts') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    eclipseProject.set(layout.projectDirectory.dir('eclipse-project'))
+    cdtPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/cdt-compiler-facts.ide'))
+    handoffPacket.set(layout.projectDirectory.file(
+        'eclipse-project/target/ide/build-handoff.ide'))
+}
+```
+
+Gradle validates original file paths/symlinks/sizes, the pinned Maven
+engine/provider JAR checksums, and the strict distinct JSON schema
+`m3-cdt-compiler-facts-v1`. Maven's Java 17 decoder—not Gradle—checks
+the canonical CDT packet and requires the same project, selected
+Eclipse configuration and original invocation UUID as the handoff.
+Only a validated report is published atomically to
+`build/reports/m3/eclipse-cdt-facts.json`.
+
+The optional `M3EclipseCdtRealEngineTest` runs the source-built Maven
+receiver through Gradle TestKit when `M3_POLYGLOT_JAR` is explicitly
+provided. It checks that a native CDT selected configuration can differ
+from the active CDT configuration, and refuses a foreign Eclipse
+selection without replacing an earlier validated report. A skipped
+optional integration test is **not** acceptance.
+
+These are advisory metadata digests, not compiler argv, linker ABI,
+headers, sysroots, generated outputs, toolchain binaries or successful
+build receipts. Neither Maven nor Gradle may use the report to skip
+native compilation or restore an M3DB cache without complete independent
+source-owner evidence. The original CDT and LLVM toolchains remain in
+charge of compiler invocations.
+
 ## Maven-to-Gradle static-analysis report compatibility
 
 The Maven fork's `M3StaticAnalysisService` publishes source-bound analyzer
