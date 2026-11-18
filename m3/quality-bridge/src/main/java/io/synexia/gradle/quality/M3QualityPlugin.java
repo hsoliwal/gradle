@@ -129,8 +129,8 @@ public final class M3QualityPlugin implements Plugin<Project> {
                     project.getProviders().gradleProperty("m3.fingerprints.moduleDb").orElse("auto"));
         });
 
-        // The compiler/interpreter/transpiler/atomizer/patternizer catalog is
-        // Maven-owned; this task only queries its versioned, pinned CLI output.
+        // All capability IDs, including Maven #203 linker/optimizer/assembler,
+        // are Maven-owned; only query the versioned and SHA-pinned CLI output.
         project.getTasks().register("m3PolyglotProviders", M3PolyglotProvidersTask.class, task -> {
             task.setGroup("verification");
             task.setDescription("Inspect available M3 Maven tool providers without invoking them");
