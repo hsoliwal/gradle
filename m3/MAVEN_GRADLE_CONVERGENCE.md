@@ -327,3 +327,47 @@ qualification lanes. Native M3File/M3AST planner receivers and complete
 Gradle-owned task/dependency/output-generation ingestion remain separate
 implementation obligations; source-bound review reports do not supply their
 missing invalidation contracts.
+
+
+## Cross-fork checkpoint: 2026-11-21 — Maven #255 source-owned Clang compilation database
+
+Observed immutable default heads at this checkpoint: Maven `master@dc9c0fcdffe89c2b0388c13612ffc197efb37cbb` and Gradle `master@82b6cd32df2af82f1f2e253e0c8b5dac501f8af4`.
+These are **partial latest-head/PR/source audits**, not a completed all-history/all-tag scan.
+Both repositories retain their original existing ancestry. New functionality is proposed
+on a separate Gradle branch without rebasing or force updates.
+
+- **Merged Gradle #60–#70**: HSQLDB state forwarding, secure project-DB JUnit
+  receipt gating, qualified Maven provider reuse, smart-review/configuration-cache
+  tasks and original Eclipse language-owner evidence bridges. Those mergers do
+  not by themselves prove their entire cross-platform CI or native cache admission.
+- **Merged Maven #247/#250/#253/#255**: one original LLVM Clang compilation
+  database implementation, including strict original compiler argv and declared
+  sidecar checks. Maven #255 exposes `PolyglotCli llvm-compile-db` with the
+  versioned two-line `M3-LLVM-COMPILE-DB-V1` result. Gradle
+  [#71](https://github.com/hsoliwal/gradle/pull/71) adds a lazy, untracked,
+  separately SHA-256-pinned invocation; Maven alone writes
+  `target/m3-llvm/compile_commands.json`. It cannot authorize native
+  compilation, Maven/M3DB cache reuse, CMake output replacement or Gradle skips.
+- **Merged Maven #235/#236**: optional Apache Derby provider
+  `ext-derby-v1`. Gradle's existing `ext-*` selector supports
+  operator-installed provider JARs by name, but a fresh positive real-driver
+  Gradle TestKit and crash/recovery qualification are **not** established here.
+- **Merged Maven #246**: newer nine-case Gradle project-DB TestKit/source
+  qualification. Do not equate historical six-case evidence with nine-case
+  coverage on this Gradle head; inspect exact source/JDK receipt artifacts.
+- **Merged Maven #258/#259**: generic Eclipse language-evidence SPI and
+  ambiguity refusal. Gradle #67 already exposes the generic receiver; check
+  the later Maven #259 provider collision rules before claiming current
+  source-owner compatibility.
+- **Maven LLVM #231/#240/#243/#244/#248/#251/#252/#256/#257**:
+  native pipeline and source-fork qualification gates remain separate from
+  the Gradle `llvm-compile-db` *export-only* task. A toolchain source SHA
+  alone is not evidence that the installed executable came from that commit.
+
+Executed here: strict Java 17 no-shell argument/receipt contract, fake
+Maven CLI Java 17 source compilation, source-pin preservation guard and
+workflow YAML/Bash syntax checks. **Not executed here**: full Gradle
+TestKit, Maven #255 original JAR runtime, JDK 17/21 hosted Actions,
+independent OpenRewrite SDK recipe replay/fixed point, Windows/macOS,
+real M3JDK21 runtime and actual source-built LLVM binaries.
+Keep Gradle #71 draft pending these gates and human DCO review.
