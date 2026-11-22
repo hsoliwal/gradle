@@ -303,6 +303,35 @@ combination. The existing
 [opt-in OpenRewrite recipe](recipes/enable-m3-polyglot-state-bridge.yml) remains
 the only Gradle consumer registration path.
 
+#### Maven #235/#236: original optional Derby 10.16.1.1 storage provider
+
+Merged [Maven #235](https://github.com/hsoliwal/maven/pull/235) registers
+`ext-derby-v1` in the existing M3 portable module-state SPI; the
+[follow-up #236](https://github.com/hsoliwal/maven/pull/236) redirects Derby's
+process-global test diagnostics without changing production JVM options.
+The original Maven engine owns sealed v2 snapshot transactions, generation
+recovery, leases, file/symlink admission and cache invalidation. Gradle's
+existing `ext-*` selector already passes the literal backend to the
+original Maven CLI; the bare `derby` identifier and all arbitrary JDBC URLs
+remain invalid. No second Derby adapter or Gradle-owned database is introduced.
+
+Choose `m3PolyglotRun` with `incremental=true` and
+`stateBackend.set('ext-derby-v1')`; provide the source-built Maven #236
+engine JAR and **complete original Derby 10.16.1.1 runtime closure** (including
+`derby`, `derbytools` and any declared transitive JARs), each independently
+SHA-256-pinned with `providerJarSha256`. The Gradle plugin never downloads
+or packages these dependencies. An optional process-level
+`-Dderby.stream.error.field=java.lang.System.err` prevents Derby from
+writing `derby.log` in its working directory; CI sets it deliberately.
+Original provider execution must refuse missing drivers, corrupt JAR pins
+and linked database paths without running the requested tool.
+
+The [separate original Maven #236 Derby acceptance](docs/MAVEN236_DERBY_PARITY.md)
+runs Java17/21 source-pinned Gradle TestKit and Maven's own required Derby
+JDBC/rollback/recovery suite. This is **not** native Gradle build-cache
+admission; no TestKit or full Maven-driver success is asserted until actual
+CI and original JUnit reports have passed.
+
 #### Maven #206: real optional RocksDB/MapDB/LMDB storage providers
 
 Merged [Maven #206](https://github.com/hsoliwal/maven/pull/206) registers

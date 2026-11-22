@@ -87,7 +87,7 @@ final class M3PolyglotManifestTaskTest {
     void nativeModuleStateOptionsAreForwardedOnlyToExplicitRun() throws Exception {
         String digest = createFakePortableEngine(root);
         fixture(digest);
-        for (String backend : List.of("file", "m3db", "sqlite", "h2", "ext-operator-store")) {
+        for (String backend : List.of("file", "m3db", "sqlite", "h2", "ext-operator-store", "ext-derby-v1")) {
             GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath()
                     .withArguments("m3PolyglotPlan", "-Pm3.polyglot.stateBackend=" + backend,
                             "--stacktrace").build();
