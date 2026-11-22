@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle original Maven 255 Clang compilation database
+on:
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven255-compile-db.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven255-compile-db.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  m3-maven255-compile-db:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Verify Gradle source contract and provenance guard
+        run: |
+          set -eu
+          sh m3/quality-bridge/scripts/verify-maven255-compile-db.sh
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          javac --release 17 -encoding UTF-8 -Xlint:all -Werror -d "$tmp" \
+            m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3QualityCommands.java \
+            m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3PolyglotCommands.java \
+            m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3LlvmCompileDbCommands.java \
+            m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3LlvmCompileDbArgsContractMain.java
+          java -cp "$tmp" io.synexia.gradle.quality.M3LlvmCompileDbArgsContractMain
+      - name: Checkout exact merged Maven 255 original CLI source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: f403544494810fd78fc3f00b8c790935bbebfeaf
+          path: m3-maven-255
+          persist-credentials: false
+      - name: Verify original Maven plugin, CLI and Clang installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C m3-maven-255 rev-parse HEAD)" = f403544494810fd78fc3f00b8c790935bbebfeaf
+          command -v clang
+          command -v clang++
+          echo "M3_LLVM_HOME=$(dirname "$(dirname "$(command -v clang)")")" >> "$GITHUB_ENV"
+          mvn -B -ntp -f m3-maven-255/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-255/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Exercise Maven 255 original compilation database through Gradle TestKit
+        shell: bash
+        run: |
+          set -euo pipefail
+          export M3_MAVEN_COMPILEDB_JAR="$GITHUB_WORKSPACE/m3-maven-255/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_MAVEN_COMPILEDB_FIXTURES="$GITHUB_WORKSPACE/m3-maven-255/tools/m3-polyglot-maven-plugin/examples/llvm"
+          test -s "$M3_MAVEN_COMPILEDB_JAR"
+          test -s "$M3_MAVEN_COMPILEDB_FIXTURES/m3-build.tsv"
+          sha256sum "$M3_MAVEN_COMPILEDB_JAR"
+          ./gradlew --no-daemon --stacktrace --console=plain \
+            -p m3/quality-bridge test \
+            --tests 'io.synexia.gradle.quality.M3LlvmCompileDbTaskTest' \
+            --tests 'io.synexia.gradle.quality.M3LlvmCompileDbRealEngineTest' --rerun-tasks
+      - name: Require five non-skipped TestKit cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+          d = Path('m3/quality-bridge/build/test-results/test')
+          wanted = {'M3LlvmCompileDbTaskTest': 3, 'M3LlvmCompileDbRealEngineTest': 2}
+          for name, expected in wanted.items():
+              file = d / f'TEST-io.synexia.gradle.quality.{name}.xml'
+              assert file.is_file() and not file.is_symlink(), file
+              xml = ET.parse(file).getroot()
+              assert xml.tag == 'testsuite' and xml.get('name') == f'io.synexia.gradle.quality.{name}'
+              assert all(int(xml.get(k, '-1')) == v for k, v in [('tests', expected), ('skipped', 0), ('failures', 0), ('errors', 0)])
+              cases = xml.findall('testcase')
+              assert len(cases) == expected and len({c.get('name') for c in cases}) == expected
+              assert all(c.get('classname') == xml.get('name') for c in cases)
+              assert all(not list(c) for c in cases)
+          print('PASS: five actual non-skipped Maven 255 Gradle TestKit cases')
+          PY
+      - name: Retain Gradle TestKit evidence regardless of result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-maven255-compdb-jdk-${{ matrix.java }}
+          path: |
+            m3/quality-bridge/build/test-results/test/**
+            m3/quality-bridge/build/reports/tests/test/**
+          if-no-files-found: warn
+          retention-days: 14

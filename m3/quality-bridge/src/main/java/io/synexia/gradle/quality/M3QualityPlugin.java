@@ -111,6 +111,20 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.setDescription("Explicitly execute the pinned Maven polyglot engine from Gradle");
         });
 
+        // Maven #255 exports exactly the original Clang compile_commands.json
+        // without executing Clang, opening M3DB or changing Gradle's task cache.
+        // This is a separate, opt-in and untracked task boundary.
+        project.getTasks().register("m3LlvmCompileDb", M3LlvmCompileDbTask.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Export original Maven LLVM compilation database for clangd/CDT");
+            task.getJavaExecutable().convention(
+                    project.getProviders().gradleProperty("m3.polyglot.java").orElse("java"));
+            task.getProviderJarSha256().convention(java.util.Map.of());
+            task.getWorkspace().convention(project.getLayout().getProjectDirectory());
+            task.getManifestFile().convention(project.getLayout().getProjectDirectory().file("m3-build.tsv"));
+            task.getTarget().convention("all");
+        });
+
         // Reuse the Maven/JDK AST fingerprint producer and its canonical
         // MIndexDB fact owner. No source parse, cache key or receipt is forked.
         project.getTasks().register("m3MachineFingerprints", M3MachineFingerprintTask.class, task -> {

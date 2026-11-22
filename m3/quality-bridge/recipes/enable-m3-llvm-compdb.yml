@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+# Opt-in consumer recipe; original CLI and SHA-pinned JARs remain operator supplied.
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.synexia.gradle.recipe.EnableM3LlvmCompileDbBridge
+displayName: Enable optional Maven-owned LLVM compilation database task in Gradle
+description: >-
+  Make the installed M3 Gradle quality plugin available to the selected build.
+  The operator must separately pin the original merged Maven #255 JAR,
+  select a manifest and explicitly invoke m3LlvmCompileDb. The recipe
+  neither runs a compiler nor attaches compilation, check or build tasks.
+recipeList:
+  - org.openrewrite.gradle.plugins.AddPlugin:
+      pluginId: io.synexia.m3.quality
+      version: '0.1.0-SNAPSHOT'

@@ -40,6 +40,34 @@ concurrent scheduling remain in charge. External analysis tasks use `@UntrackedT
 because the databases/tool implementations may mutate or have external inputs;
 turning on caching for these tasks without proving completeness would be unsafe.
 
+## Original Maven LLVM compilation database for clangd/CDT
+
+The opt-in `m3LlvmCompileDb` task delegates to merged Maven #255's original
+`PolyglotCli llvm-compile-db` Java 17 entry point. Provide the exact original
+Maven engine JAR and lowercase SHA-256, a project-local `m3-build.tsv`, and
+an installed LLVM toolchain selected through Maven's original rules. It
+publishes only `target/m3-llvm/compile_commands.json`, using Maven's original
+compile-only Clang vectors, original ownership checks and atomic publication.
+A second invocation with identical content is a filesystem fixed point.
+There is no native Clang execution, default task dependency, M3DB publication,
+Gradle build-cache eligibility or CMake compilation-database replacement.
+
+```groovy
+tasks.named('m3LlvmCompileDb') {
+    engineJar.set(layout.projectDirectory.file('vendor/m3-polyglot-maven-plugin.jar'))
+    engineSha256.set(providers.gradleProperty('m3.polyglot.sha256'))
+    manifestFile.set(layout.projectDirectory.file('m3-build.tsv'))
+    target.set('all')
+}
+```
+
+The Gradle adapter validates SHA-256 for the Maven engine and separately
+selected provider JARs, project-local non-symlink paths, the exact two-line
+`M3-LLVM-COMPILE-DB-V1` result and the bounded Maven-owned output. It does
+not parse or re-render Clang JSON. See
+[original Maven #255 bridge qualification](docs/MAVEN255_COMPILE_DB_PARITY.md)
+and the opt-in `EnableM3LlvmCompileDbBridge` OpenRewrite recipe.
+
 ## Share Maven's all-language manifest engine
 
 The opt-in `m3PolyglotPlan` and `m3PolyglotRun` tasks use the **same** Java 17
