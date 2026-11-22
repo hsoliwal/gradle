@@ -20,7 +20,7 @@ public final class M3PortableStateArgsContractMain {
         check(!original.contains("--state-backend"), "legacy overload changed");
 
         for (String backend : List.of("embedded", "file", "m3db", "native", "sqlite", "h2", "hsqldb",
-                "ext-operator-store")) {
+                "ext-operator-store", "ext-derby-v1")) {
             List<String> command = invoke(jar, root, manifest, "run", true, backend);
             check(command.subList(command.size() - 3, command.size())
                     .equals(List.of("--incremental", "--state-backend", backend)),
