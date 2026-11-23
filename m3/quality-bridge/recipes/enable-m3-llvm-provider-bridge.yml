@@ -14,6 +14,6 @@ description: >-
   the installed native LLVM toolchain. This recipe runs no native tools
   and attaches no tasks to build or check.
 recipeList:
-  - org.openrewrite.gradle.plugins.AddPlugin:
+  - org.openrewrite.gradle.plugins.AddBuildPlugin:
       pluginId: io.synexia.m3.quality
       version: '0.1.0-SNAPSHOT'

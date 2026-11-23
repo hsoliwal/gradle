@@ -11,6 +11,6 @@ description: >-
   the operator. This recipe neither runs the scanner nor provisions tools;
   no task is attached to build, check or Gradle's build cache.
 recipeList:
-  - org.openrewrite.gradle.plugins.AddPlugin:
+  - org.openrewrite.gradle.plugins.AddBuildPlugin:
       pluginId: io.synexia.m3.quality
       version: '0.1.0-SNAPSHOT'
