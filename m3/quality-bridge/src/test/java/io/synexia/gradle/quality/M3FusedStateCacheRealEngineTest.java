@@ -136,10 +136,9 @@ final class M3FusedStateCacheRealEngineTest {
             assumeTrue(supplied != null && !supplied.isBlank(),
                     "only the source-qualified original Maven engine may run this test");
         }
-        Path original = Path.of(supplied).toAbsolutePath().normalize();
+        Path original = Path.of(supplied).toAbsolutePath().normalize().toRealPath();
         assertTrue(Files.isRegularFile(original, LinkOption.NOFOLLOW_LINKS));
         Path project = Files.createDirectory(root.resolve(name));
-        Files.copy(original, project.resolve("engine.jar"));
         Files.writeString(project.resolve("settings.gradle"), "rootProject.name='m3-fused-cache'\n");
         Files.writeString(project.resolve("source.txt"), "AAAA");
         Files.writeString(project.resolve("m3-build.tsv"),
@@ -170,8 +169,8 @@ final class M3FusedStateCacheRealEngineTest {
         Files.writeString(project.resolve("build.gradle"),
                 "plugins { id 'io.synexia.m3.quality' }\n"
                         + "tasks.named('m3PolyglotRun') {\n"
-                        + "  engineJar.set(layout.projectDirectory.file('engine.jar'))\n"
-                        + "  engineSha256.set('" + sha256(project.resolve("engine.jar")) + "')\n"
+                        + "  engineJar.fileValue(file('" + groovy(original) + "'))\n"
+                        + "  engineSha256.set('" + sha256(original) + "')\n"
                         + "  incremental.set(true)\n"
                         + "  stateBackend.set('embedded')\n"
                         + "  target.set('verify')\n"
