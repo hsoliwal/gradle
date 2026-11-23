@@ -26,7 +26,7 @@ mtime and changed content, failure/recovery, independent cache mode,
 module receipt revocation and provider refusal. Gradle does not fork
 `InputStamps`, `TaskRunner`, sealed MIndexDB layout or cache artifacts.
 
-Original Maven's input-stamp engine transcript includes the **absolute JAR code-source path**. The two Gradle TestKit workspaces must therefore reference the very same externally staged original Maven JAR, not duplicate identical JAR bytes at different project-local paths. Otherwise the correctly different engine identities would invalidate the test's expected portable cache key.\n\n## Executable Gradle TestKit contract
+Original Maven's input-stamp engine transcript includes the **absolute JAR code-source path**. The two Gradle TestKit workspaces must therefore reference the very same externally staged original Maven JAR, not duplicate identical JAR bytes at different project-local paths. Otherwise the correctly different engine identities would invalidate the test's expected portable cache key.\n\nThe fixture manifest declares **both** `source.txt` and the compiled `MarkerTool.class` as task inputs. A portable result cannot be admitted after either the source data or the actual fixture tool bytecode changes. This preserves the original Maven external-input declaration requirement rather than treating an undeclared class file as a cache-safe tool.\n\n## Executable Gradle TestKit contract
 
 A source-built original Maven #274 polyglot engine is supplied through
 `M3_FUSED_MAVEN_ENGINE_JAR` with an explicit
