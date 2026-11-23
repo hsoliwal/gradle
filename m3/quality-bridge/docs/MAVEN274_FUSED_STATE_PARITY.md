@@ -26,7 +26,7 @@ mtime and changed content, failure/recovery, independent cache mode,
 module receipt revocation and provider refusal. Gradle does not fork
 `InputStamps`, `TaskRunner`, sealed MIndexDB layout or cache artifacts.
 
-## Executable Gradle TestKit contract
+Original Maven's input-stamp engine transcript includes the **absolute JAR code-source path**. The two Gradle TestKit workspaces must therefore reference the very same externally staged original Maven JAR, not duplicate identical JAR bytes at different project-local paths. Otherwise the correctly different engine identities would invalidate the test's expected portable cache key.\n\n## Executable Gradle TestKit contract
 
 A source-built original Maven #274 polyglot engine is supplied through
 `M3_FUSED_MAVEN_ENGINE_JAR` with an explicit
