@@ -12,6 +12,6 @@ description: >-
   does not generate a manifest, install native tools, run builds, or attach
   any task to build or check.
 recipeList:
-  - org.openrewrite.gradle.plugins.AddPlugin:
+  - org.openrewrite.gradle.plugins.AddBuildPlugin:
       pluginId: io.synexia.m3.quality
       version: '0.1.0-SNAPSHOT'

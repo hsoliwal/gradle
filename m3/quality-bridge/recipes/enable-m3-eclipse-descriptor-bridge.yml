@@ -11,6 +11,6 @@ description: >-
   The recipe does not invoke the reader, start a language server, modify
   an Eclipse project, or attach the task to Gradle's build or check lifecycle.
 recipeList:
-  - org.openrewrite.gradle.plugins.AddPlugin:
+  - org.openrewrite.gradle.plugins.AddBuildPlugin:
       pluginId: io.synexia.m3.quality
       version: '0.1.0-SNAPSHOT'

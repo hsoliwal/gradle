@@ -12,6 +12,6 @@ description: >-
   runs simply by applying it,
   and existing Gradle caches and task dependencies are left intact.
 recipeList:
-  - org.openrewrite.gradle.plugins.AddPlugin:
+  - org.openrewrite.gradle.plugins.AddBuildPlugin:
       pluginId: io.synexia.m3.quality
       version: '0.1.0-SNAPSHOT'

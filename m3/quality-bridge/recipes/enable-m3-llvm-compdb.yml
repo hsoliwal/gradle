@@ -10,6 +10,6 @@ description: >-
   select a manifest and explicitly invoke m3LlvmCompileDb. The recipe
   neither runs a compiler nor attaches compilation, check or build tasks.
 recipeList:
-  - org.openrewrite.gradle.plugins.AddPlugin:
+  - org.openrewrite.gradle.plugins.AddBuildPlugin:
       pluginId: io.synexia.m3.quality
       version: '0.1.0-SNAPSHOT'
