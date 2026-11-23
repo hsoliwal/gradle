@@ -5,11 +5,14 @@
 package io.synexia.gradle.quality;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
@@ -19,9 +22,11 @@ import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** Direct Maven argv/receipt handoff without a local second compdb renderer. */
 final class M3LlvmCompileDbTaskTest {
@@ -58,6 +63,30 @@ final class M3LlvmCompileDbTaskTest {
                 + "'); target.set('../escape') }\n");
         assertTrue(execute(project, false).contains("invalid M3 LLVM compilation database target"));
         assertFalse(Files.exists(project.resolve("argv.txt")));
+        Files.writeString(project.resolve("build.gradle"), Files.readString(project.resolve("build.gradle"))
+                + "tasks.named('m3LlvmCompileDb') { target.set('all') }\n");
+        Path outputParent = Files.createDirectories(project.resolve("target/m3-llvm"));
+        Path output = outputParent.resolve("compile_commands.json");
+        Path external = Files.createDirectory(root.resolve("external compile db"));
+        Path sentinel = external.resolve("compile_commands.json");
+        byte[] original = "external-owner compilation database\n".getBytes(StandardCharsets.UTF_8);
+        Files.write(sentinel, original);
+
+        createRequiredSymbolicLink(output, sentinel);
+        String linkedOutput = execute(project, false);
+        assertTrue(linkedOutput.contains("symlinked M3 LLVM compilation database path"), linkedOutput);
+        assertFalse(Files.exists(project.resolve("argv.txt")), linkedOutput);
+        assertArrayEquals(original, Files.readAllBytes(sentinel));
+        assertEquals(sentinel, Files.readSymbolicLink(output));
+
+        Files.delete(output);
+        Files.delete(outputParent);
+        createRequiredSymbolicLink(outputParent, external);
+        String linkedParent = execute(project, false);
+        assertTrue(linkedParent.contains("symlinked M3 LLVM compilation database path"), linkedParent);
+        assertFalse(Files.exists(project.resolve("argv.txt")), linkedParent);
+        assertArrayEquals(original, Files.readAllBytes(sentinel));
+        assertEquals(external, Files.readSymbolicLink(outputParent));
     }
 
     @Test
@@ -70,6 +99,26 @@ final class M3LlvmCompileDbTaskTest {
         Files.writeString(project.resolve("build.gradle"), Files.readString(project.resolve("build.gradle"))
                 + "tasks.named('m3LlvmCompileDb') { providerJars.from(layout.projectDirectory.file('external.jar')) }\n");
         assertTrue(execute(project, false).contains("exact SHA-256 pin"));
+    }
+
+    /** Linux acceptance requires real symlinks; other hosts may lack link support or permission. */
+    private static void createRequiredSymbolicLink(Path link, Path target) throws Exception {
+        boolean linux = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("linux");
+        try {
+            Files.createSymbolicLink(link, target);
+        } catch (UnsupportedOperationException unavailable) {
+            if (linux) {
+                throw unavailable;
+            }
+            assumeTrue(false, "symbolic links are unavailable on this host: " + unavailable);
+        } catch (FileSystemException unavailable) {
+            String reason = String.valueOf(unavailable.getReason()).toLowerCase(Locale.ROOT);
+            if (linux || !(unavailable instanceof AccessDeniedException
+                    || reason.contains("privilege") || reason.contains("not supported"))) {
+                throw unavailable;
+            }
+            assumeTrue(false, "symbolic links are unavailable on this host: " + unavailable);
+        }
     }
 
     private Path fixture() throws Exception {
