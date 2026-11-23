@@ -148,6 +148,7 @@ final class M3FusedStateCacheRealEngineTest {
                         + "arg\tverify\t.\n"
                         + "arg\tverify\tMarkerTool\n"
                         + "input\tverify\tsource.txt\n"
+                        + "input\tverify\tMarkerTool.class\n"
                         + "output\tverify\tresult.txt\n");
         Path source = project.resolve("MarkerTool.java");
         Files.writeString(source, """
