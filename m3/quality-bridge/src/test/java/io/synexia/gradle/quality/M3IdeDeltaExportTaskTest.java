@@ -9,7 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
@@ -85,6 +87,98 @@ final class M3IdeDeltaExportTaskTest {
         } finally {
             Files.deleteIfExists(outside);
         }
+    }
+
+    @Test
+    void nativeBuildTreeIdentitySurvivesConfigurationCacheReplay() throws Exception {
+        compositeFixture();
+        var runner = compositeRunner(":m3IdeDeltaExport", ":child:m3IdeDeltaExport",
+                ":left:m3IdeDeltaExport", ":right:m3IdeDeltaExport");
+        String first = runner.build().getOutput();
+        assertTrue(first.contains("Configuration cache entry stored"), first);
+        assertEquals("fixture::", packet(root).project());
+        assertEquals("fixture::child", packet(root.resolve("child")).project());
+        assertEquals("fixture::left", packet(root.resolve("left")).project());
+        assertEquals("fixture::right", packet(root.resolve("right")).project());
+
+        Files.writeString(root.resolve("left/src/main/java/Identity.java"),
+                "class Identity { int generation; }", StandardCharsets.UTF_8);
+        String replay = runner.build().getOutput();
+        assertTrue(replay.contains("Reusing configuration cache"), replay);
+        M3IdeDeltaWire.Packet changed = packet(root.resolve("left"));
+        assertEquals("fixture::left", changed.project());
+        assertEquals(M3IdeDeltaWire.BuildKind.INCREMENTAL, changed.kind());
+        assertFalse(changed.complete());
+        assertEquals(List.of(new M3IdeDeltaWire.Change(M3IdeDeltaWire.ChangeKind.MODIFIED,
+                "src/main/java/Identity.java")), changed.changes());
+        assertEquals("fixture::right", packet(root.resolve("right")).project());
+    }
+
+    @Test
+    void reviewRefusesAnotherIncludedBuildEvenWhenItsDigestIsPinned() throws Exception {
+        compositeFixture();
+        compositeRunner(":left:m3IdeDeltaExport", ":right:m3IdeDeltaExport").build();
+        Path leftBuild = root.resolve("left/build.gradle");
+        String plugin = Files.readString(leftBuild);
+        String ownSha = Files.readString(root.resolve("left/build/reports/m3/ide-delta.sha256")).trim();
+        Files.writeString(leftBuild, plugin + "tasks.named('m3IdeDeltaReview') { expectedSha256.set('"
+                + ownSha + "') }\n");
+        String ownReview = compositeRunner(":left:m3IdeDeltaReview").build().getOutput();
+        assertTrue(ownReview.contains("Reviewed M3 IDE delta"), ownReview);
+
+        String foreignSha = Files.readString(root.resolve("right/build/reports/m3/ide-delta.sha256")).trim();
+        Files.writeString(leftBuild, plugin + "tasks.named('m3IdeDeltaReview') {\n"
+                + "  reportFile.set(layout.projectDirectory.file('../right/build/reports/m3/ide-delta.tsv'))\n"
+                + "  expectedSha256.set('" + foreignSha + "')\n}\n");
+        String refused = compositeRunner(":left:m3IdeDeltaReview").buildAndFail().getOutput();
+        assertTrue(refused.contains("foreign M3 IDE delta provider or project"), refused);
+    }
+
+    @Test
+    void explicitCompositeIdentityOverridesRemainExact() throws Exception {
+        compositeFixture();
+        Path leftBuild = root.resolve("left/build.gradle");
+        Files.writeString(leftBuild, Files.readString(leftBuild)
+                + "tasks.named('m3IdeDeltaExport') { projectIdentifier.set('legacy-workspace:chosen') }\n"
+                + "tasks.named('m3IdeDeltaReview') { expectedProjectIdentifier.set('legacy-workspace:chosen') }\n");
+        compositeRunner(":left:m3IdeDeltaExport").build();
+        assertEquals("legacy-workspace:chosen", packet(root.resolve("left")).project());
+        String sha = Files.readString(root.resolve("left/build/reports/m3/ide-delta.sha256")).trim();
+        String review = compositeRunner(":left:m3IdeDeltaReview", "-Pm3.ide.delta.sha256=" + sha)
+                .build().getOutput();
+        assertTrue(review.contains("Reviewed M3 IDE delta"), review);
+    }
+
+    private void compositeFixture() throws IOException {
+        fixture();
+        Files.writeString(root.resolve("settings.gradle.kts"),
+                "rootProject.name = \"fixture\"\ninclude(\"child\")\n"
+                + "includeBuild(\"left\") { name = \"left\" }\n"
+                + "includeBuild(\"right\") { name = \"right\" }\n");
+        for (String name : List.of("child", "left", "right")) {
+            Path project = Files.createDirectories(root.resolve(name));
+            Files.writeString(project.resolve("build.gradle"), "plugins { id 'io.synexia.m3.quality' }\n");
+            if (!"child".equals(name)) {
+                Files.writeString(project.resolve("settings.gradle.kts"), "rootProject.name = \"fixture\"\n");
+            }
+            Path source = project.resolve("src/main/java/Identity.java");
+            Files.createDirectories(source.getParent());
+            Files.writeString(source, "class Identity {}", StandardCharsets.UTF_8);
+        }
+    }
+
+    private GradleRunner compositeRunner(String... tasks) {
+        List<String> arguments = new ArrayList<>(List.of(tasks));
+        arguments.addAll(List.of("--configuration-cache", "--configuration-cache-problems=fail", "--stacktrace"));
+        return GradleRunner.create().withProjectDir(root.toFile()).withPluginClasspath().withArguments(arguments);
+    }
+
+    private static M3IdeDeltaWire.Packet packet(Path project) throws Exception {
+        Path report = project.resolve("build/reports/m3/ide-delta.tsv");
+        byte[] bytes = Files.readAllBytes(report);
+        String sha = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+        assertEquals(sha + "\n", Files.readString(project.resolve("build/reports/m3/ide-delta.sha256")));
+        return M3IdeDeltaWire.decode(bytes);
     }
 
     private void fixture() throws IOException {

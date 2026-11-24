@@ -1,3 +1,4 @@
+<!-- SPDX-FileCopyrightText: 2026 Hitesh Soliwal and Contributors to the Synexia Project -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Native Gradle → Maven IDE delta exchange (M3-IDE-DELTA-V1)
 
@@ -23,7 +24,7 @@ tasks.named('m3IdeDeltaExport') {
     // Default sourceFiles is project.fileTree('src').
     sourceFiles.from(fileTree('generated-sources'))
     // Scoped to the receiving workspace; defaults to rootProject.name
-    // plus ':' plus project.path.
+    // plus ':' plus project.buildTreePath.
     projectIdentifier.set('build-root:project-id')
 }
 ~~~
@@ -72,7 +73,12 @@ the digest, not independent proof that the producer was trustworthy.
 ~~~
 
 Default expected owner is provider=gradle, project=rootProject.name plus
-':' plus project.path. For an external Eclipse/VS Code/Maven host report,
+':' plus project.buildTreePath. The native build-tree path distinguishes
+included builds even when their root project names and local project paths
+match. Ordinary root and subproject identities remain unchanged. Explicit
+projectIdentifier and expectedProjectIdentifier values retain their exact
+values; configure both when intentionally retaining a custom identity.
+For an external Eclipse/VS Code/Maven host report,
 configure expectedProvider, expectedProjectIdentifier and reportFile
 explicitly in the consumer task, and pin its SHA-256. A source-owner or
 workspace identity mismatch, corrupt packet, missing hash, oversized
@@ -120,7 +126,10 @@ The standalone Java 17 test reproduces Maven wire example bytes and
 rejects invalid encodings, duplicate/unsorted rows, traversal, malformed
 UTF-8 and completeness claims. Gradle TestKit exercises real InputChanges:
 cold, modified and removed sources, digest consistency, lazy registration
-and foreign source refusal. These tests must execute in CI for acceptance;
+and foreign source refusal. Composite-build tests cover distinct included-build
+identities, configuration-cache replay after a source change, explicit identity
+overrides, and refusal of a different included build's correctly hashed packet.
+These tests must execute in CI for acceptance;
 committed tests alone are not evidence of a passing build.
 
 Gradle build-cache replay is disabled for the delta task, while its normal

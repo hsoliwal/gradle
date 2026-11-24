@@ -69,6 +69,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
 
         // Native Gradle InputChanges is the source owner; Maven's v1 wire is
         // only an exchange format and never grants goal or cache skipping.
+        // Build-tree paths distinguish included builds that share the same root name.
         project.getTasks().register("m3IdeDeltaExport", M3IdeDeltaExportTask.class, task -> {
             task.setGroup("verification");
             task.setDescription("Export Gradle-owned source deltas in the Maven M3-IDE-DELTA-V1 wire format");
@@ -76,7 +77,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.getOutputRoot().convention(project.getLayout().getBuildDirectory());
             task.getSourceFiles().from(project.fileTree("src"));
             task.getProjectIdentifier().convention(
-                    project.getRootProject().getName() + ":" + project.getPath());
+                    project.getRootProject().getName() + ":" + project.getBuildTreePath());
             task.getDeltaReport().convention(
                     project.getLayout().getBuildDirectory().file("reports/m3/ide-delta.tsv"));
             task.getDeltaSha256().convention(
@@ -93,7 +94,7 @@ public final class M3QualityPlugin implements Plugin<Project> {
             task.getExpectedSha256().convention(project.getProviders().gradleProperty("m3.ide.delta.sha256"));
             task.getExpectedProvider().convention("gradle");
             task.getExpectedProjectIdentifier().convention(
-                    project.getRootProject().getName() + ":" + project.getPath());
+                    project.getRootProject().getName() + ":" + project.getBuildTreePath());
         });
 
         // Both entry points delegate to Maven's original standalone polyglot CLI.
