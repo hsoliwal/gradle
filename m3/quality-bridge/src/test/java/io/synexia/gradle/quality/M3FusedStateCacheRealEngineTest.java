@@ -55,6 +55,14 @@ final class M3FusedStateCacheRealEngineTest {
         assertFalse(Files.exists(second.resolve("calls.txt")),
                 "verified local receipt must not execute the language tool");
 
+        Files.delete(second.resolve("result.txt"));
+        String missingOutput = run(second, true);
+        assertTrue(hasLine(missingOutput, "FROM-CACHE verify"), missingOutput);
+        assertEquals("AAAA", Files.readString(second.resolve("result.txt")),
+                "deleted declared output must be restored from the Maven-owned cache");
+        assertFalse(Files.exists(second.resolve("calls.txt")),
+                "restoring deleted output must not execute the original tool");
+
         Files.writeString(second.resolve("result.txt"), "tampered");
         String tampered = run(second, true);
         assertTrue(hasLine(tampered, "FROM-CACHE verify"), tampered);
