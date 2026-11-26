@@ -388,3 +388,14 @@ Keep Gradle #71 draft pending these gates and human DCO review.
   `m3/quality-bridge/docs/M3-SMART-HOOK-CANDIDATE-20261126.md`. The exact OpenRewrite
   source template is [Synexia #19428](https://github.com/hsoliwal/com.synexia/pull/19428);
   SDK replay, Maven #315 promotion and JDK17/21 TestKit execution are **PENDING**.
+
+### Candidate source-built Java version compatibility (2026-11-26)
+
+The Maven smart-builder requires Java 21 by its POM. Gradle #80's
+source-pinned candidate job therefore builds and runs the Maven owner with
+a fixed installed JDK 21, while independently selecting JDK 17 and 21
+for Gradle and its Java 17-compatible bridge classes. The TestKit fixture
+supplies the original JDK 21 executable explicitly. No Maven Java17 bytecode
+or toolchain compatibility is claimed; exact Java test Git blob:
+`283def6a2240132a7414ecdef903b6c8eb85fc18`. Canonical fourth recipe stage:
+`jdk21-producer-gradle17-consumer.yml` in Synexia #19428.

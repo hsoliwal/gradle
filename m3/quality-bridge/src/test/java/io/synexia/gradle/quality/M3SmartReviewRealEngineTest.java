@@ -312,12 +312,22 @@ final class M3SmartReviewRealEngineTest {
         Path engine = root.resolve("engine.jar");
         Files.copy(original, engine);
         String digest = hash(Files.readAllBytes(engine));
+        String candidateJava = "";
+        if (System.getenv("M3_SMART_REVALIDATION_CANDIDATE_JAR") != null) {
+            String selected = System.getenv("M3_SMART_CANDIDATE_JAVA21");
+            assertTrue(selected != null && !selected.isBlank(),
+                    "Maven source-built Java 21 engine must have an explicit Java 21 runtime");
+            Path java21 = Path.of(selected).toAbsolutePath().normalize();
+            assertTrue(Files.isRegularFile(java21), "selected Maven Java 21 executable must exist");
+            candidateJava = "  javaExecutable.set('"
+                    + java21.toString().replace("\\", "\\\\").replace("'", "\\'") + "')\n";
+        }
         Files.writeString(root.resolve("settings.gradle"), "rootProject.name = 'm3-smart-review-consumer'\n");
         Files.writeString(root.resolve("build.gradle"), "plugins { id 'io.synexia.m3.quality' }\n"
                 + "tasks.withType(io.synexia.gradle.quality.M3SmartReviewTask).configureEach {\n"
                 + "  engineJar.set(layout.projectDirectory.file('engine.jar'))\n"
                 + "  engineSha256.set('" + digest + "')\n"
-                + "}\n" + configuration);
+                + candidateJava + "}\n" + configuration);
     }
 
     private GradleRunner runner(String task) {

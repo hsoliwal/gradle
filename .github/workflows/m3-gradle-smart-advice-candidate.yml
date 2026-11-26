@@ -22,7 +22,8 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: ${{ matrix.java }}
+          # Maven's original m3-smart-builder POM compiles for Java 21.
+          java-version: '21'
       - name: Guard exact Maven candidate source and five non-skipped TestKit methods
         run: sh m3/quality-bridge/scripts/verify-smart-advice-candidate-workflow.sh
       - name: Verify sealed Gradle candidate source manifest
@@ -52,12 +53,24 @@ jobs:
           jar --create --file m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture.jar \
             -C m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture .
           test -s m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture.jar
+      - name: Capture source-built original Maven Java 21 runtime
+        run: |
+          test -x "$JAVA_HOME/bin/java"
+          printf 'M3_SMART_CANDIDATE_JAVA21=%s/bin/java\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - name: Switch only the Gradle consumer JVM to the JDK 17/21 matrix
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
       - name: Run exact Gradle candidate summary and provider revalidation tests
         env:
           M3_SMART_BUILDER_JAR: ${{ github.workspace }}/m3-maven-smart-candidate/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
           M3_SMART_REVALIDATION_CANDIDATE_JAR: ${{ github.workspace }}/m3-maven-smart-candidate/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
           M3_SMART_REVALIDATION_FIXTURE_JAR: ${{ github.workspace }}/m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture.jar
         run: |
+          test -x "$M3_SMART_CANDIDATE_JAVA21"
+          "$M3_SMART_CANDIDATE_JAVA21" -version
+          java -version
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test \
             --tests '*M3SmartReviewRealEngineTest.candidateRefusesInvalidPreparationBeforeLaunchingSummarizer' \

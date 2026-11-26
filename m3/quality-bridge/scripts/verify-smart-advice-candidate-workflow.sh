@@ -14,6 +14,10 @@ once() {
 }
 once 'ref: 7106d65cdce5856f2fbd84f0b72981b47dc8c709'
 once "java: ['17', '21']"
+once "java-version: '21'"
+once 'java-version: ${{ matrix.java }}'
+once 'M3_SMART_CANDIDATE_JAVA21=%s/bin/java'
+once 'test -x "$M3_SMART_CANDIDATE_JAVA21"'
 once '          ./gradlew --no-daemon --stacktrace'
 once "--tests '*M3SmartReviewRealEngineTest.candidateRefusesInvalidPreparationBeforeLaunchingSummarizer'"
 once "--tests '*M3SmartReviewRealEngineTest.candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary'"
