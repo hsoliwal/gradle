@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle candidate Maven advice revalidation
+on:
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - 'm3/MAVEN_GRADLE_CONVERGENCE.md'
+      - '.github/workflows/m3-gradle-smart-advice-candidate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate-source-bound-advice:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Guard exact Maven candidate source and three non-skipped TestKit methods
+        run: sh m3/quality-bridge/scripts/verify-smart-advice-candidate-workflow.sh
+      # #317 is merged into #315's feature branch, NOT into Maven master.
+      # This source pin is a candidate qualification lane and never replaces
+      # the production Maven source pin in m3-gradle-quality-bridge.yml.
+      - name: Checkout exact Maven #315 candidate including merged child #317
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: fcb80e8007f47d74c5f1b6f18200b53b2a485d12
+          path: m3-maven-smart-candidate
+          persist-credentials: false
+      - name: Qualify the original candidate Maven smart-builder and verify source identity
+        run: |
+          test "$(git -C m3-maven-smart-candidate rev-parse HEAD)" = fcb80e8007f47d74c5f1b6f18200b53b2a485d12
+          mvn -B -ntp -f m3-maven-smart-candidate/tools/m3-smart-builder/pom.xml verify
+          test -s m3-maven-smart-candidate/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Run exact Gradle candidate summary admission and revalidation tests
+        env:
+          M3_SMART_BUILDER_JAR: ${{ github.workspace }}/m3-maven-smart-candidate/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
+          M3_SMART_REVALIDATION_CANDIDATE_JAR: ${{ github.workspace }}/m3-maven-smart-candidate/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
+        run: |
+          ./gradlew --no-daemon --stacktrace \
+            -p m3/quality-bridge test \
+            --tests '*M3SmartReviewRealEngineTest.candidateRefusesInvalidPreparationBeforeLaunchingSummarizer' \
+            --tests '*M3SmartReviewRealEngineTest.candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary' \
+            --tests '*M3SmartReviewRealEngineTest.candidateAcceptsUnchangedPreparationAfterSummary' \
+            --rerun-tasks
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          report = Path('m3/quality-bridge/build/test-results/test/TEST-io.synexia.gradle.quality.M3SmartReviewRealEngineTest.xml')
+          cases = list(ET.parse(report).getroot().iter('testcase'))
+          expected = {
+              'candidateRefusesInvalidPreparationBeforeLaunchingSummarizer',
+              'candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary',
+              'candidateAcceptsUnchangedPreparationAfterSummary',
+          }
+          found = {node.attrib.get('name') for node in cases}
+          assert found == expected, (found, expected)
+          for node in cases:
+              assert not any(node.find(tag) is not None for tag in ('skipped', 'failure', 'error')), node.attrib
+          print('PASS: all three exact original-Maven candidate TestKit cases executed; no skips')
+          PY
+      - name: Upload candidate TestKit XML reports even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-candidate-advice-jdk-${{ matrix.java }}
+          path: m3/quality-bridge/build/test-results/test/
+          if-no-files-found: warn
