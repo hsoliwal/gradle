@@ -21,4 +21,5 @@ once "--tests '*M3SmartReviewRealEngineTest.candidateAcceptsUnchangedPreparation
 once "M3_SMART_REVALIDATION_CANDIDATE_JAR:"
 once "  workflow_dispatch:"
 once "  pull_request:"
+once 'run: sha256sum -c m3/quality-bridge/receipts/M3-SMART-ADVICE-CANDIDATE-20261126.sha256'
 printf '%s\n' 'PASS: exact Maven #315/#317 candidate source and three Gradle TestKit gates retained'

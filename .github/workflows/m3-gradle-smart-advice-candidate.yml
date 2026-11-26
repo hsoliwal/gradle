@@ -25,6 +25,8 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: Guard exact Maven candidate source and three non-skipped TestKit methods
         run: sh m3/quality-bridge/scripts/verify-smart-advice-candidate-workflow.sh
+      - name: Verify sealed Gradle candidate source manifest
+        run: sha256sum -c m3/quality-bridge/receipts/M3-SMART-ADVICE-CANDIDATE-20261126.sha256
       # #317 is merged into #315's feature branch, NOT into Maven master.
       # This source pin is a candidate qualification lane and never replaces
       # the production Maven source pin in m3-gradle-quality-bridge.yml.
