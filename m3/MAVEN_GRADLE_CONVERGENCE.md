@@ -384,7 +384,7 @@ Keep Gradle #71 draft pending these gates and human DCO review.
   draft #315, so Maven master still has the older smart hook. The new Gradle candidate
   acceptance lane pins `fcb80e8007f47d74c5f1b6f18200b53b2a485d12` and does not replace
   the current Gradle smart-review producer or enable the candidate by default.
-- The three proposed tests and source-bound receipt contract are described in
+- The five proposed tests (including source-built modular provider mutation) and source-bound receipt contract are described in
   `m3/quality-bridge/docs/M3-SMART-HOOK-CANDIDATE-20261126.md`. The exact OpenRewrite
   source template is [Synexia #19428](https://github.com/hsoliwal/com.synexia/pull/19428);
   SDK replay, Maven #315 promotion and JDK17/21 TestKit execution are **PENDING**.

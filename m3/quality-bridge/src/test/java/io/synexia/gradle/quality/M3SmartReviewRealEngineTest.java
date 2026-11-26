@@ -176,6 +176,81 @@ final class M3SmartReviewRealEngineTest {
         assertFalse(report.contains("\"adviceStatus\":\"blocked-preparation\""), report);
     }
 
+
+    @Test
+    void candidateRevokesAdvisoryWhenOriginalProviderMutatesSourceAfterInference() throws Exception {
+        Path provider = candidateProviderFixture();
+        setup(candidateProviderConfiguration(provider, "mcp-hook-drift-source.gguf", "m3PostBuildAdvice"));
+        writeSyntheticReceipts();
+        Files.writeString(root.resolve("llama-fixture"), "fixture backend only\n");
+        Files.writeString(root.resolve("mcp-hook-drift-source.gguf"), "test-only synthetic model\n");
+
+        String refused = runner("m3PostBuildAdvice").buildAndFail().getOutput();
+        assertTrue(refused.contains("Build advice failed: CanonicalPreparationEvidenceRejected"), refused);
+        assertTrue(Files.isRegularFile(root.resolve("mcp-hook-drift-source.gguf.started")),
+                "the original provider must reach the inference boundary");
+        assertTrue(Files.isRegularFile(root.resolve("mcp-hook-drift-source.gguf.mutated")),
+                "the source-owner fixture must record its mutation before a successful reply");
+
+        String report = Files.readString(root.resolve("build/m3-smart/post-build.json"));
+        assertTrue(report.contains("\"buildOutcome\":\"failure\""), report);
+        assertTrue(report.contains("\"preparationStatus\":\"refused\""), report);
+        assertTrue(report.contains("\"adviceStatus\":\"blocked-preparation\""), report);
+        assertTrue(report.contains("\"adviceErrorType\":\"CanonicalPreparationEvidenceRejected\""), report);
+        assertTrue(report.contains("\"llmCandidate\":\"\""), report);
+        assertTrue(report.contains("\"llmCandidateTrusted\":false"), report);
+    }
+
+    @Test
+    void candidateRetainsSyntheticAdvisoryOnlyWithUnchangedReceipts() throws Exception {
+        Path provider = candidateProviderFixture();
+        setup(candidateProviderConfiguration(provider, "mcp-evidence-observer.gguf", "m3PostBuildAdvice"));
+        String original = writeSyntheticReceipts();
+        Files.writeString(root.resolve("llama-fixture"), "fixture backend only\n");
+        Files.writeString(root.resolve("mcp-evidence-observer.gguf"), "test-only synthetic model\n");
+
+        String accepted = runner("m3PostBuildAdvice").build().getOutput();
+        assertTrue(accepted.contains("BUILD SUCCESSFUL"), accepted);
+        assertTrue(Files.isRegularFile(root.resolve("mcp-evidence-observer.gguf.started")),
+                "provider must actually run; missing fixture must never count as a pass");
+        assertEquals(original, Files.readString(root.resolve("src/Example.java")));
+        String report = Files.readString(root.resolve("build/m3-smart/post-build.json"));
+        assertTrue(report.contains("\"buildOutcome\":\"failure\""), report);
+        assertTrue(report.contains("\"preparationStatus\":\"source-bound\""), report);
+        assertTrue(report.contains("\"adviceStatus\":\"available\""), report);
+        assertTrue(report.contains("\"llmCandidate\":\"fake MCP advisory"), report);
+        assertTrue(report.contains("\"llmCandidateTrusted\":false"), report);
+    }
+
+    /** The fixture is Maven's own Java17 modular MCP fake, never a model or provider fork. */
+    private static Path candidateProviderFixture() throws Exception {
+        requireRevalidationCandidate();
+        String supplied = System.getenv("M3_SMART_REVALIDATION_FIXTURE_JAR");
+        assumeTrue(supplied != null && !supplied.isBlank(),
+                "requires original Maven #315 source-built modular MCP test fixture");
+        Path original = Path.of(supplied).toAbsolutePath().normalize();
+        assertTrue(Files.isRegularFile(original), "real original Maven test fixture JAR required");
+        return original;
+    }
+
+    private String candidateProviderConfiguration(Path provider, String scenario, String task) throws Exception {
+        Path local = root.resolve("mcp-fixture.jar");
+        Files.copy(provider, local);
+        return "tasks.named('" + task + "') {\n"
+                + "  buildOutcome.set('failure')\n"
+                + "  sourceRoot.set(layout.projectDirectory.dir('src'))\n"
+                + "  preparationRequired.set(true)\n"
+                + "  preparationReport.set(layout.projectDirectory.file('receipts/preparation.json'))\n"
+                + "  optionLlm.set(true)\n"
+                + "  backend.set('cli')\n"
+                + "  chromeLlmJar.set(layout.projectDirectory.file('mcp-fixture.jar'))\n"
+                + "  chromeLlmJarSha256.set('" + hash(Files.readAllBytes(local)) + "')\n"
+                + "  llamaExecutable.set(layout.projectDirectory.file('llama-fixture'))\n"
+                + "  modelFile.set(layout.projectDirectory.file('" + scenario + "'))\n"
+                + "  timeoutSeconds.set(7)\n"
+                + "}\n";
+    }
+
     private static void requireRevalidationCandidate() throws Exception {
         String candidate = System.getenv("M3_SMART_REVALIDATION_CANDIDATE_JAR");
         String engine = System.getenv("M3_SMART_BUILDER_JAR");

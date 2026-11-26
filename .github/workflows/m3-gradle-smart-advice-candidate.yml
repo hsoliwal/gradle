@@ -23,7 +23,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Guard exact Maven candidate source and three non-skipped TestKit methods
+      - name: Guard exact Maven candidate source and five non-skipped TestKit methods
         run: sh m3/quality-bridge/scripts/verify-smart-advice-candidate-workflow.sh
       - name: Verify sealed Gradle candidate source manifest
         run: sha256sum -c m3/quality-bridge/receipts/M3-SMART-ADVICE-CANDIDATE-20261126.sha256
@@ -42,16 +42,29 @@ jobs:
           test "$(git -C m3-maven-smart-candidate rev-parse HEAD)" = fcb80e8007f47d74c5f1b6f18200b53b2a485d12
           mvn -B -ntp -f m3-maven-smart-candidate/tools/m3-smart-builder/pom.xml verify
           test -s m3-maven-smart-candidate/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
-      - name: Run exact Gradle candidate summary admission and revalidation tests
+      - name: Build Maven's original modular MCP fixture (no model inference)
+        run: |
+          mkdir -p m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture
+          javac --release 17 -encoding UTF-8 -Xlint:all -Werror \
+            -d m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture \
+            m3-maven-smart-candidate/tools/m3-smart-builder/src/test/fixture/module-info.java \
+            m3-maven-smart-candidate/tools/m3-smart-builder/src/test/fixture/io/synexia/chromellm/standalone/StandaloneMain.java
+          jar --create --file m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture.jar \
+            -C m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture .
+          test -s m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture.jar
+      - name: Run exact Gradle candidate summary and provider revalidation tests
         env:
           M3_SMART_BUILDER_JAR: ${{ github.workspace }}/m3-maven-smart-candidate/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
           M3_SMART_REVALIDATION_CANDIDATE_JAR: ${{ github.workspace }}/m3-maven-smart-candidate/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
+          M3_SMART_REVALIDATION_FIXTURE_JAR: ${{ github.workspace }}/m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture.jar
         run: |
           ./gradlew --no-daemon --stacktrace \
             -p m3/quality-bridge test \
             --tests '*M3SmartReviewRealEngineTest.candidateRefusesInvalidPreparationBeforeLaunchingSummarizer' \
             --tests '*M3SmartReviewRealEngineTest.candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary' \
             --tests '*M3SmartReviewRealEngineTest.candidateAcceptsUnchangedPreparationAfterSummary' \
+            --tests '*M3SmartReviewRealEngineTest.candidateRevokesAdvisoryWhenOriginalProviderMutatesSourceAfterInference' \
+            --tests '*M3SmartReviewRealEngineTest.candidateRetainsSyntheticAdvisoryOnlyWithUnchangedReceipts' \
             --rerun-tasks
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
@@ -62,12 +75,14 @@ jobs:
               'candidateRefusesInvalidPreparationBeforeLaunchingSummarizer',
               'candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary',
               'candidateAcceptsUnchangedPreparationAfterSummary',
+              'candidateRevokesAdvisoryWhenOriginalProviderMutatesSourceAfterInference',
+              'candidateRetainsSyntheticAdvisoryOnlyWithUnchangedReceipts',
           }
           found = {node.attrib.get('name', '').removesuffix('()') for node in cases}
           assert found == expected, (found, expected)
           for node in cases:
               assert not any(node.find(tag) is not None for tag in ('skipped', 'failure', 'error')), node.attrib
-          print('PASS: all three exact original-Maven candidate TestKit cases executed; no skips')
+          print('PASS: all five exact original-Maven candidate TestKit cases executed; no skips')
           PY
       - name: Upload candidate TestKit XML reports even on failure
         if: always()

@@ -12,7 +12,7 @@ SHA-256-pinned JAR and retains its native Gradle configuration-cache semantics. 
 **only** its existing TestKit owner: no alternate receipt grammar, source scanner, summarizer,
 provider, engine, task, default task dependency or cache admission is added.
 
-## Exactly three opt-in candidate checks
+## Five opt-in candidate checks
 
 - A malformed source-bound preparation report refuses **before** an explicitly configured
   Java-17-compatible CPU summarizer writes a marker; its report must say
@@ -24,14 +24,21 @@ provider, engine, task, default task dependency or cache admission is added.
 - Unmodified source and receipt must allow the same summarizer and emit the original
   `source-bound` / `available` / `disabled` statuses without starting any model.
 
+- After the original modular Maven MCP fixture returns a successful synthetic reply **but modifies
+  source bytes**, the hook must refuse the stale preparation evidence, erase its proposed
+  candidate, and preserve the observed failed-build result.
+- With unchanged source and receipts, the same original Maven fixture returns synthetic
+  advisory text that is explicitly **untrusted**, also preserving the observed build failure.
+
 Synthetic source-bound receipts are inherited from
 `M3SmartReviewRealEngineTest.writeSyntheticReceipts`: they are **test data**, not
 compiler/behavior/JIT proofs. The exact companion [Synexia recipe proposal](https://github.com/hsoliwal/com.synexia/pull/19428)
-contains the complete Git preimage and the expected postimage. The Java test postimage must
-equal Git blob `1a9b993f2ab9470fc9e90788fd579860010097ec`. No new test is active in
-the older Maven CI lane because all three require `M3_SMART_REVALIDATION_CANDIDATE_JAR`.
-A separate source-pinned JDK17/21 job checks out the candidate and demands that **all three**
-exact Gradle TestKit methods run with no JUnit skip, error or failure.
+contains the complete Git preimage and the expected postimage. The two canonical recipe stages produce final Java Git blob `b3c07c66b9401453579259f05b42dd45ecaac342`
+(first stage: `1a9b993f2ab9470fc9e90788fd579860010097ec`).
+All five tests require `M3_SMART_REVALIDATION_CANDIDATE_JAR`;
+the two provider cases additionally require `M3_SMART_REVALIDATION_FIXTURE_JAR`.
+A source-pinned JDK17/21 job builds Maven's original modular test fixture
+and requires all five Gradle TestKit methods to run with no skips, errors or failures.
 
 ## Remaining gates
 
@@ -39,7 +46,7 @@ exact Gradle TestKit methods run with no JUnit skip, error or failure.
    second replay and source SHA-256/structural/logic fingerprint verification.
 2. Maven #315 must satisfy its own branch provenance, `mvn verify`, cross-platform and native
    provider qualification; #317 being merged into #315 is not sufficient.
-3. Hosted JDK17/21 TestKit XML artifacts must prove three executed zero-skip passes, with
+3. Hosted JDK17/21 TestKit XML artifacts must prove five executed zero-skip passes, with
    a separate review of warning/error output and native process retirement.
 4. Human code/license/DCO review and explicit integration of Maven #315 into `master`;
    only then consider updating Gradle's production Maven pin.

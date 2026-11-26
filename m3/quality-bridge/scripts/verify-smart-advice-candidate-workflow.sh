@@ -18,8 +18,12 @@ once '          ./gradlew --no-daemon --stacktrace'
 once "--tests '*M3SmartReviewRealEngineTest.candidateRefusesInvalidPreparationBeforeLaunchingSummarizer'"
 once "--tests '*M3SmartReviewRealEngineTest.candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary'"
 once "--tests '*M3SmartReviewRealEngineTest.candidateAcceptsUnchangedPreparationAfterSummary'"
+once "--tests '*M3SmartReviewRealEngineTest.candidateRevokesAdvisoryWhenOriginalProviderMutatesSourceAfterInference'"
+once "--tests '*M3SmartReviewRealEngineTest.candidateRetainsSyntheticAdvisoryOnlyWithUnchangedReceipts'"
+once "M3_SMART_REVALIDATION_FIXTURE_JAR:"
+once 'jar --create --file m3-maven-smart-candidate/tools/m3-smart-builder/target/mcp-fixture.jar'
 once "M3_SMART_REVALIDATION_CANDIDATE_JAR:"
 once "  workflow_dispatch:"
 once "  pull_request:"
 once 'run: sha256sum -c m3/quality-bridge/receipts/M3-SMART-ADVICE-CANDIDATE-20261126.sha256'
-printf '%s\n' 'PASS: exact Maven #315/#317 candidate source and three Gradle TestKit gates retained'
+printf '%s\n' 'PASS: exact Maven #315/#317 candidate source and five Gradle TestKit gates retained'
