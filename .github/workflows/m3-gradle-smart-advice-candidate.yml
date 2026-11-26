@@ -61,7 +61,7 @@ jobs:
               'candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary',
               'candidateAcceptsUnchangedPreparationAfterSummary',
           }
-          found = {node.attrib.get('name') for node in cases}
+          found = {node.attrib.get('name', '').removesuffix('()') for node in cases}
           assert found == expected, (found, expected)
           for node in cases:
               assert not any(node.find(tag) is not None for tag in ('skipped', 'failure', 'error')), node.attrib
