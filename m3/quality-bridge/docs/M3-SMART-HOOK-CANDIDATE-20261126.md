@@ -4,7 +4,7 @@
 **Source custody (2026-11-26):** Maven `master@62499c2051a6152f8e4951728264efb4fd5b1fb8` still contains the
 **older** `BuildHookMain`; Maven [#317](https://github.com/hsoliwal/maven/pull/317)
 merged into **draft** [#315](https://github.com/hsoliwal/maven/pull/315), not into `master`.
-The candidate hook source is frozen to `fcb80e8007f47d74c5f1b6f18200b53b2a485d12`.
+The candidate hook source is frozen to `7106d65cdce5856f2fbd84f0b72981b47dc8c709`.
 Do not report #317 as released to Maven/Gradle master.
 
 The original Gradle `m3PreBuildAdvice` task already delegates to Maven's BuildHookMain through a

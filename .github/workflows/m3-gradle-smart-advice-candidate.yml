@@ -34,12 +34,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: hsoliwal/maven
-          ref: fcb80e8007f47d74c5f1b6f18200b53b2a485d12
+          ref: 7106d65cdce5856f2fbd84f0b72981b47dc8c709
           path: m3-maven-smart-candidate
           persist-credentials: false
       - name: Qualify the original candidate Maven smart-builder and verify source identity
         run: |
-          test "$(git -C m3-maven-smart-candidate rev-parse HEAD)" = fcb80e8007f47d74c5f1b6f18200b53b2a485d12
+          test "$(git -C m3-maven-smart-candidate rev-parse HEAD)" = 7106d65cdce5856f2fbd84f0b72981b47dc8c709
           mvn -B -ntp -f m3-maven-smart-candidate/tools/m3-smart-builder/pom.xml verify
           test -s m3-maven-smart-candidate/tools/m3-smart-builder/target/m3-smart-maven-plugin-0.1.0-SNAPSHOT.jar
       - name: Build Maven's original modular MCP fixture (no model inference)

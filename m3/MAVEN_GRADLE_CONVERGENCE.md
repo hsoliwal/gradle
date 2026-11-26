@@ -382,7 +382,7 @@ Keep Gradle #71 draft pending these gates and human DCO review.
   lifecycle recipe does not change Gradle's task/cache semantics.
 - **Do not import merged status without its target branch.** Maven #317 merged into open
   draft #315, so Maven master still has the older smart hook. The new Gradle candidate
-  acceptance lane pins `fcb80e8007f47d74c5f1b6f18200b53b2a485d12` and does not replace
+  acceptance lane pins `7106d65cdce5856f2fbd84f0b72981b47dc8c709` and does not replace
   the current Gradle smart-review producer or enable the candidate by default.
 - The five proposed tests (including source-built modular provider mutation) and source-bound receipt contract are described in
   `m3/quality-bridge/docs/M3-SMART-HOOK-CANDIDATE-20261126.md`. The exact OpenRewrite
