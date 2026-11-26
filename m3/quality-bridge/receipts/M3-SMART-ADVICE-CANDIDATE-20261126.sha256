@@ -1,7 +1,7 @@
 # SHA-256 byte custody for Gradle #80 candidate receiving files; excludes this manifest
 # Source-locked Maven #315 candidate; all paths relative to hsoliwal/gradle root
-537f62bb44126705008e081ffba2e555075a3e9e3222c28c224e1f5cfd714087  .github/workflows/m3-gradle-smart-advice-candidate.yml
-3320b7a524b8068b254a65e073141786102d6d2663fd8db85b2e05b4f542563c  m3/MAVEN_GRADLE_CONVERGENCE.md
-308d5b571927fd7fcd718946528703a4f39805e004b502908c66624fadffa16f  m3/quality-bridge/docs/M3-SMART-HOOK-CANDIDATE-20261126.md
-8518c03976772d94f9557889fe1cf78e23583abb9a7c61af7f97c801a3ec112b  m3/quality-bridge/scripts/verify-smart-advice-candidate-workflow.sh
-3107eab979fef011838ab12e9bf1a3da00eb3249ed8b8dff451e613d14b96049  m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3SmartReviewRealEngineTest.java
+7aeec5103369b9f1f579a9ae894c39423d898124d0a14697a0b9b95c4e015d44  .github/workflows/m3-gradle-smart-advice-candidate.yml
+257946610f7bc4d42fbc352318d9ca86623acadbdfd7d6f4f6cfacdad4ab824b  m3/MAVEN_GRADLE_CONVERGENCE.md
+22fb9503516844cafc8017dbac19449906f9271f14ecf623777d6147af369c47  m3/quality-bridge/docs/M3-SMART-HOOK-CANDIDATE-20261126.md
+f6dc13becff8ce7e7ed9b47b9c00b282fda14f43deaf370e7880e65863efb939  m3/quality-bridge/scripts/verify-smart-advice-candidate-workflow.sh
+d005dfebd1224c52c8f32cfec27bcfbfbcc1879c258c647e5678f8afe8536a79  m3/quality-bridge/src/test/java/io/synexia/gradle/quality/M3SmartReviewRealEngineTest.java
