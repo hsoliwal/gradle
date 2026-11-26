@@ -14,10 +14,10 @@ once() {
 }
 once 'ref: fcb80e8007f47d74c5f1b6f18200b53b2a485d12'
 once "java: ['17', '21']"
-once "test --tests"
-once "candidateRefusesInvalidPreparationBeforeLaunchingSummarizer'"
-once "candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary'"
-once "candidateAcceptsUnchangedPreparationAfterSummary'"
+once '          ./gradlew --no-daemon --stacktrace'
+once "--tests '*M3SmartReviewRealEngineTest.candidateRefusesInvalidPreparationBeforeLaunchingSummarizer'"
+once "--tests '*M3SmartReviewRealEngineTest.candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary'"
+once "--tests '*M3SmartReviewRealEngineTest.candidateAcceptsUnchangedPreparationAfterSummary'"
 once "M3_SMART_REVALIDATION_CANDIDATE_JAR:"
 once "  workflow_dispatch:"
 once "  pull_request:"
