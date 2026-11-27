@@ -101,6 +101,28 @@ final class M3LlvmCompileDbTaskTest {
         assertTrue(execute(project, false).contains("exact SHA-256 pin"));
     }
 
+    @Test
+    void refusesEmptyAndTruncatedDatabaseEvenWithCanonicalMavenReceipt() throws Exception {
+        Path project = fixture();
+        Path db = project.resolve("target/m3-llvm/compile_commands.json");
+        Files.writeString(project.resolve("empty.txt"), "1");
+        String empty = execute(project, false);
+        assertTrue(empty.contains("Maven LLVM compile DB output is empty, truncated or oversized"), empty);
+        assertTrue(Files.exists(project.resolve("argv.txt")),
+                "synthetic Maven producer actually ran and returned its canonical protocol");
+        assertEquals(0, Files.size(db));
+
+        Files.delete(project.resolve("empty.txt"));
+        Files.delete(db);
+        Files.writeString(project.resolve("truncated.txt"), "1");
+        String truncated = execute(project, false);
+        assertTrue(truncated.contains("Maven LLVM compile DB output is empty, truncated or oversized"),
+                truncated);
+        assertEquals(1, Files.size(db));
+        assertFalse(Files.exists(project.resolve(".m3")),
+                "failing IDE metadata admission does not create Gradle or Maven state");
+    }
+
     /** Linux acceptance requires real symlinks; other hosts may lack link support or permission. */
     private static void createRequiredSymbolicLink(Path link, Path target) throws Exception {
         boolean linux = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("linux");
@@ -137,7 +159,10 @@ final class M3LlvmCompileDbTaskTest {
                     java.nio.file.Path output = root.resolve("target/m3-llvm/compile_commands.json");
                     java.nio.file.Files.createDirectories(output.getParent());
                     if (!java.nio.file.Files.exists(output)) {
-                      java.nio.file.Files.writeString(output, "[]\\n");
+                      java.nio.file.Files.writeString(output,
+                          java.nio.file.Files.exists(root.resolve("empty.txt")) ? ""
+                          : java.nio.file.Files.exists(root.resolve("truncated.txt")) ? "["
+                          : "[]\\n");
                     }
                     System.out.println("M3-LLVM-COMPILE-DB-V1");
                     System.out.println("file\\t" + (java.nio.file.Files.exists(root.resolve("spoof.txt"))

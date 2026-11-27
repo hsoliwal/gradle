@@ -108,9 +108,15 @@ public abstract class M3LlvmCompileDbTask extends DefaultTask {
             });
             M3LlvmCompileDbCommands.verifyReceipt(receipt.bytes(), database);
             rejectLinks(database);
-            if (!Files.isRegularFile(database, LinkOption.NOFOLLOW_LINKS)
-                    || Files.size(database) > M3LlvmCompileDbCommands.MAX_DATABASE_BYTES) {
+            if (!Files.isRegularFile(database, LinkOption.NOFOLLOW_LINKS)) {
                 throw new IOException("Maven LLVM compile DB did not publish a bounded regular file");
+            }
+            long bytes = Files.size(database);
+            // The Maven exporter owns JSON syntax. Gradle checks only the
+            // minimal nonempty handoff: [] + LF is three bytes even in a
+            // synthetic producer; an empty/partial file is never success.
+            if (bytes < 3 || bytes > M3LlvmCompileDbCommands.MAX_DATABASE_BYTES) {
+                throw new IOException("Maven LLVM compile DB output is empty, truncated or oversized");
             }
             getLogger().lifecycle("Maven-owned Clang compilation database: {}", database);
         } catch (IOException rejected) {
