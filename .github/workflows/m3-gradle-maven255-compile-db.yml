@@ -69,7 +69,7 @@ jobs:
             -p m3/quality-bridge test \
             --tests 'io.synexia.gradle.quality.M3LlvmCompileDbTaskTest' \
             --tests 'io.synexia.gradle.quality.M3LlvmCompileDbRealEngineTest' --rerun-tasks
-      - name: Require five non-skipped TestKit cases
+      - name: Require six non-skipped TestKit cases
         shell: bash
         run: |
           set -euo pipefail
@@ -77,7 +77,7 @@ jobs:
           from pathlib import Path
           from xml.etree import ElementTree as ET
           d = Path('m3/quality-bridge/build/test-results/test')
-          wanted = {'M3LlvmCompileDbTaskTest': 3, 'M3LlvmCompileDbRealEngineTest': 2}
+          wanted = {'M3LlvmCompileDbTaskTest': 4, 'M3LlvmCompileDbRealEngineTest': 2}
           for name, expected in wanted.items():
               file = d / f'TEST-io.synexia.gradle.quality.{name}.xml'
               assert file.is_file() and not file.is_symlink(), file
@@ -88,7 +88,7 @@ jobs:
               assert len(cases) == expected and len({c.get('name') for c in cases}) == expected
               assert all(c.get('classname') == xml.get('name') for c in cases)
               assert all(not list(c) for c in cases)
-          print('PASS: five actual non-skipped Maven 255 Gradle TestKit cases')
+          print('PASS: six actual non-skipped Maven 255 Gradle TestKit cases')
           PY
       - name: Retain Gradle TestKit evidence regardless of result
         if: always()
