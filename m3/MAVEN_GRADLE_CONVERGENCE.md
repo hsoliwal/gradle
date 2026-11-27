@@ -371,3 +371,31 @@ TestKit, Maven #255 original JAR runtime, JDK 17/21 hosted Actions,
 independent OpenRewrite SDK recipe replay/fixed point, Windows/macOS,
 real M3JDK21 runtime and actual source-built LLVM binaries.
 Keep Gradle #71 draft pending these gates and human DCO review.
+
+## 2026-11-26 receiving-owner and branch audit
+
+- Reviewed `hsoliwal/gradle master@510f7cb9f00e29cac05473609c4828c6bf198c59`: Gradle #49–#79
+  are merged, including #75 fused Maven-state/cache, #74 corrected OpenRewrite plugin recipes,
+  #78 unique included-build IDE identities and #79 same-metadata javac classpath invalidation.
+- Reviewed `hsoliwal/maven master@62499c2051a6152f8e4951728264efb4fd5b1fb8`: merged #309
+  includes the source-pinned real Gradle compiler-reuse owner; Maven #303's native *Maven*
+  lifecycle recipe does not change Gradle's task/cache semantics.
+- **Do not import merged status without its target branch.** Maven #317 merged into open
+  draft #315, so Maven master still has the older smart hook. The new Gradle candidate
+  acceptance lane pins `7106d65cdce5856f2fbd84f0b72981b47dc8c709` and does not replace
+  the current Gradle smart-review producer or enable the candidate by default.
+- The five proposed tests (including source-built modular provider mutation) and source-bound receipt contract are described in
+  `m3/quality-bridge/docs/M3-SMART-HOOK-CANDIDATE-20261126.md`. The exact OpenRewrite
+  source template is [Synexia #19428](https://github.com/hsoliwal/com.synexia/pull/19428);
+  SDK replay, Maven #315 promotion and JDK17/21 TestKit execution are **PENDING**.
+
+### Candidate source-built Java version compatibility (2026-11-26)
+
+The Maven smart-builder requires Java 21 by its POM. Gradle #80's
+source-pinned candidate job therefore builds and runs the Maven owner with
+a fixed installed JDK 21, while independently selecting JDK 17 and 21
+for Gradle and its Java 17-compatible bridge classes. The TestKit fixture
+supplies the original JDK 21 executable explicitly. No Maven Java17 bytecode
+or toolchain compatibility is claimed; exact Java test Git blob:
+`283def6a2240132a7414ecdef903b6c8eb85fc18`. Canonical fourth recipe stage:
+`jdk21-producer-gradle17-consumer.yml` in Synexia #19428.

@@ -115,6 +115,195 @@ final class M3SmartReviewRealEngineTest {
         assertFalse(Files.exists(root.resolve("build/m3-smart/pre-build.json")));
     }
 
+
+    /**
+     * Candidate-only acceptance for Maven #315 (with #317 merged into its
+     * feature branch). Never run these tests against the production Maven pin.
+     */
+    @Test
+    void candidateRefusesInvalidPreparationBeforeLaunchingSummarizer() throws Exception {
+        requireRevalidationCandidate();
+        setup(candidateAdviceConfiguration(candidateSummarizerCommand("unchanged")));
+        writeSyntheticReceipts();
+        Files.writeString(root.resolve("receipts/preparation.json"), "{}\n");
+
+        String refused = runner("m3PreBuildAdvice").buildAndFail().getOutput();
+        assertTrue(refused.contains("Build advice failed: CanonicalPreparationEvidenceRejected"), refused);
+        assertFalse(Files.exists(root.resolve("summary-started.marker")),
+                "a refused preparation report must not start an external summarizer");
+        String report = Files.readString(root.resolve("build/m3-smart/pre-build.json"));
+        assertTrue(report.contains("\"summaryStatus\":\"blocked-admission\""), report);
+        assertTrue(report.contains("\"adviceStatus\":\"blocked-preparation\""), report);
+        assertTrue(report.contains("\"preparationStatus\":\"refused\""), report);
+    }
+
+    @Test
+    void candidateRejectsSameSizeTimestampRestoredSourceDriftAfterSummary() throws Exception {
+        requireRevalidationCandidate();
+        setup(candidateAdviceConfiguration(candidateSummarizerCommand("mutate")));
+        String original = writeSyntheticReceipts();
+        Path source = root.resolve("src/Example.java");
+        long length = Files.size(source);
+        java.nio.file.attribute.FileTime stamp = Files.getLastModifiedTime(source);
+
+        String refused = runner("m3PreBuildAdvice").buildAndFail().getOutput();
+        assertTrue(refused.contains("Build advice failed: CanonicalPreparationEvidenceRejected"), refused);
+        assertTrue(Files.isRegularFile(root.resolve("summary-started.marker")),
+                "valid preparation must allow the explicitly selected summarizer to run");
+        assertEquals(length, Files.size(source), "test changes bytes but preserves byte length");
+        assertEquals(stamp, Files.getLastModifiedTime(source), "test restores original file timestamp");
+        assertFalse(original.equals(Files.readString(source)), "the summarizer must change source bytes");
+        String report = Files.readString(root.resolve("build/m3-smart/pre-build.json"));
+        assertTrue(report.contains("\"summaryStatus\":\"available\""), report);
+        assertTrue(report.contains("\"preparationStatus\":\"refused\""), report);
+        assertTrue(report.contains("\"adviceStatus\":\"blocked-preparation\""), report);
+        assertTrue(report.contains("\"llmCandidate\":\"\""), report);
+    }
+
+    @Test
+    void candidateAcceptsUnchangedPreparationAfterSummary() throws Exception {
+        requireRevalidationCandidate();
+        setup(candidateAdviceConfiguration(candidateSummarizerCommand("unchanged")));
+        String original = writeSyntheticReceipts();
+        String accepted = runner("m3PreBuildAdvice").build().getOutput();
+        assertTrue(accepted.contains("BUILD SUCCESSFUL"), accepted);
+        assertTrue(Files.isRegularFile(root.resolve("summary-started.marker")));
+        assertEquals(original, Files.readString(root.resolve("src/Example.java")));
+        String report = Files.readString(root.resolve("build/m3-smart/pre-build.json"));
+        assertTrue(report.contains("\"summaryStatus\":\"available\""), report);
+        assertTrue(report.contains("\"preparationStatus\":\"source-bound\""), report);
+        assertTrue(report.contains("\"adviceStatus\":\"disabled\""), report);
+        assertFalse(report.contains("\"adviceStatus\":\"blocked-preparation\""), report);
+    }
+
+
+    @Test
+    void candidateRevokesAdvisoryWhenOriginalProviderMutatesSourceAfterInference() throws Exception {
+        Path provider = candidateProviderFixture();
+        setup(candidateProviderConfiguration(provider, "mcp-hook-drift-source.gguf", "m3PostBuildAdvice"));
+        writeSyntheticReceipts();
+        Files.writeString(root.resolve("llama-fixture"), "fixture backend only\n");
+        Files.writeString(root.resolve("mcp-hook-drift-source.gguf"), "test-only synthetic model\n");
+
+        String refused = runner("m3PostBuildAdvice").buildAndFail().getOutput();
+        assertTrue(refused.contains("Build advice failed: CanonicalPreparationEvidenceRejected"), refused);
+        assertTrue(Files.isRegularFile(root.resolve("mcp-hook-drift-source.gguf.started")),
+                "the original provider must reach the inference boundary");
+        assertTrue(Files.isRegularFile(root.resolve("mcp-hook-drift-source.gguf.mutated")),
+                "the source-owner fixture must record its mutation before a successful reply");
+
+        String report = Files.readString(root.resolve("build/m3-smart/post-build.json"));
+        assertTrue(report.contains("\"buildOutcome\":\"failure\""), report);
+        assertTrue(report.contains("\"preparationStatus\":\"refused\""), report);
+        assertTrue(report.contains("\"adviceStatus\":\"blocked-preparation\""), report);
+        assertTrue(report.contains("\"adviceErrorType\":\"CanonicalPreparationEvidenceRejected\""), report);
+        assertTrue(report.contains("\"llmCandidate\":\"\""), report);
+        assertTrue(report.contains("\"llmCandidateTrusted\":false"), report);
+    }
+
+    @Test
+    void candidateRetainsSyntheticAdvisoryOnlyWithUnchangedReceipts() throws Exception {
+        Path provider = candidateProviderFixture();
+        setup(candidateProviderConfiguration(provider, "mcp-evidence-observer.gguf", "m3PostBuildAdvice"));
+        String original = writeSyntheticReceipts();
+        Files.writeString(root.resolve("llama-fixture"), "fixture backend only\n");
+        Files.writeString(root.resolve("mcp-evidence-observer.gguf"), "test-only synthetic model\n");
+
+        String accepted = runner("m3PostBuildAdvice").build().getOutput();
+        assertTrue(accepted.contains("BUILD SUCCESSFUL"), accepted);
+        assertTrue(Files.isRegularFile(root.resolve("mcp-evidence-observer.gguf.started")),
+                "provider must actually run; missing fixture must never count as a pass");
+        assertEquals(original, Files.readString(root.resolve("src/Example.java")));
+        String report = Files.readString(root.resolve("build/m3-smart/post-build.json"));
+        assertTrue(report.contains("\"buildOutcome\":\"failure\""), report);
+        assertTrue(report.contains("\"preparationStatus\":\"source-bound\""), report);
+        assertTrue(report.contains("\"adviceStatus\":\"available\""), report);
+        assertTrue(report.contains("\"llmCandidate\":\"fake MCP advisory"), report);
+        assertTrue(report.contains("\"llmCandidateTrusted\":false"), report);
+    }
+
+    /** The fixture is Maven's own Java17 modular MCP fake, never a model or provider fork. */
+    private static Path candidateProviderFixture() throws Exception {
+        requireRevalidationCandidate();
+        String supplied = System.getenv("M3_SMART_REVALIDATION_FIXTURE_JAR");
+        assumeTrue(supplied != null && !supplied.isBlank(),
+                "requires original Maven #315 source-built modular MCP test fixture");
+        Path original = Path.of(supplied).toAbsolutePath().normalize();
+        assertTrue(Files.isRegularFile(original), "real original Maven test fixture JAR required");
+        return original;
+    }
+
+    private String candidateProviderConfiguration(Path provider, String scenario, String task) throws Exception {
+        Path local = root.resolve("mcp-fixture.jar");
+        Files.copy(provider, local);
+        return "tasks.named('" + task + "') {\n"
+                + "  buildOutcome.set('failure')\n"
+                + "  sourceRoot.set(layout.projectDirectory.dir('src'))\n"
+                + "  preparationRequired.set(true)\n"
+                + "  preparationReport.set(layout.projectDirectory.file('receipts/preparation.json'))\n"
+                + "  optionLlm.set(true)\n"
+                + "  backend.set('cli')\n"
+                + "  chromeLlmJar.set(layout.projectDirectory.file('mcp-fixture.jar'))\n"
+                + "  chromeLlmJarSha256.set('" + hash(Files.readAllBytes(local)) + "')\n"
+                + "  llamaExecutable.set(layout.projectDirectory.file('llama-fixture'))\n"
+                + "  modelFile.set(layout.projectDirectory.file('" + scenario + "'))\n"
+                + "  timeoutSeconds.set(7)\n"
+                + "}\n";
+    }
+
+    private static void requireRevalidationCandidate() throws Exception {
+        String candidate = System.getenv("M3_SMART_REVALIDATION_CANDIDATE_JAR");
+        String engine = System.getenv("M3_SMART_BUILDER_JAR");
+        assumeTrue(candidate != null && !candidate.isBlank() && engine != null && !engine.isBlank(),
+                "requires exact Maven #315 candidate containing merged-to-branch #317");
+        assertEquals(Path.of(candidate).toRealPath(), Path.of(engine).toRealPath(),
+                "candidate proof must never silently exercise an older Maven engine");
+    }
+
+    private static String candidateAdviceConfiguration(String command) {
+        return "tasks.named('m3PreBuildAdvice') {\n"
+                + "  sourceRoot.set(layout.projectDirectory.dir('src'))\n"
+                + "  preparationRequired.set(true)\n"
+                + "  preparationReport.set(layout.projectDirectory.file('receipts/preparation.json'))\n"
+                + "  summarizer.set('" + command.replace("\\", "\\\\").replace("'", "\\'") + "')\n"
+                + "}\n";
+    }
+
+    /** The Java source-file launcher is available on both supported JDK 17/21 hosts. */
+    private String candidateSummarizerCommand(String action) throws Exception {
+        Path script = root.resolve("CandidateSummary.java");
+        Files.writeString(script, """
+                import java.nio.file.Files;
+                import java.nio.file.Path;
+                import java.nio.file.attribute.FileTime;
+                public final class CandidateSummary {
+                    public static void main(String[] args) throws Exception {
+                        Files.writeString(Path.of(args[1]), "executed");
+                        if (args.length > 2 && "mutate".equals(args[2])) {
+                            Path file = Path.of(args[0]);
+                            FileTime beforeTime = Files.getLastModifiedTime(file);
+                            String before = Files.readString(file);
+                            String after = before.replace("int n=0", "int n=1");
+                            if (before.equals(after) || before.length() != after.length()) {
+                                throw new AssertionError("fixture did not change equal-length content");
+                            }
+                            Files.writeString(file, after);
+                            Files.setLastModifiedTime(file, beforeTime);
+                        }
+                        System.out.println("summary-test-only");
+                    }
+                }
+                """);
+        return quote(Path.of(System.getProperty("java.home"), "bin", "java"))
+                + " " + quote(script)
+                + " " + quote(root.resolve("src/Example.java"))
+                + " " + quote(root.resolve("summary-started.marker")) + " " + action;
+    }
+
+    private static String quote(Path path) {
+        return "\"" + path.toAbsolutePath().normalize().toString().replace("\"", "\\\"") + "\"";
+    }
+
     private void setup(String configuration) throws Exception {
         String supplied = System.getenv("M3_SMART_BUILDER_JAR");
         assumeTrue(supplied != null && !supplied.isBlank(), "requires the original Maven smart-builder JAR");
@@ -123,12 +312,22 @@ final class M3SmartReviewRealEngineTest {
         Path engine = root.resolve("engine.jar");
         Files.copy(original, engine);
         String digest = hash(Files.readAllBytes(engine));
+        String candidateJava = "";
+        if (System.getenv("M3_SMART_REVALIDATION_CANDIDATE_JAR") != null) {
+            String selected = System.getenv("M3_SMART_CANDIDATE_JAVA21");
+            assertTrue(selected != null && !selected.isBlank(),
+                    "Maven source-built Java 21 engine must have an explicit Java 21 runtime");
+            Path java21 = Path.of(selected).toAbsolutePath().normalize();
+            assertTrue(Files.isRegularFile(java21), "selected Maven Java 21 executable must exist");
+            candidateJava = "  javaExecutable.set('"
+                    + java21.toString().replace("\\", "\\\\").replace("'", "\\'") + "')\n";
+        }
         Files.writeString(root.resolve("settings.gradle"), "rootProject.name = 'm3-smart-review-consumer'\n");
         Files.writeString(root.resolve("build.gradle"), "plugins { id 'io.synexia.m3.quality' }\n"
                 + "tasks.withType(io.synexia.gradle.quality.M3SmartReviewTask).configureEach {\n"
                 + "  engineJar.set(layout.projectDirectory.file('engine.jar'))\n"
                 + "  engineSha256.set('" + digest + "')\n"
-                + "}\n" + configuration);
+                + candidateJava + "}\n" + configuration);
     }
 
     private GradleRunner runner(String task) {
