@@ -36,9 +36,12 @@ declaring `target/hidden.d` as an output, to prove that *merely naming
 the hidden depfile does not qualify arbitrary forwarded native
 compiler effects*. The second original Maven CLI invocation must fail
 with `unqualified Clang output/forwarding option`, preserving the
-previous accepted database bytes and timestamp. No object file,
-depfile or M3DB state may be emitted; the metadata exporter must not
-execute a native compiler.
+previous accepted database bytes and timestamp. The same refusal is
+required for `-Wp,-MMD,target/hidden.d`, also with its hidden output
+declared. Finally, restoring the original manifest must **succeed
+without rewriting the byte-identical accepted JSON or its timestamp**.
+No object file, depfile or M3DB state may be emitted; the metadata
+exporter must not execute a native compiler.
 
 This is deliberately distinct from the original
 `M3LlvmCompileDbRealEngineTest` positive and digest-negative
@@ -55,9 +58,10 @@ The new JDK17/JDK21 workflow:
 3. Runs the **original Maven** plugin `mvn verify` in each JDK lane,
    including its compiler-argument refusal contracts, with original
    Clang selected from the runner's installed toolchain.
-4. Reproduces real Clang `-Wp,-MD` generation on the original
-   `native/hello.c` and `native/message.h` fixture; the depfile
-   must contain the header dependency.
+4. Reproduces real Clang `-Wp,-MD` **and** `-Wp,-MMD`
+   generation on the original `native/hello.c` and
+   `native/message.h` fixture; both depfiles must contain the
+   original header dependency.
 5. Runs Gradle TestKit on the three named original/source-sealed
    classes, which comprise **4 synthetic + 2 historic real-engine +
    1 new real-engine = 7 tests per JDK**.
