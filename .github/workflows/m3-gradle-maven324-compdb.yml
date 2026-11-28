@@ -1,0 +1,147 @@
+# SPDX-FileCopyrightText: 2026 Contributors to the Synexia Project
+# SPDX-License-Identifier: Apache-2.0
+name: M3 Gradle merged Maven 324 Clang compilation database
+
+on:
+  pull_request:
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven324-compdb.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'm3/quality-bridge/**'
+      - '.github/workflows/m3-gradle-maven324-compdb.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  merged-maven324-compdb:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Preserve historical Maven 255 source pin and original Gradle task
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh m3/quality-bridge/scripts/verify-maven255-compile-db.sh
+          test -s .github/workflows/m3-gradle-maven255-compile-db.yml
+          test -s m3/quality-bridge/src/main/java/io/synexia/gradle/quality/M3LlvmCompileDbTask.java
+      - name: Check out exact merged Maven 324 source
+        uses: actions/checkout@v4
+        with:
+          repository: hsoliwal/maven
+          ref: 6efb7b09d35b377f817f6da156efef47a915d4de
+          path: m3-maven-324
+          persist-credentials: false
+      - name: Verify original Maven 324 source identity and build original plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C m3-maven-324 rev-parse HEAD)" = 6efb7b09d35b377f817f6da156efef47a915d4de
+          grep -Fq -- '"-Wp,"' \
+            m3-maven-324/tools/m3-polyglot-maven-plugin/src/main/java/io/synexia/maven/polyglot/LlvmCompilationDatabase.java
+          command -v clang
+          command -v clang++
+          command -v mvn
+          LLVM_ROOT="$(dirname "$(dirname "$(command -v clang)")")"
+          echo "M3_LLVM_HOME=$LLVM_ROOT" >> "$GITHUB_ENV"
+          mvn -B -ntp -f m3-maven-324/tools/m3-polyglot-maven-plugin/pom.xml verify
+          test -s m3-maven-324/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar
+      - name: Reproduce original Clang forwarded dependency file on real C17 fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd m3-maven-324/tools/m3-polyglot-maven-plugin/examples/llvm
+          mkdir -p target/m3-llvm
+          clang -std=c17 -c native/hello.c \
+            -o target/m3-llvm/forwarded.o \
+            -Wp,-MD,target/m3-llvm/forwarded.d
+          test -s target/m3-llvm/forwarded.o
+          test -s target/m3-llvm/forwarded.d
+          grep -F 'native/message.h' target/m3-llvm/forwarded.d
+          clang -std=c17 -c native/hello.c \
+            -o target/m3-llvm/forwarded-mmd.o \
+            -Wp,-MMD,target/m3-llvm/forwarded-mmd.d
+          test -s target/m3-llvm/forwarded-mmd.o
+          test -s target/m3-llvm/forwarded-mmd.d
+          grep -F 'native/message.h' target/m3-llvm/forwarded-mmd.d
+          echo 'PASS: original Clang creates hidden -Wp,-MD and -Wp,-MMD depfiles'
+      - name: Execute four synthetic and three real Maven Gradle TestKit methods
+        shell: bash
+        run: |
+          set -euo pipefail
+          export M3_MAVEN_COMPILEDB_JAR="$GITHUB_WORKSPACE/m3-maven-324/tools/m3-polyglot-maven-plugin/target/m3-polyglot-maven-plugin-0.1.0-SNAPSHOT.jar"
+          export M3_MAVEN_COMPILEDB_FIXTURES="$GITHUB_WORKSPACE/m3-maven-324/tools/m3-polyglot-maven-plugin/examples/llvm"
+          test -s "$M3_MAVEN_COMPILEDB_JAR"
+          test -s "$M3_MAVEN_COMPILEDB_FIXTURES/m3-build.tsv"
+          sha256sum "$M3_MAVEN_COMPILEDB_JAR"
+          ./gradlew --no-daemon --stacktrace --console=plain \
+            -p m3/quality-bridge test \
+            --tests 'io.synexia.gradle.quality.M3LlvmCompileDbTaskTest' \
+            --tests 'io.synexia.gradle.quality.M3LlvmCompileDbRealEngineTest' \
+            --tests 'io.synexia.gradle.quality.M3Llvm324ForwardedDepfileRealEngineTest' \
+            --rerun-tasks
+      - name: Require exactly seven non-skipped JDK TestKit methods
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+
+          root = Path('m3/quality-bridge/build/test-results/test')
+          required = {
+              'M3LlvmCompileDbTaskTest': {
+                  'delegatesTwiceWithoutNativeExecutionOrTaskCaching',
+                  'refusesWrongDigestUnknownTargetAndLinkedOutputBeforeStartingMaven',
+                  'rejectsForeignReceiptAndUnpinnedProvider',
+                  'refusesEmptyAndTruncatedDatabaseEvenWithCanonicalMavenReceipt',
+              },
+              'M3LlvmCompileDbRealEngineTest': {
+                  'publishedDatabaseMatchesOriginalCompilerVectorsAndIsStable',
+                  'wrongEngineDigestRefusesBeforeMavenCanPublish',
+              },
+              'M3Llvm324ForwardedDepfileRealEngineTest': {
+                  'mergedMaven324RejectsForwardedDepfileWithoutClobberingAcceptedDatabase',
+              },
+          }
+          for short, methods in required.items():
+              name = 'io.synexia.gradle.quality.' + short
+              file = root / ('TEST-' + name + '.xml')
+              assert file.is_file() and not file.is_symlink(), file
+              suite = ET.parse(file).getroot()
+              assert suite.tag == 'testsuite' and suite.get('name') == name, (file, suite.attrib)
+              for attribute, count in [('tests', len(methods)), ('skipped', 0),
+                                       ('failures', 0), ('errors', 0)]:
+                  assert int(suite.get(attribute, '-1')) == count, (file, attribute, suite.attrib)
+              cases = suite.findall('testcase')
+              assert len(cases) == len(methods), file
+              assert {c.get('name') for c in cases} == methods, file
+              assert all(c.get('classname') == name and not list(c) for c in cases), file
+          print('PASS: exactly seven executed Maven324/Gradle TestKit methods, zero skips or failures')
+          PY
+      - name: Retain original Maven324/Gradle JDK execution reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-gradle-maven324-compdb-jdk-${{ matrix.java }}
+          path: |
+            m3/quality-bridge/build/test-results/test/**
+            m3/quality-bridge/build/reports/tests/test/**
+            m3-maven-324/tools/m3-polyglot-maven-plugin/target/surefire-reports/**
+          if-no-files-found: warn
+          retention-days: 21
