@@ -106,6 +106,37 @@ final class M3Llvm324ForwardedDepfileRealEngineTest {
                 "failed metadata export must preserve accepted output timestamp");
         assertFalse(Files.exists(project.resolve("target/hidden.d")),
                 "Gradle must not execute native Clang during IDE metadata export");
+
+        // Both supported Clang forwarded-dependency spellings can create
+        // sidecars without a visible driver-level -MF. The Maven exporter
+        // must refuse each mode even when the hidden output is declared.
+        String forwardedMmd = forwardedManifest.replace(
+                "-Wp,-MD,target/hidden.d", "-Wp,-MMD,target/hidden.d");
+        assertNotEquals(forwardedManifest, forwardedMmd);
+        Files.writeString(manifest, forwardedMmd, StandardCharsets.UTF_8);
+        String mmdRefused = GradleRunner.create().withProjectDir(project.toFile())
+                .withPluginClasspath()
+                .withArguments("m3LlvmCompileDb", "--stacktrace", "--rerun-tasks")
+                .buildAndFail().getOutput();
+        assertTrue(mmdRefused.contains("unqualified Clang output/forwarding option")
+                        && mmdRefused.contains("-Wp,-MMD,target/hidden.d"), mmdRefused);
+        assertArrayEquals(acceptedBytes, Files.readAllBytes(database));
+        assertEquals(acceptedStamp, Files.getLastModifiedTime(database));
+        assertFalse(Files.exists(project.resolve("target/hidden.d")));
+
+        // Repair the manifest: no hidden outputs, no native invocation, and
+        // the identical accepted compilation database is a fixed point.
+        Files.writeString(manifest, sourceManifest, StandardCharsets.UTF_8);
+        String repaired = GradleRunner.create().withProjectDir(project.toFile())
+                .withPluginClasspath()
+                .withArguments("m3LlvmCompileDb", "--stacktrace", "--rerun-tasks")
+                .build().getOutput();
+        assertTrue(repaired.contains("BUILD SUCCESSFUL"), repaired);
+        assertArrayEquals(acceptedBytes, Files.readAllBytes(database),
+                "repaired manifest must reproduce the accepted database");
+        assertEquals(acceptedStamp, Files.getLastModifiedTime(database),
+                "repaired manifest must not rewrite byte-identical IDE metadata");
+        assertFalse(Files.exists(project.resolve("target/hidden.d")));
         assertFalse(Files.exists(project.resolve("target/hello.o")));
         assertFalse(Files.exists(project.resolve(".m3")));
     }
