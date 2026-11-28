@@ -73,7 +73,13 @@ jobs:
           test -s target/m3-llvm/forwarded.o
           test -s target/m3-llvm/forwarded.d
           grep -F 'native/message.h' target/m3-llvm/forwarded.d
-          echo 'PASS: original Clang creates a depfile hidden in -Wp forwarding'
+          clang -std=c17 -c native/hello.c \
+            -o target/m3-llvm/forwarded-mmd.o \
+            -Wp,-MMD,target/m3-llvm/forwarded-mmd.d
+          test -s target/m3-llvm/forwarded-mmd.o
+          test -s target/m3-llvm/forwarded-mmd.d
+          grep -F 'native/message.h' target/m3-llvm/forwarded-mmd.d
+          echo 'PASS: original Clang creates hidden -Wp,-MD and -Wp,-MMD depfiles'
       - name: Execute four synthetic and three real Maven Gradle TestKit methods
         shell: bash
         run: |
